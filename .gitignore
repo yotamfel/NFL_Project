@@ -3,6 +3,9 @@
 *.pgpass
 pgpass.conf
 
+# DB backups (large binary dumps, kept locally only)
+db_backups/
+
 # Dependencies
 node_modules/
 __pycache__/
