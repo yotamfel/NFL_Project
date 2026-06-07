@@ -238,3 +238,42 @@ raw season rows (exact match), and checking a household name's numbers against
 public record — Tom Brady's career view reports 89,208 passing yards, 649
 touchdowns, and 7,752-of-12,047 completions over 22 seasons, matching his
 well-known career figures exactly.
+
+### Finding a path to keep the data current — and an unexpected gap
+Pro-Football-Reference's raw exports stop at the 2024 season, with no
+ongoing feed to pull from. Looking for a way to extend the database forward
+led to **nflverse**, an open-source community project that republishes NFL
+data (including PFR's own player IDs as a direct field) on an automated
+weekly refresh cycle — exactly the kind of source a "keep this current" job
+could run against. Its Python package, `nfl_data_py`, was archived in
+September 2025 in favor of its successor, `nflreadpy`, which is what this
+project adopted.
+
+Before pointing it at "the future," it was worth checking whether it could
+also patch any holes in the *existing* 2000–2024 range. Comparing season
+coverage across all nine tables surfaced exactly one: every single
+`*_seasons` and `combine_seasons` table runs the full 2000–2024, but `draft`
+quietly stopped at **2022** — the original raw CSV exports for the draft
+category never included the 2023 or 2024 classes (confirmed by checking the
+source folder directly: the newest file present is `Draft 2022.csv`). This
+had been sitting there, invisible, since the rebuild — nothing in the
+pipeline would have flagged a *category* simply ending two years early.
+
+`nflreadpy.load_draft_picks()` covers 1980–2026 and ships its own PFR
+player-id field (`pfr_player_id`) — no id-crosswalk step needed, a pleasant
+contrast to the three-stage effort the original 2000–2022 linking required.
+`etl/supplement_draft.py` pulls the two missing classes, renames nflverse's
+columns onto this project's schema (including untangling that nflverse's
+`w_av`/`dr_av` are this project's `career_av`/`draft_team_av` — PFR's
+"weighted career AV" and "AV with the drafting team" — while nflverse's own
+similarly-named `car_av` field is something else and is empty), and appends
+516 picks. 470 of them carry a `pfr_player_id` already present in `players`;
+the remaining 46 — Cody Mauch (T, 36 games), Chandler Zavala (G, 34 games),
+and others overwhelmingly at offensive-line and similar no-personal-stat
+positions — show the *exact same pattern* documented during the original
+draft-linking effort (a real, lengthy career that simply never produces a
+tracked box-score stat), and are stored with a null `player_id`, consistent
+with how every other such case in this dataset is represented. The result:
+`draft` now spans 2000–2024 like every other table, at 6,387 picks total and
+92.8% linked — in line with the original 93.0%, as expected from picks of
+the same kind.
