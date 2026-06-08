@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(source venv/Scripts/activate)",
+      "Bash(./venv/Scripts/python.exe etl/supplement_seasons.py)",
+      "Bash(./venv/Scripts/python.exe etl/supplement_draft.py)",
+      "Bash(./venv/Scripts/python.exe etl/supplement_players.py)",
+      "Bash(./venv/Scripts/python.exe etl/_validate_supplement_2024.py)",
+      "Bash(./venv/Scripts/python.exe etl/build_career_views.py)",
+      "Bash(./venv/Scripts/python.exe etl/add_constraints.py)"
+    ]
+  }
+}

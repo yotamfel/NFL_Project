@@ -1,24 +1,27 @@
 """
-Fill the 2023-2024 gap in the `draft` table from nflverse data.
+Fill `draft` table gaps from nflverse data - originally written for the
+2023-2024 backfill, now reused for 2025.
 
-While evaluating nflreadpy as a source for keeping this database current, a
-comparison of season ranges across all tables turned up a real gap that
-predates this project: every `*_seasons` table (and `combine_seasons`) covers
-2000-2024, but `draft` stops at 2022 - the original raw CSV exports for the
-draft category simply never included the 2023 and 2024 classes. nflreadpy's
+PFR's raw per-season CSV exports - the only ground truth this project has
+ever loaded `draft` from - simply stop getting produced for this category, so
+every new draft class is a gap of the same kind, recurring every year
+(distinct from `supplement_seasons.py`'s job, which extends the seven
+box-score categories that nflverse *does* keep current). nflreadpy's
 `load_draft_picks()` covers 1980-2026 and, helpfully, ships its own PFR
-player-id column (`pfr_player_id`) - no id crosswalk needed.
+player-id column (`pfr_player_id`) - no id crosswalk needed, unlike the
+three-stage effort `link_draft.py` required for the original 2000-2022 range.
 
-Of the 516 picks across these two classes, all 516 carry a `pfr_player_id`,
-and 470 of those already exist in our `players` table (they recorded a
-tracked stat sometime in 2023-2024, which is in range). The remaining 46 are
-overwhelmingly offensive linemen and similar no-personal-stat positions who
-have real, lengthy careers (e.g. Cody Mauch, T, 36 games) but - exactly like
-roughly 400 picks from the original 2000-2022 linking effort (see
-link_draft.py / PROJECT_LOG.md) - never appear in any of the seven box-score
-categories the `players` table is built from. They're inserted with a null
-`player_id`, consistent with how every other such case in this dataset is
-represented; the foreign key to `players` still holds.
+Original 2023-2024 backfill: of 516 picks, all 516 carried a `pfr_player_id`,
+and 470 already existed in `players` (a tracked stat sometime in 2023-2024).
+The remaining 46 - overwhelmingly offensive linemen and similar
+no-personal-stat positions with real, lengthy careers (e.g. Cody Mauch, T, 36
+games) - never appear in any of the seven box-score categories `players` is
+built from, exactly like ~400 picks from the original link_draft.py effort.
+They're inserted with a null `player_id`, consistent with how every other
+such case in this dataset is represented; the foreign key to `players` still
+holds. The 2025 run (257 picks, run after `supplement_players.py` had already
+seeded that season's rookies) reproduced the same shape: 100% `pfr_player_id`
+coverage, the unmatched minority concentrated in the same no-stat positions.
 """
 import sys
 from pathlib import Path
@@ -29,7 +32,7 @@ import nflreadpy as nfl
 
 from db import get_engine
 
-YEARS = [2023, 2024]
+YEARS = [2025]
 
 # nflreadpy column -> our `draft` column. wAV/DrAV are exposed as `w_av`/`dr_av`
 # (nflreadpy's own `car_av` is an unrelated, currently-empty field).

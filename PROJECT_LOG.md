@@ -402,3 +402,44 @@ isn't possible for 2025 by definition (there is no PFR export to diff
 against, which is the entire reason this pipeline exists); structural and
 internal-consistency validation is the most rigorous check available for a
 season this database has never seen before, and it came back clean.
+
+### Closing the last gap: the 2025 draft class and its combine
+With the seven box-score categories current through 2025, two tables were
+still sitting at 2024: `draft` and `combine_seasons`. Both trace back to the
+same root cause already on record — PFR's raw exports for these two
+categories simply stop getting produced, so each new year is a fresh gap of
+the same shape the 2023-2024 backfill closed, not a one-time accident.
+`supplement_draft.py` (originally written for that backfill) is parametrized
+by `YEARS`, so closing the 2025 gap meant pointing it at `[2025]` and
+re-running it: 257 picks loaded, 100% carrying a `pfr_player_id`, 182 already
+present in `players` (seeded by that season's `supplement_players.py` run),
+and 75 — concentrated in OL/OT/G/C (41 of 75) plus a handful of QBs and other
+skill positions who simply didn't see the field as rookies — left with a null
+`player_id`, the same no-personal-stat pattern documented throughout this
+project (e.g. the #4 overall pick, LSU tackle Will Campbell, genuinely
+appears in zero tables — confirmed by checking every box-score category
+directly, not just `players`).
+
+`combine_seasons` had no precedent script — nothing in the original pipeline
+needed to *add* a season to it, only clean what was already there — so
+`supplement_combine.py` is new. nflreadpy's `load_combine()` ships the same
+PFR id and "team / round / pick / year" draft-slot fields the draft loader
+uses, which made two reshaping decisions the only real work:
+
+- **`ht`** arrives as `"6-2"`; every one of the 8,320 existing rows spells it
+  `"6_2"` — confirmed to be PFR's own raw-export convention (zero hyphenated
+  values exist anywhere in the column, so this isn't the underscore-corruption
+  pattern from earlier in this log), and normalized to match.
+- **`drafted_tm_per_rnd_per_yr`** isn't a single field in nflreadpy; it's
+  rebuilt from `draft_team`/`draft_round`/`draft_ovr`/`draft_year` into the
+  exact `"{team} / {round}{suffix} / {pick}{suffix} pick / {year}"` shape
+  `link_draft.py`'s regex expects — verified by sampling existing rows across
+  every ordinal-suffix case (1st/2nd/3rd/4th and the 11th-13th exception).
+  `college` — a column that was always either null or the meaningless literal
+  placeholder `"College Stats"` — is left null for new rows rather than
+  inventing a value nflreadpy doesn't carry.
+
+The run added 329 prospects (184 linked, the same no-personal-stat shape as
+`draft`), bringing `combine_seasons` to 8,649 rows spanning 2000-2025 — and
+with it, every table in the database now covers the same 2000-2025 range,
+fully linked and with zero orphaned foreign keys.
