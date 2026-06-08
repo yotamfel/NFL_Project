@@ -543,3 +543,35 @@ the latest class in the data), the list came back as JaMarcus Russell, Zach
 Wilson, Charles Rogers, Trey Lance, Justin Blackmon — names that match the
 real-world "biggest draft busts" consensus almost exactly, rather than a
 list of 2024-2025 rookies who simply haven't played enough games yet.
+
+### Stage 4 — The API: one router per module, plus an honest placeholder
+`app/main.py` wires up four routers (`players`, `comparison`, `draft`,
+`search`), each a thin HTTP layer over stage 3's data functions — the
+interesting decisions were less about routing than about what each endpoint
+does at its edges.
+
+Two were straightforward to delegate to FastAPI/Pydantic: query-parameter
+type validation (an out-of-range `limit` or non-integer `draft_year` is
+rejected automatically with a 422) and a search query below the minimum
+length. The data-layer's own special cases turned into deliberate HTTP
+choices: an unknown `player_id` is a 404 (not a 200 with an empty body, and
+not a 500 — `get_player_profile` already distinguishes "not found" from
+"found but sparse"), a comparison with fewer than two ids or an unknown
+category is a 400 with a message naming the valid options, and the data
+layer's `ValueError` for bad categories gets caught at the router boundary
+rather than leaking a stack trace to the client.
+
+The fourth router, `search` (module 4 — natural-language queries), is
+deliberately a stub: it defines the contract now (`POST /search/natural`
+with `{"question": ...}`) so the client can be built against a stable shape
+in stage 7, but returns `501 Not Implemented` with a clear message rather
+than faking a result — the actual Claude-backed translation is stage 6's
+job, and pretending otherwise here would just create a more confusing
+failure mode to debug later.
+
+Every endpoint was exercised end-to-end with FastAPI's `TestClient`,
+including its error paths — 404 on an unknown id, 400 on a malformed
+comparison, 422 on invalid query params, 501 on the NL-search stub — and
+the full Mahomes profile came back through the API exactly as the data
+layer produced it (categories, career totals, draft slot, combine numbers
+all intact).
