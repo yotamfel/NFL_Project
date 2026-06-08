@@ -443,3 +443,38 @@ The run added 329 prospects (184 linked, the same no-personal-stat shape as
 `draft`), bringing `combine_seasons` to 8,649 rows spanning 2000-2025 — and
 with it, every table in the database now covers the same 2000-2025 range,
 fully linked and with zero orphaned foreign keys.
+
+## Phase Two: building a web platform on top of the data
+
+With the database complete, documented (`DB_SCHEMA.md`), and current through
+2025, the project moves into its second phase: an interactive web platform
+that makes this data explorable without writing SQL — a player search and
+profile page, head-to-head comparisons, draft-value analysis (with a
+career-value prediction model), and a natural-language search backed by
+Claude. The plan for this phase, including its ten stages, lives in
+`מפרט_פרויקט_NFL.md`; this log will keep tracking the *why* behind each
+stage's decisions, the same way it did for the data pipeline.
+
+### Stage 1 — Setting up the web server's environment
+The first decision was where this new code should live: rather than spin up
+a separate repo, `server/` (FastAPI backend) and `client/` (React frontend,
+still empty — built in stage 7) joined `etl/` as siblings in the existing
+project, since it's the same database and the same overall effort.
+
+The more interesting decision was *how the server should reach the
+database*. `etl/db.py` authenticates via a local pgpass file — fine for
+scripts that only ever run on this machine, but the server is meant to be
+deployed to a host like Render that has no access to it. So `server/app/config.py`
+reads connection details from a `DATABASE_URL` environment variable instead —
+sourced from a local `.env` (gitignored, see `.env.example` for the format)
+during development, and from the platform's own environment in production.
+The local default mirrors `etl/db.py`'s connection exactly, so the server
+runs out of the box on this machine without requiring any `.env` file at all
+— libpq still falls back to pgpass for the password, same as the ETL.
+
+The server got its own virtualenv and `requirements.txt` (FastAPI, uvicorn,
+SQLAlchemy, psycopg2, python-dotenv, pydantic) — deliberately separate from
+the ETL's environment, since the two halves of the project now have
+genuinely different dependencies. `test_connection.py` confirmed the new
+config can reach the live database (`players`: 11,627 rows, matching
+`DB_SCHEMA.md` exactly).
