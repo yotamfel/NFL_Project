@@ -642,3 +642,88 @@ The trained model and its feature list are persisted to
 `ml/draft_value_model.joblib` via `joblib.dump`, ready for a future
 endpoint to serve predictions and surprise scores without retraining on
 every request.
+
+### Stage 6 — Natural-language search: translating questions into SQL, safely
+This is the module the spec describes most concretely: the user types a
+free-text question — Hebrew or English, e.g. "מי הרבעי גב עם הכי הרבה
+טאצ'דאונים בין 2015 ל-2020" — and gets back results, powered by Claude
+translating it into a query. `app/nl_search.py` carries the whole pipeline;
+`app/routers/search.py` finally replaces stage 4's honest 501 stub with
+the real thing.
+
+The interesting engineering here isn't the translation itself — it's that
+we're about to let an LLM write SQL that runs against a real database from
+*untrusted free text*, which means trusting the model's good behavior isn't
+a defensible design. Two independent layers, deliberately not just one:
+
+1. **A pre-filter (`_validate_sql`)** rejects anything that isn't a single
+   bare `SELECT`/`WITH` statement, or that contains a write/DDL keyword
+   (`INSERT`, `DROP`, `UPDATE`, `;`-separated second statements, ...) —
+   fast, with a clear error message, before the database is ever touched.
+2. **The query itself runs inside a PostgreSQL `READ ONLY` transaction**
+   (`engine.connect().execution_options(postgresql_readonly=True)`) — this
+   is enforced by the database engine itself, so even a write hidden inside
+   something the regex didn't anticipate (a function call, an obscure
+   keyword) gets refused at the source, not by string-matching.
+
+Neither alone would be trustworthy — a regex can be fooled by something
+creative, and a read-only transaction alone would still let an unbounded or
+multi-statement query through. Together they cover each other's blind
+spots. A `LIMIT` is enforced too (appended automatically if the generated
+query lacks one).
+
+The system prompt is the other half of the design: rather than dumping the
+full `DB_SCHEMA.md`, it's a condensed table/column reference *plus* the
+handful of "rules that produce a wrong answer, not just an ugly one" —
+don't sum `*_career` rate columns, prefer the live `*_career` join over
+`draft`'s scrape-time snapshot, a null `player_id` isn't evidence of a
+"bust", quote digit-prefixed columns. Claude is also told to answer with
+*only* the SQL (a fenced-code-block stripper is a safety net for when it
+ignores that), and — just as importantly — to respond with an explicit
+`CANNOT_ANSWER: <reason>` when a question can't honestly be turned into a
+query, rather than guessing at one. Every flavor of failure — declined,
+unsafe, or one that fails at the database — funnels into one
+`TranslationError`, which the router maps to a single honest `422`: from
+the caller's seat, "couldn't translate it" and "translated it but it broke"
+mean the same thing.
+
+Testing surfaced a real gap worth recording: asked for "Tom Brady's career
+completion percentage", Claude generated a query against `passing_career`
+that selected `player_name` directly — but `*_career` views carry *only*
+`player_id` plus aggregated stats (no name, position, or team; confirmed by
+querying `information_schema.columns` live). The query failed at the
+database with `column "player_name" does not exist`, which the pipeline
+correctly surfaced as a translation failure rather than a crash. Adding one
+explicit rule about this to the prompt fixed it outright — the corrected
+query joined back to `players` for the name and correctly recomputed the
+rate from summed counts (`100.0 * sum(cmp) / NULLIF(sum(att), 0)`),
+returning **64.3%** — Brady's actual career figure.
+
+A run through several more questions, in both languages, showed the
+pipeline handling real nuance, not just pattern-matching:
+- *"top 5 running backs by career rushing yards"* → correctly joined
+  `players` to `offense_career`, filtered on `pos = 'RB'`, returned Frank
+  Gore atop the list at 16,000 yards.
+- *"מי הרבעי גב עם הכי הרבה טאצ'דאונים בין 2015 ל-2020"* (no "passing"
+  specified) vs. the English *"most **passing** touchdowns..."* — Claude
+  picked different tables for each (`offense_seasons`' total TDs vs.
+  `passing_seasons`' passing TDs specifically), which is the *correct*
+  reading of each phrasing, not an inconsistency.
+- *"איזה שחקן נבחר הכי מאוחר בדראפט והפך לכוכב (steal)?"* → an honest
+  `CANNOT_ANSWER`: "the definition of 'star'/'steal' isn't defined in the
+  database... judging that requires an arbitrary threshold" — exactly the
+  kind of question the model should decline rather than silently invent a
+  cutoff for.
+- *"What is the capital of France?"* and *"What's the weather in Miami?"*
+  → both correctly declined as out-of-domain.
+- The validator's unit checks confirmed `DROP TABLE`, a `;`-chained
+  `DELETE`, and a bare `UPDATE` are all blocked before reaching the
+  database — and a sanity question ("Russell Wilson's passing TDs
+  2015-2020") came back as **195**, matching his known season-by-season
+  totals (34+21+34+35+31+40) exactly.
+
+`claude-haiku-4-5` was the deliberate model choice — not a budget
+compromise, but a fit: this is a narrow, structured translation task (free
+text → one SQL statement against a schema spelled out in full in the
+system prompt), exactly the kind of job a fast, cheap model handles as
+capably as a larger one.

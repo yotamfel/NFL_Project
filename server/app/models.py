@@ -37,3 +37,13 @@ class PlayerProfile(BaseModel):
     categories: list[CategoryStats]
     draft: Optional[dict[str, Any]] = None
     combine: Optional[dict[str, Any]] = None
+
+
+class NaturalLanguageResult(BaseModel):
+    """A translated-and-executed natural-language query: the SQL that ran
+    (shown back for transparency — this is a translation tool, not a black
+    box) plus its result rows. Row shape depends entirely on what the
+    generated query selected, hence dict[str, Any] — the same reasoning as
+    draft/combine above, just one level more dynamic."""
+    sql: str
+    rows: list[dict[str, Any]]

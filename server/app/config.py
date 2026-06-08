@@ -22,3 +22,9 @@ DATABASE_URL = os.environ.get(
     "DATABASE_URL",
     "postgresql+psycopg2://postgres@localhost:5432/NFL_project",
 )
+
+# Used by the natural-language search (module 4 / stage 6) to translate
+# free-text questions into SQL via Claude. No local fallback — without it,
+# that one feature degrades to an honest "not configured" response rather
+# than the rest of the server failing to start.
+ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
