@@ -277,3 +277,128 @@ with how every other such case in this dataset is represented. The result:
 `draft` now spans 2000–2024 like every other table, at 6,387 picks total and
 92.8% linked — in line with the original 93.0%, as expected from picks of
 the same kind.
+
+### Building the periodic-refresh pipeline: trusting nflverse enough to extend the database past 2024
+The draft gap was a one-time backfill. The much bigger structural fact behind
+it — PFR's raw exports simply stop at 2024, full stop — meant that keeping
+the other seven categories current needed a recurring job, not a patch.
+`etl/supplement_seasons.py` is that job: pull a season of `nflreadpy` data,
+reshape it onto this project's PFR-derived schema, and append it.
+
+The trouble is that "reshape it onto this project's schema" is not a column
+rename. nflverse's wide per-player-season table uses different column
+groupings, different inclusion rules, and — in a few places — measures
+different things than PFR's published categories do, and PFR's own raw
+exports (the only ground truth this project has ever trusted) don't exist for
+any season nflverse would be filling in. Two sourcing strategies ended up
+covering the schema, chosen column by column:
+
+1. **Direct fields and formula-computed derivatives.** The large majority of
+   PFR's published columns — including its "advanced" derived ones — turn out
+   to be exactly reproducible from nflverse's raw counts via PFR's own
+   published formulas. Joe Burrow's 2024 line reproduces to the decimal
+   (passer rating 108.5, AY/A 8.24, ANY/A 6.86, Sk% 6.86%) once the formula is
+   right.
+2. **Direct play-by-play aggregation**, for the handful of things the wide
+   table either doesn't carry at all or gets demonstrably wrong. Two findings
+   stand out: punting and placekicker-kickoff lines are *entirely absent* from
+   the wide table — there's no shortcut around aggregating raw plays for them —
+   and the wide table's own `def_tds` column is provably unreliable: Taron
+   Johnson scored two genuine defensive touchdowns in 2024 (an
+   interception-return TD and a fumble-recovery TD, both confirmed in the raw
+   play text, and both present in PFR's own historical row), yet nflverse's
+   aggregate reports just one. Deriving touchdown/longest-play breakdowns
+   directly from the underlying plays isn't merely a workaround here — it's
+   *more correct* than the column PFR-equivalent data nflverse already
+   publishes.
+
+### Validating a pipeline with no future ground truth: build it against the past instead
+A "keep this current" job is, by definition, going to be run on seasons this
+project can never cross-check against PFR's raw exports — that's the entire
+point of building it. So before trusting it on 2025, `etl/_validate_supplement_2024.py`
+ran the pipeline against **2024** — a season this database already holds
+PFR's own figures for — and diffed every column, on the theory that whatever
+discrepancy families show up there are the same ones that would silently slip
+into 2025 unnoticed. This turned a one-shot "does it run" check into a
+genuine audit, and it earned its keep: three real formula bugs surfaced and
+got fixed before they could compound forward season after season —
+
+- **`apyd` (all-purpose yards)** was missing two components entirely. PFR's
+  figure turns out to be wider than "yards from scrimmage plus return
+  yardage" — it also folds in the player's *own* interception-return and
+  fumble-return yardage. Proven exactly via four 2024 return specialists who
+  also play defense: Marcus Jones' apyd only reproduces PFR's stored 461 once
+  his 35 interception-return and 17 fumble-return yards are added to his 409
+  rush+rec+return total, and three other players' gaps close the same way.
+- **`fum_ret_yds`** turned out to be unreliable to compute from the wide
+  table at all (the best candidate split matched only 85% of rows, off by as
+  much as 102 yards) but is derivable from play-by-play to 96% exactness by
+  crediting the yardage on every play where a player is recorded as *the*
+  recoverer — regardless of whose fumble it was.
+- **`fga_30_39`/`fga_40_49`/`fga_50_plus`** (field goals *attempted* by
+  distance bucket) undercounted by exactly the number of *blocked* attempts
+  in that range — PFR counts a blocked kick as an attempt at the distance it
+  was kicked from, but the wide table only exposes blocked-kick distances as
+  an unstructured `fg_blocked_list` string (`'43;46;48'`), not bucketed like
+  makes and misses are. Parsing that string and bucketing it the same way
+  closed all nine 2024 kickers' gaps exactly, to the kick.
+
+Just as important as the fixes: a disciplined accounting of what's *not*
+fixable, and why — so a future "this column looks off" doesn't turn into
+re-litigating settled ground. Several discrepancy families were investigated
+to a confident, documented conclusion and deliberately left alone: penalty-
+affected punt/kickoff return yardage (nflverse charts the post-penalty spot,
+PFR the play-described distance — quantified at 76 affected 2024 plays and a
++434-yard league-wide gap, too entangled with free-text play descriptions to
+parse reliably at scale); `comb`/`solo`/`ast` tackle counts (a mix of PFR's
+"Defense & Fumbles" page including fringe players who never otherwise show up
+defensively, plus the ordinary cross-tracker tackle-crediting noise that's
+famously inconsistent across official sources — and notably, an attempt to
+PBP-derive these performed *far worse* than the wide table, the opposite of
+the usual pattern here); `tgt` being off by exactly one for ~40 receivers (PFR
+doesn't count a target on a play an offensive penalty nullifies; nflverse
+does); and a structural quirk in `apyd` for traded players, whose PFR row
+reflects only their last team's stint total while this pipeline — mirroring
+nflverse's combined-season convention, the same one the rest of the schema
+relies on — reports a season total (proven exactly for Diontae Johnson and
+Cam Akers; architecturally irreducible without abandoning that convention
+everywhere else).
+
+### A circular dependency the original build never had to face
+Running the finished pipeline against a real new season (2025) surfaced one
+more problem — not a data-correctness one, a *structural* one. `*_seasons`
+rows carry a foreign key into `players`, and `players` is itself *built from*
+the `*_seasons` tables (`build_players.py`). The original 2000–2024 load
+never had to think about the order this implies, because it loaded every
+season first and only constructed `players` — and its foreign keys —
+afterward. A recurring refresh job doesn't get to do that: the very first
+2025 rookie's row was rejected by the foreign key, because their id couldn't
+exist in `players` until their season existed in `*_seasons` — which couldn't
+be written until their id existed in `players`.
+
+The fix breaks the cycle at its least ambiguous point: a brand-new player's
+canonical name, position, and season-span are *never* in question — by
+definition, their entire tracked history is the very data about to be
+written, so "most recent listed name" and "most frequent listed position"
+(the same rules `build_players.py` uses across a whole career) resolve to a
+single obvious answer with nothing to reconcile. `_seed_new_players` computes
+exactly that, straight from the in-memory tables, and inserts those rows
+*before* the season data — satisfying the foreign key — and
+`etl/supplement_players.py` (an upsert-based incremental counterpart to
+`build_players.py`'s full `drop … cascade; create table … as` rebuild, which
+would tear down and require re-creating every foreign key in the schema just
+to add a few names a year) runs immediately after to re-derive every player's
+canonical fields — old and new alike — from the now-complete picture.
+
+The first real run of the finished pipeline went cleanly end to end: 298
+brand-new players seeded with exactly correct canonical values (spot-checked
+against their actual 2025 listings), 2,404 rows appended across the six
+categories at 100% PFR-id linkage, 1,850 returning players' spans correctly
+extended into 2025, and zero structural inconsistencies — no orphaned foreign
+keys, no malformed spans, every formula identity (`comb = solo + ast`,
+`netyds = yds − retyds`, `fga_total = Σ fga_*`, …) holding exactly. True
+value-level validation — the kind `_validate_supplement_2024.py` exists for —
+isn't possible for 2025 by definition (there is no PFR export to diff
+against, which is the entire reason this pipeline exists); structural and
+internal-consistency validation is the most rigorous check available for a
+season this database has never seen before, and it came back clean.
