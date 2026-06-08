@@ -504,3 +504,42 @@ are excluded from `*_career` views by design. The fix is the one the schema
 doc prescribes (`100.0 * cmp / NULLIF(att, 0)`), and it's common enough
 across modules that stage 3 should build it once as a shared helper rather
 than re-deriving it per query.
+
+(Also caught and fixed in passing: `DB_SCHEMA.md` had said "seven box-score
+categories" in its prose while §3 always listed six — passing, offense,
+defense, kicking, punting, returns. A live count against the schema
+confirmed six; fixed everywhere "seven" appeared before it could mislead
+the data layer's design.)
+
+### Stage 3 — The data layer: models and query functions per module
+Modeled only what has a genuinely stable shape: `Player` (clean, underscore-
+free columns) got a real Pydantic model. Everything else — the six box-score
+categories (each with different stat columns), draft picks and combine
+prospects (both carrying PFR's digit-prefixed names like `_40yd`/`_1d`,
+which collide with Pydantic's leading-underscore-means-private convention)
+— travels as plain dicts wrapped in a thin `CategoryStats`/`PlayerProfile`
+envelope. Forcing fourteen near-identical strict models onto data that
+doesn't have a uniform shape would've meant fighting Pydantic aliases for
+no real type-safety win.
+
+`app/data/players.py`, `comparison.py`, and `draft.py` hold the query
+functions for modules 1–3, plus `app/data/common.py`'s `career_rate()` —
+the shared helper stage 2 called for, recomputing a rate from summed counts
+(`career_rate(cmp, att)` → `career_cmp_pct`) instead of selecting one that
+the `*_career` views correctly don't carry.
+
+Testing against real data exercised every documented special case
+end-to-end: Mahomes' profile correctly shows only the categories he
+actually appears in (passing/offense/defense — not kicking or punting);
+an offensive lineman's profile shows *zero* box-score categories but still
+carries a draft record (the no-personal-stat pattern from `DB_SCHEMA.md`
+§6.1, handled by surfacing an empty list rather than rows of nulls); an
+undrafted player's `draft` field comes back `None` rather than an error;
+and an unknown `player_id` returns `None` cleanly instead of raising.
+
+`find_busts()` is where stage 2's seasoning-period fix proved itself: with
+the cutoff applied (judging only draft classes ≤ 2021, four years before
+the latest class in the data), the list came back as JaMarcus Russell, Zach
+Wilson, Charles Rogers, Trey Lance, Justin Blackmon — names that match the
+real-world "biggest draft busts" consensus almost exactly, rather than a
+list of 2024-2025 rookies who simply haven't played enough games yet.
