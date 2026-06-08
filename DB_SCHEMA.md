@@ -6,7 +6,7 @@ live database — this reflects exactly what's there today (2000–2025, fully
 filled). For the *why* behind any design choice mentioned here, see
 `PROJECT_LOG.md`, which this document deliberately doesn't repeat.
 
-## 1. The shape of it: a hub with seven spokes, plus one unlinked satellite
+## 1. The shape of it: a hub with six spokes, plus one unlinked satellite
 
 ```
                          ┌────────────────────────┐
@@ -26,10 +26,10 @@ filled). For the *why* behind any design choice mentioned here, see
 ```
 
 - **`players`** is the hub every other table joins against. It is *built
-  from* the seven `*_seasons` tables (one collapsed identity per PFR
+  from* the six `*_seasons` tables (one collapsed identity per PFR
   `player_id`), not the other way around — see §6 for what that implies
   about query order and trust.
-- The **seven box-score categories** each follow an identical two-table
+- The **six box-score categories** each follow an identical two-table
   pattern: a `*_seasons` table (one row per player-season-team) and a
   `*_career` view (one row per player, derived by aggregation — see §3).
 - **`draft`** and **`combine_seasons`** both carry an FK to `players`, but
@@ -46,17 +46,17 @@ filled). For the *why* behind any design choice mentioned here, see
 | `player_id` | text, **PK** | PFR's own stable id (e.g. `BradTo00`). ~80 older players carry an all-lowercase legacy format (`vinatada01`) — preserved as-is, confirmed valid. |
 | `player_name` | text | the player's *most recently listed* name across all appearances (handles mid-career name changes, e.g. id `AlleJo03` = "Josh Allen" → "Josh Hines-Allen") |
 | `pos` | text | the *most frequently listed* position — a single best-guess label, deliberately not a normalized taxonomy (collapsing e.g. "LDE"/"RDE" would lose real information) |
-| `first_season`, `last_season`, `n_seasons` | bigint | span of *tracked* appearances across all seven categories — **not** necessarily a player's true rookie/final year (an offensive lineman may go years without a single tracked "skill" stat; see §6) |
+| `first_season`, `last_season`, `n_seasons` | bigint | span of *tracked* appearances across all six categories — **not** necessarily a player's true rookie/final year (an offensive lineman may go years without a single tracked "skill" stat; see §6) |
 
 11,627 rows, spanning seasons 2000–2025. Index: `ix_players_name`.
 
-## 3. The seven box-score categories
+## 3. The six box-score categories
 
 Each category ships as a `*_seasons` table (raw, one row per player per team
 per season — a player traded mid-season has multiple rows) and a `*_career`
 view (one row per player, lifetime).
 
-**Common `*_seasons` columns** (present in all seven, beyond category-specific stats):
+**Common `*_seasons` columns** (present in all six, beyond category-specific stats):
 
 | column | meaning |
 |---|---|
@@ -221,7 +221,7 @@ problem the moment you start querying:
    out of sync with `*_career` for any player who's kept playing since. Prefer
    the linked join for anything beyond a quick lookup.
 7. **Query/build order matters if you ever touch `players`.** It's *built
-   from* the seven `*_seasons` tables (`build_players.py`'s full rebuild, or
+   from* the six `*_seasons` tables (`build_players.py`'s full rebuild, or
    `supplement_players.py`'s incremental upsert) — not the other way round.
    A brand-new player must be seeded into `players` *before* their first
    season row can be written (the FK requires it); `supplement_seasons.py`
