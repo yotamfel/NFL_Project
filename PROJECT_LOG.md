@@ -478,3 +478,29 @@ the ETL's environment, since the two halves of the project now have
 genuinely different dependencies. `test_connection.py` confirmed the new
 config can reach the live database (`players`: 11,627 rows, matching
 `DB_SCHEMA.md` exactly).
+
+### Stage 2 — Rehearsing each module's queries against real data
+`DB_SCHEMA.md` already covers table shapes and known issues in depth, so
+this stage skipped re-deriving that and instead rehearsed the *actual*
+queries each module will need — written up in `server/docs/exploration_findings.md`,
+which doubles as a draft spec for stage 3's data-layer functions.
+
+Two things surfaced that weren't visible from the schema alone, both about
+the planned ML model (stage 5): a naive "round-1 picks with low `career_av`"
+query for finding busts returned almost entirely 2024-2025 rookies — their
+low value reflects not having played long enough yet, not having failed, so
+"bust" detection needs a minimum-seasoning-period filter on `draft_year`.
+And only 52.5% of linked combine prospects have complete numbers across the
+four key drills — notably *not* at random: Joe Burrow and Chase Young (the
+top two picks of 2020) both skipped the 40-yard dash and vertical jump,
+the way locked-in elite prospects often do. That makes "ran the drill at
+all" a potential feature in its own right, not just something to impute
+past. Filed both for stage 5 to design around deliberately rather than
+trip over later.
+
+One existing finding got a live confirmation: querying `passing_career` for
+`rate` failed with `UndefinedColumn`, exactly as documented — rate columns
+are excluded from `*_career` views by design. The fix is the one the schema
+doc prescribes (`100.0 * cmp / NULLIF(att, 0)`), and it's common enough
+across modules that stage 3 should build it once as a shared helper rather
+than re-deriving it per query.
