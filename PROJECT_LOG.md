@@ -575,3 +575,70 @@ comparison, 422 on invalid query params, 501 on the NL-search stub — and
 the full Mahomes profile came back through the API exactly as the data
 layer produced it (categories, career totals, draft slot, combine numbers
 all intact).
+
+### Stage 5 — A draft-value model: predicting career_av from the combine and the slot
+The spec asks for a model that judges draft picks against their measurable
+profile, so the first decision was the target. `draft.career_av` (PFR's
+Approximate Value) won over deriving a custom value metric from the
+box-score categories for three reasons at once: it already exists in the
+table, it's position-agnostic — a tackle and a wide receiver land on the
+same scale — and it *is* "career value" in the spec's own words, not an
+approximation of it.
+
+The architecture choice was shaped directly by a stage 2 finding, not
+picked for convenience: ~48% of linked combine prospects are missing key
+drill numbers, and *not* at random — locked-in elite prospects (Joe Burrow,
+Chase Young, ...) skip drills deliberately, which makes "didn't run it" a
+signal worth keeping rather than noise to paper over. `HistGradientBoosting
+Regressor` natively handles missing numeric values *and* categorical
+features (`pos`), so it can learn from the missingness pattern itself —
+imputing those gaps first would have laundered that signal away before the
+model ever saw it. `ml/prepare_data.py` builds the table feeding it
+(`combine_seasons` joined to `draft` on player and year, restricted to
+`career_av IS NOT NULL` and the same `DEFAULT_MIN_SEASONING_YEARS` cutoff
+`app/data/draft.py` uses for steals/busts — for the same reason: a class
+needs years to pass before its `career_av` reflects anything but "hasn't
+played enough yet").
+
+Evaluation uses a temporal split rather than a random one — train on
+draft classes through 2017, test on 2018-2021 — because that's the actual
+shape of the real task (judging a new class against everything that came
+before it), and a random split would let the model quietly key on era-
+specific context that a genuinely new class won't share. One small
+debugging note: `pd.read_sql` returns SQL `NULL` height values as `NaN`
+(a float), not `None`, so `_height_to_inches`'s null check had to be
+`pd.isna(ht)` rather than `ht is None` — an easy trap when a column is
+documented as nullable but the in-memory representation doesn't say `None`.
+
+The numbers, with the honest framing baked into the script's own output:
+on 4,358 seasoned prospects (2000-2021, 3,540 train / 818 test), the model
+reaches an MAE of 11.6 `career_av` points against a naive baseline (always
+guess the training-set mean) of 14.0, with R² = 0.02. That R² looks small
+in isolation, but `career_av` spans roughly 0-200 across a career and even
+professional scouting departments get this wrong constantly — beating the
+naive baseline by a real margin means the combine-and-slot profile carries
+*some* genuine signal, not that the model can call individual careers. That
+was the goal: a defensible, honestly-evaluated pipeline, not a claim of
+oracular accuracy.
+
+The "surprise score" (actual `career_av` minus the model's prediction) is
+where the model becomes interesting rather than just accurate-ish. The
+biggest positive surprises are a murderer's row of value picks the
+combine+slot profile didn't see coming: Tom Brady (6th round, pick 199 —
+predicted 64.7, actual 184, a +119.3 surprise that towers over everyone
+else), Russell Wilson, Dak Prescott, Travis Kelce, Lamar Jackson, and
+Aaron Rodgers among them. The negative-surprise list turned up an
+unplanned finding of its own: of the eight biggest model-flagged busts,
+*all eight* are quarterbacks taken in the first two rounds — Josh Rosen,
+Trey Lance, Dwayne Haskins, JaMarcus Russell, Sam Darnold, Trevor Lawrence,
+Matt Leinart, Zach Wilson. That's not a coincidence the model "knows"
+about — it falls out naturally from a combination of QBs commanding the
+highest draft capital (so they have the most `career_av` to lose relative
+to their predicted value) and the position being notoriously the hardest
+to evaluate from measurables alone, which is exactly the kind of pattern a
+"surprise score" is supposed to surface.
+
+The trained model and its feature list are persisted to
+`ml/draft_value_model.joblib` via `joblib.dump`, ready for a future
+endpoint to serve predictions and surprise scores without retraining on
+every request.

@@ -5,3 +5,7 @@ psycopg2-binary
 python-dotenv
 pydantic
 httpx
+scikit-learn
+joblib
+pandas
+matplotlib
