@@ -860,3 +860,50 @@ returns Tom Brady first, `/draft/steals` returns the correct list topped
 by Tom Brady (round 6, AV 184), and `/players/BradTo00` returns all four
 of his tracked categories (passing, offense, defense, punting) with draft
 slot (round 6, pick 199) intact.
+
+---
+
+## Stage 9 — Tests, Bug-Fixes & Responsive Polish
+
+Two URL-mapping bugs were found by tracing the React pages against the actual
+FastAPI router definitions:
+
+1. **Comparison endpoint mismatch** — The frontend called
+   `/comparison/career?ids=…` but the router registers the route as
+   `GET /compare?player_ids=…`.  Fixed in `client/src/api.js`
+   (`compareCareer` and `compareSeason`).
+
+2. **Draft endpoint mismatch** — The frontend called `/draft/picks?…` but the
+   actual route is `GET /draft?…`.  Fixed in `api.js` (`getDraftPicks`).
+
+3. **Comparison response shape** — `compare_career()` was returning a flat list
+   of rows.  The frontend expects `{ players: [{player_id, player_name, pos}],
+   career: [{…stats, player_name}] }`.  Fixed in
+   `server/app/data/comparison.py` by:
+   - adding a `_player_info()` helper that fetches player metadata in a
+     separate query and preserves the caller's player order (for colour pairing
+     in the chart);
+   - rewriting `compare_career()` and `compare_season()` to JOIN the career /
+     season view back to `players` and return the structured dict.
+
+4. **Server restart** — After the Python data-layer fix, the still-running
+   `uvicorn` process was serving old code.  Killed the background process and
+   restarted before verifying the fix.
+
+**Validation** — After restart, `curl /compare?player_ids=MahoPa00&player_ids=BradTo00&category=passing`
+returned `{"players": [{"player_id": "MahoPa00", "player_name": "Patrick Mahomes", …}, …], "career": […]}`.
+
+**Responsive design** (three targeted fixes, all via Tailwind utility classes):
+
+- `Nav.jsx` — changed the rigid `h-14` container to `min-h-14 flex-wrap py-2`
+  so the logo and nav links wrap to a second row on very narrow viewports
+  instead of overflowing.
+
+- `PlayerProfile.jsx` — changed the draft-info block from `text-right` to
+  `sm:text-right` so it left-aligns when it stacks below the player name on
+  small screens.
+
+- `DraftAnalysis.jsx` — added `w-full sm:w-{N}` to each filter input so they
+  expand to full width on mobile and collapse to their compact widths on sm+.
+
+All changes committed to git.

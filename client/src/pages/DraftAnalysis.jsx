@@ -59,11 +59,11 @@ export default function DraftAnalysis() {
         <div className="space-y-4">
           <div className="flex gap-3 flex-wrap">
             <input type="number" value={filters.year} onChange={set('year')} placeholder="Year"
-              className="w-28 bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
+              className="w-full sm:w-28 bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
             <input value={filters.team} onChange={set('team')} placeholder="Team (e.g. KAN)"
-              className="w-36 bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
+              className="w-full sm:w-36 bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
             <input value={filters.pos} onChange={set('pos')} placeholder="Position"
-              className="w-32 bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
+              className="w-full sm:w-32 bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
           </div>
           {picksLoading && <Loading text="Loading picks…" />}
           {picksError   && <ErrorMsg message={picksError} />}

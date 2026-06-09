@@ -120,7 +120,7 @@ export default function PlayerProfile() {
             </div>
           </div>
           {draft && (
-            <div className="text-right shrink-0">
+            <div className="sm:text-right shrink-0">
               <p className="text-slate-400 text-sm">Round {draft.round}, Pick {draft.pick} ({draft.draft_year})</p>
               <p className="text-slate-400 text-sm">{draft.team}{draft.college ? ` · ${draft.college}` : ''}</p>
               {draft.career_av != null && (

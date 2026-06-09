@@ -31,9 +31,9 @@ export const api = {
   getPlayer:     id => get(`/players/${id}`),
 
   compareCareer: (ids, category) =>
-    get(`/comparison/career?${ids.map(id => `ids=${encodeURIComponent(id)}`).join('&')}&category=${category}`),
+    get(`/compare?${ids.map(id => `player_ids=${encodeURIComponent(id)}`).join('&')}&category=${category}`),
   compareSeason: (ids, category, season) =>
-    get(`/comparison/season?${ids.map(id => `ids=${encodeURIComponent(id)}`).join('&')}&category=${category}&season=${season}`),
+    get(`/compare?${ids.map(id => `player_ids=${encodeURIComponent(id)}`).join('&')}&category=${category}&season=${season}`),
 
   getDraftPicks: ({ team, draft_year, pos, limit = 50 } = {}) => {
     const p = new URLSearchParams()
@@ -41,7 +41,7 @@ export const api = {
     if (draft_year) p.set('draft_year', draft_year)
     if (pos)        p.set('pos', pos)
     p.set('limit', limit)
-    return get(`/draft/picks?${p}`)
+    return get(`/draft?${p}`)
   },
   getSteals: () => get('/draft/steals'),
   getBusts:  () => get('/draft/busts'),
