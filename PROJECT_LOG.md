@@ -727,3 +727,77 @@ compromise, but a fit: this is a narrow, structured translation task (free
 text → one SQL statement against a schema spelled out in full in the
 system prompt), exactly the kind of job a fast, cheap model handles as
 capably as a larger one.
+
+### Stage 7 — The React frontend: structure, pages, and design
+
+The client directory was a placeholder from stage 1. Stage 7 turns it into
+a working React app — every screen built and styled, all four modules
+navigable, running against placeholder data whose shapes match the real API
+responses exactly so stage 8 is a straight data-source swap, not a
+structural one.
+
+Tech choices: **Vite 8 + React 19 + React Router v7** for the scaffolding
+(CRA is effectively dead; Vite is the current standard for React SPAs),
+**Tailwind CSS v4** (imported via the `@tailwindcss/vite` plugin, no
+`tailwind.config.js` required in v4 — one fewer config file) for a
+consistent dark-navy theme across all pages without managing CSS files,
+and **Recharts** for charts — it's a React-native library that renders
+cleanly with Recharts's own SVG engine, takes typed data arrays directly,
+and plays well with Tailwind's color tokens.
+
+The app has five routes and a sticky navigation bar that highlights the
+active route:
+
+**`/` — PlayerSearch**: a large search input that filters the player list
+client-side as you type (stage 8 replaces the filter with a real debounced
+`/api/players/search?q=...` call). Three feature cards below the search
+box give one-click access to the other modules, doubling as a quick
+orientation to what the app can do.
+
+**`/player/:id` — PlayerProfile**: the most data-dense page. An info card
+at the top shows the player's position, career span, and draft slot; a
+combine card shows the physical measurements in a tight horizontal row
+(height, weight, 40-yard, vertical, bench, broad jump — NULLs silently
+filtered out rather than shown as "—" in the header). Below that, one
+card per box-score category the player appears in: a career line chart
+(touchdowns/interceptions for QBs, scrimmage yards and TDs for offensive
+players, tackles and sacks for defenders) over seasons, followed by the
+full per-season table, followed by career totals in a compact summary line.
+`StatTable` is a generic column-driven component — columns are defined as
+`[{key, label, format?}]` dicts — so adding a new stat category in stage
+8 is just a new column definition, not a new component.
+
+**`/comparison` — Comparison**: colored player chips at the top (one per
+player, with the matching color in the bar chart), a four-metric bar chart
+(yards/TD/INT/games), and a head-to-head career-totals table below. A
+category dropdown is wired into the selector but in stage 7 the data
+behind it is still static — stage 8 will re-fetch when it changes.
+
+**`/draft` — DraftAnalysis**: three tabs. "Draft Picks" has live
+filter inputs (year, team, position) that filter the mock rows client-side
+in real time — the filter logic is the same whether the rows come from
+mock data or a real API call, so stage 8 only changes where the unfiltered
+list comes from. "Steals" and "Busts" each open with a callout card that
+explains its threshold (round 4+ with AV ≥ 50, and rounds 1-2 with AV ≤
+15 respectively) — framing the data honesty carries over from the backend.
+
+**`/search` — NaturalSearch**: a text input + Ask button (Enter key
+submits), five example question chips (in both Hebrew and English — exactly
+the two-language support the spec asks for), a `<details>` disclosure for
+the generated SQL (collapsed by default — there for power users and
+debugging, not in the way for casual use), and a results table that builds
+columns dynamically from whatever keys the first row has. Stage 7 uses a
+500ms delay + mock result to simulate the async round-trip; stage 8
+replaces that with `POST /api/search/natural`.
+
+Two shared components keep the visual language consistent:
+**`StatTable`** handles any table (alternating rows, hover highlight, auto
+`—` for null values, column formatters); **`StatChart`** wraps Recharts'
+`LineChart` and `BarChart` in dark-theme-styled `ResponsiveContainer`s
+with a shared tooltip/grid style.
+
+Vite's dev-server proxy (`/api/*` → `localhost:8000`) is configured in
+`vite.config.js` so stage 8's `fetch('/api/players/...')` calls work in
+development without CORS issues — no `localhost:8000` hardcoded anywhere
+in the frontend code. Confirmed: `vite build` produces a clean production
+bundle (187 kB gzipped JS, 592 modules), dev server responds `200`.
