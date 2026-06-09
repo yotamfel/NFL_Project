@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { api } from '../api'
+import { useUser } from '../context/UserContext'
 
 const EXAMPLES = [
   'Who had the most passing touchdowns between 2015 and 2020?',
@@ -14,11 +15,13 @@ export default function NaturalSearch() {
   const [result,   setResult]   = useState(null)
   const [error,    setError]    = useState(null)
   const [loading,  setLoading]  = useState(false)
+  const [saved,    setSaved]    = useState(false)
+  const { saveSearch } = useUser()
 
   const ask = async text => {
     const q = (text ?? question).trim()
     if (!q) return
-    setQuestion(q); setLoading(true); setError(null); setResult(null)
+    setQuestion(q); setLoading(true); setError(null); setResult(null); setSaved(false)
     try { setResult(await api.askQuestion(q)) }
     catch (e) { setError(e.message) }
     finally   { setLoading(false) }
@@ -89,6 +92,21 @@ export default function NaturalSearch() {
       {/* Results */}
       {result && (
         <div className="space-y-3">
+          {/* Save button */}
+          <div className="flex justify-end">
+            <button
+              onClick={() => { saveSearch(question, result.sql, result.rows); setSaved(true) }}
+              disabled={saved}
+              className={`text-sm font-medium px-4 py-1.5 rounded-lg transition-colors border ${
+                saved
+                  ? 'border-emerald-700/60 text-emerald-400 bg-emerald-900/30 cursor-default'
+                  : 'border-slate-700 text-slate-400 hover:text-white hover:border-violet-700/40 bg-slate-800/60'
+              }`}
+            >
+              {saved ? '✓ Saved' : '💾 Save result'}
+            </button>
+          </div>
+
           <details className="rounded-xl overflow-hidden group border border-slate-800"
             style={{ background: '#0a0a0f' }}>
             <summary className="px-5 py-3 text-sm text-slate-500 cursor-pointer hover:text-slate-300 select-none flex items-center gap-2">

@@ -3,6 +3,7 @@ import { api } from '../api'
 import { Loading, ErrorMsg } from '../components/Status'
 import StatTable from '../components/StatTable'
 import { ComparisonBarChart } from '../components/StatChart'
+import { useUser } from '../context/UserContext'
 
 const CATEGORIES = ['passing', 'offense', 'defense', 'kicking', 'punting', 'returns']
 const BAR_COLORS = ['#60a5fa', '#fbbf24', '#4ade80', '#f87171']
@@ -25,7 +26,9 @@ export default function Comparison() {
   const [data,    setData]    = useState(null)
   const [loading, setLoading] = useState(false)
   const [error,   setError]   = useState(null)
+  const [saved,   setSaved]   = useState(false)
   const debounceRef = useRef(null)
+  const { saveComparison } = useUser()
 
   useEffect(() => {
     if (playerIds.length === 0) { setData(null); return }
@@ -50,8 +53,15 @@ export default function Comparison() {
   const addPlayer = id => {
     if (!playerIds.includes(id) && playerIds.length < 4) setPlayerIds(p => [...p, id])
     setSearchQuery(''); setSearchResults([])
+    setSaved(false)
   }
-  const removePlayer = id => setPlayerIds(p => p.filter(x => x !== id))
+  const removePlayer = id => { setPlayerIds(p => p.filter(x => x !== id)); setSaved(false) }
+
+  const handleSave = () => {
+    if (!data) return
+    saveComparison(playerIds, data.players.map(p => p.player_name), category)
+    setSaved(true)
+  }
 
   const displayPlayers = data?.players ?? playerIds.map(id => ({ player_id: id, player_name: id, pos: '' }))
 
@@ -128,6 +138,21 @@ export default function Comparison() {
 
       {data && (
         <>
+          {/* Save button */}
+          <div className="flex justify-end">
+            <button
+              onClick={handleSave}
+              disabled={saved}
+              className={`text-sm font-medium px-4 py-1.5 rounded-lg transition-colors border ${
+                saved
+                  ? 'border-emerald-700/60 text-emerald-400 bg-emerald-900/30 cursor-default'
+                  : 'border-slate-700 text-slate-400 hover:text-white hover:border-slate-500 bg-slate-800/60'
+              }`}
+            >
+              {saved ? '✓ Saved' : '💾 Save comparison'}
+            </button>
+          </div>
+
           {/* Chart section */}
           <div className="rounded-2xl overflow-hidden border border-slate-700/60"
             style={{ background: 'linear-gradient(160deg, #0f172a 0%, #1e293b 100%)' }}>

@@ -5,6 +5,7 @@ import { Loading, ErrorMsg } from '../components/Status'
 import StatTable from '../components/StatTable'
 import { CareerLineChart } from '../components/StatChart'
 import { posColor, posGradient, CARD_STRIPES } from '../utils/posColors'
+import { useUser } from '../context/UserContext'
 
 const COLS = {
   passing: [
@@ -104,6 +105,8 @@ export default function PlayerProfile() {
 
   const { player, categories, draft, combine } = profile
   const c = posColor(player.pos)
+  const { savePlayer, removePlayer, isPlayerSaved } = useUser()
+  const saved = isPlayerSaved(player.player_id)
 
   return (
     <div className="space-y-5">
@@ -131,6 +134,19 @@ export default function PlayerProfile() {
                 {player.first_season}–{player.last_season} &nbsp;·&nbsp; {player.n_seasons} seasons
               </p>
             </div>
+            <button
+              onClick={() => saved ? removePlayer(player.player_id) : savePlayer(player)}
+              title={saved ? 'Remove from saved' : 'Save player'}
+              className="shrink-0 w-9 h-9 flex items-center justify-center rounded-full transition-all"
+              style={{
+                background: saved ? `${c.mid}40` : 'rgba(0,0,0,0.3)',
+                border: `1px solid ${saved ? c.hex : 'rgba(255,255,255,0.1)'}`,
+                color: saved ? c.hex : '#64748b',
+              }}
+            >
+              {saved ? '★' : '☆'}
+            </button>
+
             {draft && (
               <div className="sm:text-right shrink-0 bg-black/20 rounded-xl px-4 py-3">
                 <p className="text-slate-400 text-xs uppercase tracking-wider mb-1">Draft</p>
