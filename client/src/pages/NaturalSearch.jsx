@@ -7,7 +7,7 @@ const EXAMPLES = [
   'Top 5 running backs by career rushing yards',
   "What was Tom Brady's career completion percentage?",
   'Show me 2017 draft picks with the highest career AV',
-  'מי הרבעי גב עם הכי הרבה טאצ׳דאונים בין 2015 ל-2020?',
+  'Which wide receivers had over 1000 receiving yards in 2022?',
 ]
 
 export default function NaturalSearch() {
