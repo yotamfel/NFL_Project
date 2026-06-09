@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
 import { api } from '../api'
-import { useApi } from '../hooks/useApi'
 import { Loading, ErrorMsg } from '../components/Status'
 import StatTable from '../components/StatTable'
 import { ComparisonBarChart } from '../components/StatChart'
@@ -20,15 +19,23 @@ const CAREER_COLS = [
 
 export default function Comparison() {
   const [category, setCategory] = useState('passing')
-  const [playerIds, setPlayerIds] = useState(['MahoPa00', 'BradTo00'])
+  const [playerIds, setPlayerIds] = useState([])
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState([])
+  const [data, setData]       = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError]     = useState(null)
   const debounceRef = useRef(null)
 
-  const { data, loading, error } = useApi(
-    () => api.compareCareer(playerIds, category),
-    [playerIds.join(','), category]
-  )
+  useEffect(() => {
+    if (playerIds.length === 0) { setData(null); return }
+    let cancelled = false
+    setLoading(true); setError(null)
+    api.compareCareer(playerIds, category)
+      .then(r  => { if (!cancelled) { setData(r);         setLoading(false) } })
+      .catch(e => { if (!cancelled) { setError(e.message); setLoading(false) } })
+    return () => { cancelled = true }
+  }, [playerIds.join(','), category])
 
   // Player search for adding more
   useEffect(() => {
@@ -77,14 +84,15 @@ export default function Comparison() {
 
       {/* Player chips + add */}
       <div className="flex gap-2 flex-wrap items-center">
+        {playerIds.length === 0 && (
+          <p className="text-slate-500 text-sm">Add players below to start comparing.</p>
+        )}
         {(data?.players ?? playerIds.map(id => ({ player_id: id, player_name: id, pos: '' }))).map((p, i) => (
           <span key={p.player_id} className="flex items-center gap-2 bg-slate-800 border border-slate-700 rounded-full px-4 py-1.5 text-sm text-white">
             <span className="w-2.5 h-2.5 rounded-full" style={{ background: BAR_COLORS[i] }} />
             {p.player_name}
             {p.pos && <span className="text-slate-400 text-xs">{p.pos}</span>}
-            {playerIds.length > 2 && (
-              <button onClick={() => removePlayer(p.player_id)} className="text-slate-500 hover:text-red-400 ml-1">×</button>
-            )}
+            <button onClick={() => removePlayer(p.player_id)} className="text-slate-500 hover:text-red-400 ml-1">×</button>
           </span>
         ))}
 

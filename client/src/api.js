@@ -27,7 +27,13 @@ async function post(path, body) {
 }
 
 export const api = {
-  searchPlayers: q => get(`/players/search?q=${encodeURIComponent(q)}&limit=10`),
+  searchPlayers: (q = '', { pos, season, team, limit = 10 } = {}) => {
+    const p = new URLSearchParams({ q, limit })
+    if (pos)    p.set('pos', pos)
+    if (season) p.set('season', season)
+    if (team)   p.set('team', team)
+    return get(`/players/search?${p}`)
+  },
   getPlayer:     id => get(`/players/${id}`),
 
   compareCareer: (ids, category) =>

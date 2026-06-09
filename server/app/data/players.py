@@ -9,16 +9,54 @@ from app.models import CategoryStats, Player, PlayerProfile
 CATEGORIES = ["passing", "offense", "defense", "kicking", "punting", "returns"]
 
 
-def search_players(query: str, limit: int = 10) -> list[Player]:
-    sql = text("""
-        SELECT player_id, player_name, pos, first_season, last_season, n_seasons
-        FROM players
-        WHERE player_name ILIKE :pattern
-        ORDER BY last_season DESC NULLS LAST, player_name
-        LIMIT :limit
-    """)
+def search_players(
+    query: str,
+    limit: int = 10,
+    pos: str | None = None,
+    season: int | None = None,
+    team: str | None = None,
+) -> list[Player]:
+    params: dict = {"pattern": f"%{query}%", "limit": limit, "pos": pos, "season": season}
+
+    if team:
+        # team lives on the *_seasons tables, not on players directly
+        params["team"] = team.upper()
+        sql = text("""
+            WITH team_players AS (
+                SELECT DISTINCT player_id FROM passing_seasons WHERE UPPER(team) = :team
+                UNION
+                SELECT DISTINCT player_id FROM offense_seasons  WHERE UPPER(team) = :team
+                UNION
+                SELECT DISTINCT player_id FROM defense_seasons  WHERE UPPER(team) = :team
+                UNION
+                SELECT DISTINCT player_id FROM kicking_seasons  WHERE UPPER(team) = :team
+                UNION
+                SELECT DISTINCT player_id FROM punting_seasons  WHERE UPPER(team) = :team
+                UNION
+                SELECT DISTINCT player_id FROM returns_seasons  WHERE UPPER(team) = :team
+            )
+            SELECT p.player_id, p.player_name, p.pos, p.first_season, p.last_season, p.n_seasons
+            FROM players p
+            JOIN team_players tp ON tp.player_id = p.player_id
+            WHERE p.player_name ILIKE :pattern
+              AND (:pos    IS NULL OR UPPER(p.pos) = UPPER(:pos))
+              AND (:season IS NULL OR (p.first_season <= :season AND p.last_season >= :season))
+            ORDER BY p.last_season DESC NULLS LAST, p.player_name
+            LIMIT :limit
+        """)
+    else:
+        sql = text("""
+            SELECT player_id, player_name, pos, first_season, last_season, n_seasons
+            FROM players
+            WHERE player_name ILIKE :pattern
+              AND (:pos    IS NULL OR UPPER(pos) = UPPER(:pos))
+              AND (:season IS NULL OR (first_season <= :season AND last_season >= :season))
+            ORDER BY last_season DESC NULLS LAST, player_name
+            LIMIT :limit
+        """)
+
     with engine.connect() as conn:
-        rows = conn.execute(sql, {"pattern": f"%{query}%", "limit": limit}).fetchall()
+        rows = conn.execute(sql, params).fetchall()
     return [Player(**row._mapping) for row in rows]
 
 
