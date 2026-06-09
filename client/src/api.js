@@ -49,8 +49,10 @@ export const api = {
     p.set('limit', limit)
     return get(`/draft?${p}`)
   },
-  getSteals: () => get('/draft/steals'),
-  getBusts:  () => get('/draft/busts'),
+  getSteals: ({ minRound = 4, minAv = 50, limit = 50 } = {}) =>
+    get(`/draft/steals?min_round=${minRound}&min_career_av=${minAv}&limit=${limit}`),
+  getBusts: ({ maxRound = 2, maxAv = 15, limit = 50 } = {}) =>
+    get(`/draft/busts?max_round=${maxRound}&max_career_av=${maxAv}&limit=${limit}`),
 
   topPlayersByStat: (category, stat, { pos, season, min = 0, limit = 20 } = {}) => {
     const p = new URLSearchParams({ category, stat, min, limit })
