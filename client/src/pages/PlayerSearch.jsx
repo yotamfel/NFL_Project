@@ -5,14 +5,23 @@ import { api } from '../api'
 const POSITIONS = ['QB', 'RB', 'WR', 'TE', 'OL', 'DL', 'LB', 'CB', 'S', 'K', 'P']
 
 export default function PlayerSearch() {
-  const [query,   setQuery]   = useState('')
-  const [pos,     setPos]     = useState('')
-  const [season,  setSeason]  = useState('')
-  const [team,    setTeam]    = useState('')
-  const [results, setResults] = useState([])
-  const [searching, setSearching] = useState(false)
-  const debounceRef = useRef(null)
-  const navigate    = useNavigate()
+  const [query,      setQuery]      = useState('')
+  const [pos,        setPos]        = useState('')
+  const [season,     setSeason]     = useState('')
+  const [team,       setTeam]       = useState('')
+  const [posOpen,    setPosOpen]    = useState(false)
+  const [results,    setResults]    = useState([])
+  const [searching,  setSearching]  = useState(false)
+  const debounceRef  = useRef(null)
+  const posRef       = useRef(null)
+  const navigate     = useNavigate()
+
+  // Close position dropdown on outside click
+  useEffect(() => {
+    const handler = e => { if (posRef.current && !posRef.current.contains(e.target)) setPosOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
 
   const hasFilter = pos || season || team
 
@@ -69,22 +78,43 @@ export default function PlayerSearch() {
       </div>
 
       {/* Filters */}
-      <div className="mt-3 flex gap-2 flex-wrap items-center">
-        {/* Position chips */}
-        <div className="flex gap-1 flex-wrap">
-          {POSITIONS.map(p => (
-            <button
-              key={p}
-              onClick={() => setPos(pos === p ? '' : p)}
-              className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
-                pos === p
-                  ? 'bg-blue-600 border-blue-600 text-white'
-                  : 'border-slate-700 text-slate-400 hover:text-slate-200 hover:border-slate-500'
-              }`}
-            >
-              {p}
-            </button>
-          ))}
+      <div className="mt-3 flex gap-2 items-center">
+        {/* Position dropdown */}
+        <div className="relative" ref={posRef}>
+          <button
+            onClick={() => setPosOpen(o => !o)}
+            className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border transition-colors ${
+              pos
+                ? 'bg-blue-600 border-blue-600 text-white'
+                : 'border-slate-700 text-slate-400 hover:text-slate-200 hover:border-slate-500'
+            }`}
+          >
+            {pos || 'Position'}
+            <span className="text-xs opacity-60">▾</span>
+          </button>
+          {posOpen && (
+            <ul className="absolute top-full mt-1 left-0 w-32 bg-slate-800 border border-slate-700 rounded-xl overflow-hidden shadow-xl z-20">
+              {pos && (
+                <li
+                  onClick={() => { setPos(''); setPosOpen(false) }}
+                  className="px-4 py-2 text-sm text-slate-500 hover:bg-slate-700 cursor-pointer border-b border-slate-700"
+                >
+                  All positions
+                </li>
+              )}
+              {POSITIONS.map(p => (
+                <li
+                  key={p}
+                  onClick={() => { setPos(p); setPosOpen(false) }}
+                  className={`px-4 py-2 text-sm cursor-pointer hover:bg-slate-700 ${
+                    pos === p ? 'text-blue-400 font-medium' : 'text-slate-200'
+                  }`}
+                >
+                  {p}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
 
         {/* Season + Team inputs */}
@@ -106,8 +136,8 @@ export default function PlayerSearch() {
         />
 
         {hasFilter && (
-          <button onClick={clearFilters} className="text-xs text-slate-500 hover:text-slate-300 transition-colors ml-1">
-            Clear filters
+          <button onClick={clearFilters} className="text-xs text-slate-500 hover:text-slate-300 transition-colors">
+            Clear
           </button>
         )}
       </div>
