@@ -1,6 +1,6 @@
 import {
   LineChart, Line,
-  BarChart, Bar,
+  BarChart, Bar, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts'
 
@@ -34,6 +34,31 @@ export function CareerLineChart({ data, xKey, lines }) {
         ))}
       </LineChart>
     </ResponsiveContainer>
+  )
+}
+
+// data = [{name, value, color?}, ...] — one entry per player, all for the same metric
+export function MetricBarChart({ title, data, colors }) {
+  return (
+    <div className="rounded-xl p-3 border border-slate-700/40" style={{ background: 'rgba(15,23,42,0.7)' }}>
+      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">{title}</p>
+      <ResponsiveContainer width="100%" height={160}>
+        <BarChart data={data} margin={{ top: 4, right: 8, left: -10, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+          <XAxis dataKey="name" stroke="#475569" tick={{ fill: '#94a3b8', fontSize: 11 }} />
+          <YAxis stroke="#475569" tick={{ fill: '#94a3b8', fontSize: 10 }} width={42}
+            tickFormatter={v => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v} />
+          <Tooltip
+            contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }}
+            labelStyle={{ color: '#94a3b8' }}
+            formatter={v => [v?.toLocaleString(), '']}
+          />
+          <Bar dataKey="value" radius={[3, 3, 0, 0]} maxBarSize={60}>
+            {data.map((_, i) => <Cell key={i} fill={colors[i % colors.length]} />)}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
   )
 }
 

@@ -1,7 +1,7 @@
 """Module 1 endpoints: player search and full profile."""
 from fastapi import APIRouter, HTTPException, Query
 
-from app.data.players import get_player_profile, search_players
+from app.data.players import get_player_profile, search_players, top_players_by_stat
 from app.models import Player, PlayerProfile
 
 router = APIRouter(prefix="/players", tags=["players"])
@@ -18,6 +18,21 @@ def search(
     if not q and not pos and not season and not team:
         return []
     return search_players(q, limit=limit, pos=pos, season=season, team=team)
+
+
+@router.get("/top_by_stat")
+def top_by_stat(
+    category: str = Query(...),
+    stat:     str = Query(...),
+    pos:      str | None  = Query(None),
+    season:   int | None  = Query(None),
+    min:      float       = Query(0.0, ge=0),
+    limit:    int         = Query(20, ge=1, le=50),
+):
+    try:
+        return top_players_by_stat(category, stat, pos=pos, season=season, min_val=min, limit=limit)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
 
 @router.get("/{player_id}", response_model=PlayerProfile)

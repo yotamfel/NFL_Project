@@ -38,6 +38,50 @@ def _team_codes(team: str) -> list[str]:
     return _TEAM_ALIASES.get(team.upper(), [team.upper()])
 
 
+# Whitelisted stat columns per category — stat is interpolated into SQL after
+# this check, so the whitelist is the sole injection guard.
+_ALLOWED_STATS: dict[str, frozenset[str]] = {
+    "passing": frozenset({"yds", "td", "int", "cmp", "att", "sk", "g"}),
+    "offense": frozenset({"rush_yds", "rush_td", "rec", "rec_yds", "rec_td", "yscm", "touch", "att", "g"}),
+    "defense": frozenset({"comb", "solo", "ast", "sk", "int", "pd", "ff", "fr", "g"}),
+    "kicking": frozenset({"fgm_total", "fga_total", "xpm", "xpa", "g"}),
+    "punting": frozenset({"pnt", "yds", "netyds", "tb", "pnt20", "g"}),
+    "returns": frozenset({"punt_ret", "punt_ret_yds", "punt_ret_td", "kick_ret", "kick_ret_yds", "kick_ret_td", "apyd", "g"}),
+}
+
+
+def top_players_by_stat(
+    category: str,
+    stat: str,
+    pos: str | None = None,
+    season: int | None = None,
+    min_val: float = 0,
+    limit: int = 20,
+) -> list[dict]:
+    if category not in CATEGORIES:
+        raise ValueError(f"unknown category {category!r}")
+    if stat not in _ALLOWED_STATS.get(category, frozenset()):
+        raise ValueError(f"stat {stat!r} not allowed for category {category!r}")
+
+    sql = text(f"""
+        SELECT p.player_id, p.player_name, p.pos,
+               MAX(s.{stat}) AS best_value
+        FROM {category}_seasons s
+        JOIN players p ON p.player_id = s.player_id
+        WHERE (:pos    IS NULL OR UPPER(p.pos) = UPPER(:pos))
+          AND (:season IS NULL OR s.season = :season)
+          AND s.{stat} IS NOT NULL
+        GROUP BY p.player_id, p.player_name, p.pos
+        HAVING MAX(s.{stat}) >= :min_val
+        ORDER BY best_value DESC
+        LIMIT :limit
+    """)
+
+    with engine.connect() as conn:
+        rows = conn.execute(sql, {"pos": pos, "season": season, "min_val": min_val, "limit": limit}).fetchall()
+    return [dict(r._mapping) for r in rows]
+
+
 def search_players(
     query: str,
     limit: int = 10,

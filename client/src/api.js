@@ -52,5 +52,12 @@ export const api = {
   getSteals: () => get('/draft/steals'),
   getBusts:  () => get('/draft/busts'),
 
+  topPlayersByStat: (category, stat, { pos, season, min = 0, limit = 20 } = {}) => {
+    const p = new URLSearchParams({ category, stat, min, limit })
+    if (pos)    p.set('pos', pos)
+    if (season) p.set('season', season)
+    return get(`/players/top_by_stat?${p}`)
+  },
+
   askQuestion: question => post('/search/natural', { question }),
 }
