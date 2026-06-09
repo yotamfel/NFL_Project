@@ -907,3 +907,63 @@ returned `{"players": [{"player_id": "MahoPa00", "player_name": "Patrick Mahomes
   expand to full width on mobile and collapse to their compact widths on sm+.
 
 All changes committed to git.
+
+---
+
+## Stage 10 — Deployment & Documentation
+
+**Route conflict resolution**
+
+In development, the Vite proxy rewrote `/api/*` → `http://localhost:8000/*`
+(stripping the `/api` prefix), so FastAPI never saw `/api` at all.  Serving
+the built React app from FastAPI in production exposed a path conflict:
+FastAPI's `/draft` and `/search` router prefixes would swallow React Router's
+`/draft` and `/search` navigation paths before the SPA catch-all could handle
+them.
+
+Fixed by:
+1. Adding `prefix="/api"` when including each router in `main.py` — all API
+   paths are now `/api/players/…`, `/api/compare`, `/api/draft/…`,
+   `/api/search/…`, `/api/health`.
+2. Removing the `rewrite: path => path.replace(/^\/api/, '')` from the Vite
+   dev-server proxy in `vite.config.js` — the proxy now forwards
+   `/api/players/search` to `http://localhost:8000/api/players/search` intact,
+   matching the new FastAPI routes.  The `api.js` `BASE = '/api'` constant
+   required no change.
+
+**Production static-file serving**
+
+`main.py` conditionally mounts `client/dist/assets` as StaticFiles and
+registers a `/{full_path:path}` catch-all that returns `client/dist/index.html`
+when `client/dist/` exists.  Order matters: the API routers and assets mount
+are registered before the catch-all so API requests are never accidentally
+caught by the SPA handler.
+
+In development (without `dist/`) the conditional block is skipped and Vite's
+own dev-server handles the UI.  The same uvicorn process serves production.
+
+**Startup script**
+
+`start.ps1` — one-command production launcher.  Builds the frontend if
+`client/dist/` is missing (first run), then starts uvicorn.  Accepts a `-Port`
+parameter (default 8000).
+
+**README**
+
+`README.md` covers: feature overview, tech stack, prerequisites, setup steps
+(Python venv, `.env`, ML model training, npm install), dev vs production run
+commands, full API route reference, and project directory structure.
+
+**Validation**
+
+After restart with the new routing:
+- `GET /api/health` → `{"status":"ok"}`
+- `GET /api/players/search?q=Brady` → Brady Cook, Brady Russell, Tom Brady…
+- `GET /api/draft/steals` → Tom Brady (round 6) at index 0
+- `GET /api/compare?player_ids=MahoPa00&player_ids=BradTo00&category=passing`
+  → `{"players":[…], "career":[…]}`
+- `GET /` → 200 (serves `index.html`)
+- `GET /comparison` → 200 (SPA catch-all)
+- `GET /assets/index-CNpR8Dvb.css` → 200 (static asset)
+
+Project complete.
