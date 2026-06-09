@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { api } from '../api'
 
 const POSITIONS = ['QB', 'RB', 'WR', 'TE', 'OL', 'DL', 'LB', 'CB', 'S', 'K', 'P']
+const YEARS = Array.from({ length: 26 }, (_, i) => 2025 - i)  // 2025 down to 2000
 
 export default function PlayerSearch() {
   const [query,      setQuery]      = useState('')
@@ -10,15 +11,20 @@ export default function PlayerSearch() {
   const [season,     setSeason]     = useState('')
   const [team,       setTeam]       = useState('')
   const [posOpen,    setPosOpen]    = useState(false)
+  const [yearOpen,   setYearOpen]   = useState(false)
   const [results,    setResults]    = useState([])
   const [searching,  setSearching]  = useState(false)
   const debounceRef  = useRef(null)
   const posRef       = useRef(null)
+  const yearRef      = useRef(null)
   const navigate     = useNavigate()
 
-  // Close position dropdown on outside click
+  // Close dropdowns on outside click
   useEffect(() => {
-    const handler = e => { if (posRef.current && !posRef.current.contains(e.target)) setPosOpen(false) }
+    const handler = e => {
+      if (posRef.current  && !posRef.current.contains(e.target))  setPosOpen(false)
+      if (yearRef.current && !yearRef.current.contains(e.target)) setYearOpen(false)
+    }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [])
@@ -117,15 +123,43 @@ export default function PlayerSearch() {
           )}
         </div>
 
-        {/* Season + Team inputs */}
-        <input
-          type="number"
-          value={season}
-          onChange={e => setSeason(e.target.value)}
-          placeholder="Year"
-          min="2000" max="2025"
-          className="w-20 bg-slate-800 border border-slate-700 text-white text-sm rounded-lg px-3 py-1.5 focus:outline-none focus:border-blue-500 placeholder-slate-500"
-        />
+        {/* Year dropdown */}
+        <div className="relative" ref={yearRef}>
+          <button
+            onClick={() => setYearOpen(o => !o)}
+            className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border transition-colors ${
+              season
+                ? 'bg-blue-600 border-blue-600 text-white'
+                : 'border-slate-700 text-slate-400 hover:text-slate-200 hover:border-slate-500'
+            }`}
+          >
+            {season || 'Year'}
+            <span className="text-xs opacity-60">▾</span>
+          </button>
+          {yearOpen && (
+            <ul className="absolute top-full mt-1 left-0 w-24 max-h-56 overflow-y-auto bg-slate-800 border border-slate-700 rounded-xl shadow-xl z-20">
+              {season && (
+                <li
+                  onClick={() => { setSeason(''); setYearOpen(false) }}
+                  className="px-4 py-2 text-sm text-slate-500 hover:bg-slate-700 cursor-pointer border-b border-slate-700 sticky top-0 bg-slate-800"
+                >
+                  All years
+                </li>
+              )}
+              {YEARS.map(y => (
+                <li
+                  key={y}
+                  onClick={() => { setSeason(String(y)); setYearOpen(false) }}
+                  className={`px-4 py-2 text-sm cursor-pointer hover:bg-slate-700 ${
+                    season === String(y) ? 'text-blue-400 font-medium' : 'text-slate-200'
+                  }`}
+                >
+                  {y}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
         <input
           type="text"
           value={team}
