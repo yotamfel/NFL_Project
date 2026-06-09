@@ -6,13 +6,34 @@ from app.db import engine
 # Allowed stat columns per stat category — column name is interpolated into SQL
 # after this whitelist check, so this is the sole injection guard.
 _STAT_WHITELIST: dict[str, frozenset[str]] = {
-    "passing": frozenset({"yds", "td", "int", "cmp", "att", "sk", "g"}),
-    "offense": frozenset({"rush_yds", "rush_td", "rec", "rec_yds", "rec_td", "yscm", "touch", "att", "g"}),
-    "defense": frozenset({"comb", "solo", "ast", "sk", "int", "pd", "ff", "fr", "g"}),
-    "kicking": frozenset({"fgm_total", "fga_total", "xpm", "xpa", "g"}),
-    "punting": frozenset({"pnt", "yds", "netyds", "tb", "pnt20", "g"}),
-    "returns": frozenset({"punt_ret", "punt_ret_yds", "punt_ret_td", "kick_ret",
-                          "kick_ret_yds", "kick_ret_td", "apyd", "g"}),
+    "passing": frozenset({
+        "yds", "td", "int", "cmp", "att", "sk", "g",
+        "rate", "qbr", "y_per_a", "ay_per_a", "ny_per_a", "any_per_a",
+        "sk_pct", "_4qc", "gwd",
+    }),
+    "offense": frozenset({
+        "rush_yds", "rush_td", "rec", "rec_yds", "rec_td", "yscm", "touch", "att", "g",
+        "tgt", "ctch_pct", "y_per_tgt", "y_per_r",
+        "rec_first_downs", "rush_first_downs", "fmb",
+    }),
+    "defense": frozenset({
+        "comb", "solo", "ast", "sk", "int", "pd", "ff", "fr", "g",
+        "tfl", "qb_hits", "int_ret_yds", "int_td", "fr_td", "sfty",
+    }),
+    "kicking": frozenset({
+        "fgm_total", "fga_total", "xpm", "xpa", "g",
+        "fgm_40_49", "fga_40_49", "fgm_50_plus", "fga_50_plus",
+        "ko", "koyds", "koavg", "tb", "tb_pct",
+    }),
+    "punting": frozenset({
+        "pnt", "yds", "netyds", "tb", "pnt20", "g",
+        "y_per_p", "ny_per_p", "retyds", "blck", "in20_pct",
+    }),
+    "returns": frozenset({
+        "punt_ret", "punt_ret_yds", "punt_ret_td",
+        "kick_ret", "kick_ret_yds", "kick_ret_td", "apyd", "g",
+        "y_per_punt_ret", "y_per_kick_ret",
+    }),
 }
 
 # A "steal"/"bust" verdict needs the player to have had enough time to prove

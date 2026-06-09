@@ -41,12 +41,44 @@ def _team_codes(team: str) -> list[str]:
 # Whitelisted stat columns per category — stat is interpolated into SQL after
 # this check, so the whitelist is the sole injection guard.
 _ALLOWED_STATS: dict[str, frozenset[str]] = {
-    "passing": frozenset({"yds", "td", "int", "cmp", "att", "sk", "g"}),
-    "offense": frozenset({"rush_yds", "rush_td", "rec", "rec_yds", "rec_td", "yscm", "touch", "att", "g"}),
-    "defense": frozenset({"comb", "solo", "ast", "sk", "int", "pd", "ff", "fr", "g"}),
-    "kicking": frozenset({"fgm_total", "fga_total", "xpm", "xpa", "g"}),
-    "punting": frozenset({"pnt", "yds", "netyds", "tb", "pnt20", "g"}),
-    "returns": frozenset({"punt_ret", "punt_ret_yds", "punt_ret_td", "kick_ret", "kick_ret_yds", "kick_ret_td", "apyd", "g"}),
+    "passing": frozenset({
+        "yds", "td", "int", "cmp", "att", "sk", "g",
+        # advanced
+        "rate", "qbr", "y_per_a", "ay_per_a", "ny_per_a", "any_per_a",
+        "sk_pct", "_4qc", "gwd", "_1d",
+    }),
+    "offense": frozenset({
+        "rush_yds", "rush_td", "rec", "rec_yds", "rec_td", "yscm", "touch", "att", "g",
+        # advanced
+        "tgt", "ctch_pct", "y_per_tgt", "y_per_r",
+        "rec_first_downs", "rush_first_downs", "fmb",
+        "rec_lng", "rush_lng",
+    }),
+    "defense": frozenset({
+        "comb", "solo", "ast", "sk", "int", "pd", "ff", "fr", "g",
+        # advanced
+        "tfl", "qb_hits", "int_ret_yds", "int_td", "fr_td", "fum_ret_yds", "sfty",
+    }),
+    "kicking": frozenset({
+        "fgm_total", "fga_total", "xpm", "xpa", "g",
+        # advanced — by distance
+        "fgm_0_19", "fga_0_19", "fgm_20_29", "fga_20_29",
+        "fgm_30_39", "fga_30_39", "fgm_40_49", "fga_40_49",
+        "fgm_50_plus", "fga_50_plus",
+        # kickoffs
+        "ko", "koyds", "koavg", "tb", "tb_pct",
+    }),
+    "punting": frozenset({
+        "pnt", "yds", "netyds", "tb", "pnt20", "g",
+        # advanced
+        "y_per_p", "ny_per_p", "retyds", "blck", "in20_pct",
+    }),
+    "returns": frozenset({
+        "punt_ret", "punt_ret_yds", "punt_ret_td",
+        "kick_ret", "kick_ret_yds", "kick_ret_td", "apyd", "g",
+        # advanced
+        "y_per_punt_ret", "y_per_kick_ret", "punt_ret_lng", "kick_ret_lng",
+    }),
 }
 
 

@@ -4,6 +4,7 @@ import { Loading, ErrorMsg } from '../components/Status'
 import StatTable from '../components/StatTable'
 import { MetricBarChart } from '../components/StatChart'
 import { useUser } from '../context/UserContext'
+import { STAT_DEFS } from '../utils/statDefinitions'
 
 const CATEGORIES = ['passing', 'offense', 'defense', 'kicking', 'punting', 'returns']
 const BAR_COLORS = ['#60a5fa', '#fbbf24', '#4ade80', '#f87171']
@@ -12,40 +13,64 @@ const YEARS      = Array.from({ length: 26 }, (_, i) => 2025 - i)
 
 const STAT_OPTIONS = {
   passing: [
-    { key: 'yds', label: 'Pass Yards' },
-    { key: 'td',  label: 'Touchdowns' },
-    { key: 'int', label: 'Interceptions' },
-    { key: 'att', label: 'Attempts' },
-    { key: 'cmp', label: 'Completions' },
+    { key: 'yds',      label: 'Pass Yards' },
+    { key: 'td',       label: 'Touchdowns' },
+    { key: 'int',      label: 'Interceptions' },
+    { key: 'att',      label: 'Attempts' },
+    { key: 'cmp',      label: 'Completions' },
+    { key: 'rate',     label: 'Passer Rating' },
+    { key: 'qbr',      label: 'ESPN QBR' },
+    { key: 'any_per_a',label: 'ANY/A' },
+    { key: 'y_per_a',  label: 'Y/A' },
+    { key: 'sk',       label: 'Sacks Taken' },
+    { key: '_4qc',     label: '4th-Qtr Comebacks' },
+    { key: 'gwd',      label: 'Game-Winning Drives' },
   ],
   offense: [
-    { key: 'yscm',     label: 'Scrimmage Yards' },
-    { key: 'rush_yds', label: 'Rush Yards' },
-    { key: 'rec_yds',  label: 'Rec Yards' },
-    { key: 'rec',      label: 'Receptions' },
-    { key: 'rush_td',  label: 'Rush TDs' },
-    { key: 'rec_td',   label: 'Rec TDs' },
+    { key: 'yscm',            label: 'Scrimmage Yards' },
+    { key: 'rush_yds',        label: 'Rush Yards' },
+    { key: 'rec_yds',         label: 'Rec Yards' },
+    { key: 'rec',             label: 'Receptions' },
+    { key: 'rush_td',         label: 'Rush TDs' },
+    { key: 'rec_td',          label: 'Rec TDs' },
+    { key: 'tgt',             label: 'Targets' },
+    { key: 'y_per_tgt',       label: 'Yards Per Target' },
+    { key: 'y_per_r',         label: 'Yards Per Reception' },
+    { key: 'rec_first_downs', label: 'Receiving First Downs' },
+    { key: 'rush_first_downs',label: 'Rushing First Downs' },
+    { key: 'fmb',             label: 'Fumbles' },
   ],
   defense: [
-    { key: 'comb', label: 'Total Tackles' },
-    { key: 'sk',   label: 'Sacks' },
-    { key: 'int',  label: 'INTs' },
-    { key: 'pd',   label: 'Pass Deflections' },
-    { key: 'ff',   label: 'Forced Fumbles' },
+    { key: 'comb',        label: 'Total Tackles' },
+    { key: 'sk',          label: 'Sacks' },
+    { key: 'int',         label: 'INTs' },
+    { key: 'pd',          label: 'Pass Deflections' },
+    { key: 'ff',          label: 'Forced Fumbles' },
+    { key: 'tfl',         label: 'Tackles For Loss' },
+    { key: 'qb_hits',     label: 'QB Hits' },
+    { key: 'int_td',      label: 'Pick-Sixes' },
+    { key: 'sfty',        label: 'Safeties' },
   ],
   kicking: [
-    { key: 'fgm_total', label: 'FG Made' },
-    { key: 'fga_total', label: 'FG Attempted' },
-    { key: 'xpm',       label: 'Extra Points Made' },
+    { key: 'fgm_total',   label: 'FG Made' },
+    { key: 'fga_total',   label: 'FG Attempted' },
+    { key: 'xpm',         label: 'Extra Points Made' },
+    { key: 'fgm_40_49',   label: 'FG Made 40-49 yds' },
+    { key: 'fgm_50_plus', label: 'FG Made 50+ yds' },
   ],
   punting: [
     { key: 'pnt',    label: 'Punts' },
     { key: 'yds',    label: 'Punt Yards' },
     { key: 'netyds', label: 'Net Yards' },
+    { key: 'pnt20',  label: 'Punts Inside 20' },
+    { key: 'blck',   label: 'Blocked Punts' },
   ],
   returns: [
-    { key: 'kick_ret_yds', label: 'KR Yards' },
-    { key: 'punt_ret_yds', label: 'PR Yards' },
+    { key: 'kick_ret_yds',  label: 'KR Yards' },
+    { key: 'punt_ret_yds',  label: 'PR Yards' },
+    { key: 'kick_ret_td',   label: 'KR Touchdowns' },
+    { key: 'punt_ret_td',   label: 'PR Touchdowns' },
+    { key: 'apyd',          label: 'All-Purpose Yards' },
   ],
 }
 
@@ -335,11 +360,16 @@ export default function Comparison() {
                   )}
                 </div>
                 {filterCat && filterStat && (
-                  <p className="text-xs text-slate-600">
-                    Showing top players by {STAT_OPTIONS[filterCat]?.find(s => s.key === filterStat)?.label ?? filterStat}
-                    {filterMin ? ` (min ${Number(filterMin).toLocaleString()})` : ''}
-                    {filterSeason ? ` in ${filterSeason}` : ' (career best)'}
-                  </p>
+                  <div>
+                    <p className="text-xs text-slate-600">
+                      Showing top players by {STAT_OPTIONS[filterCat]?.find(s => s.key === filterStat)?.label ?? filterStat}
+                      {filterMin ? ` (min ${Number(filterMin).toLocaleString()})` : ''}
+                      {filterSeason ? ` in ${filterSeason}` : ' (career best)'}
+                    </p>
+                    {STAT_DEFS[filterStat] && (
+                      <p className="text-xs text-slate-500 mt-1 italic">{STAT_DEFS[filterStat]}</p>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
