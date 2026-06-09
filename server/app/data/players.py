@@ -8,6 +8,35 @@ from app.models import CategoryStats, Player, PlayerProfile
 # (see DB_SCHEMA.md §3). Not user input — safe to interpolate into table names.
 CATEGORIES = ["passing", "offense", "defense", "kicking", "punting", "returns"]
 
+# PFR changed team abbreviations over time (e.g. NWE→NE, KAN→KC).
+# Both old and new codes coexist in the DB, so map each alias to all variants.
+_TEAM_ALIASES: dict[str, list[str]] = {
+    "NE":  ["NE",  "NWE"],
+    "NWE": ["NE",  "NWE"],
+    "KC":  ["KC",  "KAN"],
+    "KAN": ["KC",  "KAN"],
+    "GB":  ["GB",  "GNB"],
+    "GNB": ["GB",  "GNB"],
+    "NO":  ["NO",  "NOR"],
+    "NOR": ["NO",  "NOR"],
+    "SF":  ["SF",  "SFO"],
+    "SFO": ["SF",  "SFO"],
+    "TB":  ["TB",  "TAM"],
+    "TAM": ["TB",  "TAM"],
+    "LV":  ["LV",  "LVR", "OAK"],
+    "LVR": ["LV",  "LVR", "OAK"],
+    "OAK": ["LV",  "LVR", "OAK"],
+    "LA":  ["LA",  "LAR", "STL"],
+    "LAR": ["LA",  "LAR", "STL"],
+    "STL": ["LA",  "LAR", "STL"],
+    "LAC": ["LAC", "SDG"],
+    "SDG": ["LAC", "SDG"],
+}
+
+
+def _team_codes(team: str) -> list[str]:
+    return _TEAM_ALIASES.get(team.upper(), [team.upper()])
+
 
 def search_players(
     query: str,
@@ -16,24 +45,25 @@ def search_players(
     season: int | None = None,
     team: str | None = None,
 ) -> list[Player]:
-    params: dict = {"pattern": f"%{query}%", "limit": limit, "pos": pos, "season": season}
+    params: dict = {"pattern": f"%{query}%", "limit": limit, "pos": pos, "season": season, "teams": []}
 
     if team:
-        # team lives on the *_seasons tables, not on players directly
-        params["team"] = team.upper()
+        # team lives on the *_seasons tables, not on players directly.
+        # Use ANY(:teams) to cover all historical abbreviations for the same franchise.
+        params["teams"] = _team_codes(team)
         sql = text("""
             WITH team_players AS (
-                SELECT DISTINCT player_id FROM passing_seasons WHERE UPPER(team) = :team
+                SELECT DISTINCT player_id FROM passing_seasons WHERE UPPER(team) = ANY(:teams)
                 UNION
-                SELECT DISTINCT player_id FROM offense_seasons  WHERE UPPER(team) = :team
+                SELECT DISTINCT player_id FROM offense_seasons  WHERE UPPER(team) = ANY(:teams)
                 UNION
-                SELECT DISTINCT player_id FROM defense_seasons  WHERE UPPER(team) = :team
+                SELECT DISTINCT player_id FROM defense_seasons  WHERE UPPER(team) = ANY(:teams)
                 UNION
-                SELECT DISTINCT player_id FROM kicking_seasons  WHERE UPPER(team) = :team
+                SELECT DISTINCT player_id FROM kicking_seasons  WHERE UPPER(team) = ANY(:teams)
                 UNION
-                SELECT DISTINCT player_id FROM punting_seasons  WHERE UPPER(team) = :team
+                SELECT DISTINCT player_id FROM punting_seasons  WHERE UPPER(team) = ANY(:teams)
                 UNION
-                SELECT DISTINCT player_id FROM returns_seasons  WHERE UPPER(team) = :team
+                SELECT DISTINCT player_id FROM returns_seasons  WHERE UPPER(team) = ANY(:teams)
             )
             SELECT p.player_id, p.player_name, p.pos, p.first_season, p.last_season, p.n_seasons
             FROM players p
