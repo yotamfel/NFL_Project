@@ -3,6 +3,18 @@ from sqlalchemy import text
 
 from app.db import engine
 
+# Allowed stat columns per stat category — column name is interpolated into SQL
+# after this whitelist check, so this is the sole injection guard.
+_STAT_WHITELIST: dict[str, frozenset[str]] = {
+    "passing": frozenset({"yds", "td", "int", "cmp", "att", "sk", "g"}),
+    "offense": frozenset({"rush_yds", "rush_td", "rec", "rec_yds", "rec_td", "yscm", "touch", "att", "g"}),
+    "defense": frozenset({"comb", "solo", "ast", "sk", "int", "pd", "ff", "fr", "g"}),
+    "kicking": frozenset({"fgm_total", "fga_total", "xpm", "xpa", "g"}),
+    "punting": frozenset({"pnt", "yds", "netyds", "tb", "pnt20", "g"}),
+    "returns": frozenset({"punt_ret", "punt_ret_yds", "punt_ret_td", "kick_ret",
+                          "kick_ret_yds", "kick_ret_td", "apyd", "g"}),
+}
+
 # A "steal"/"bust" verdict needs the player to have had enough time to prove
 # (or disprove) themselves. Stage 2's exploration found that a naive query
 # for low-career_av round-1 picks returned almost entirely 2024-2025 rookies
@@ -40,6 +52,87 @@ def get_draft_picks(team: str | None = None, draft_year: int | None = None,
         LIMIT :limit
     """)
     with engine.connect() as conn:
+        rows = conn.execute(sql, params).fetchall()
+    return [dict(r._mapping) for r in rows]
+
+
+def get_custom_draft_rank(
+    round_val: int,
+    round_op: str,          # "gte" (round >=) or "lte" (round <=)
+    stat_val: float,
+    stat_op: str,           # "gte" (stat >=) or "lte" (stat <=)
+    category: str = "career_av",
+    stat: str | None = None,
+    scope: str = "career",  # "career" or "season" (best single season)
+    pos: str | None = None,
+    min_seasoning_years: int = DEFAULT_MIN_SEASONING_YEARS,
+    limit: int = 50,
+) -> list[dict]:
+    if round_op not in ("gte", "lte"):
+        raise ValueError("round_op must be 'gte' or 'lte'")
+    if stat_op not in ("gte", "lte"):
+        raise ValueError("stat_op must be 'gte' or 'lte'")
+    if scope not in ("career", "season"):
+        raise ValueError("scope must be 'career' or 'season'")
+
+    round_sql = ">=" if round_op == "gte" else "<="
+    stat_sql  = ">=" if stat_op  == "gte" else "<="
+    order     = "DESC" if stat_op == "gte" else "ASC"
+    params    = {"round_val": round_val, "stat_val": stat_val,
+                 "pos": pos, "limit": limit}
+
+    with engine.connect() as conn:
+        params["cutoff"] = _latest_draft_year(conn) - min_seasoning_years
+
+        if category == "career_av":
+            sql = text(f"""
+                SELECT d.draft_year, d.round, d.pick, d.player_name, d.pos, d.team,
+                       d.career_av, d.career_av AS stat_value
+                FROM draft d
+                WHERE d.round {round_sql} :round_val
+                  AND d.career_av IS NOT NULL
+                  AND d.career_av {stat_sql} :stat_val
+                  AND d.draft_year <= :cutoff
+                  AND (:pos IS NULL OR UPPER(d.pos) = UPPER(:pos))
+                ORDER BY stat_value {order}
+                LIMIT :limit
+            """)
+        else:
+            valid = _STAT_WHITELIST.get(category, frozenset())
+            if not stat or stat not in valid:
+                raise ValueError(f"stat {stat!r} not allowed for category {category!r}")
+
+            if scope == "career":
+                sql = text(f"""
+                    SELECT d.draft_year, d.round, d.pick, d.player_name, d.pos, d.team,
+                           d.career_av, c.{stat} AS stat_value
+                    FROM draft d
+                    JOIN {category}_career c ON c.player_id = d.player_id
+                    WHERE d.round {round_sql} :round_val
+                      AND c.{stat} IS NOT NULL
+                      AND c.{stat} {stat_sql} :stat_val
+                      AND d.draft_year <= :cutoff
+                      AND (:pos IS NULL OR UPPER(d.pos) = UPPER(:pos))
+                    ORDER BY stat_value {order}
+                    LIMIT :limit
+                """)
+            else:
+                sql = text(f"""
+                    SELECT d.draft_year, d.round, d.pick, d.player_name, d.pos, d.team,
+                           d.career_av, MAX(s.{stat}) AS stat_value
+                    FROM draft d
+                    JOIN {category}_seasons s ON s.player_id = d.player_id
+                    WHERE d.round {round_sql} :round_val
+                      AND d.draft_year <= :cutoff
+                      AND (:pos IS NULL OR UPPER(d.pos) = UPPER(:pos))
+                    GROUP BY d.draft_year, d.round, d.pick, d.player_name,
+                             d.pos, d.team, d.career_av
+                    HAVING MAX(s.{stat}) IS NOT NULL
+                       AND MAX(s.{stat}) {stat_sql} :stat_val
+                    ORDER BY stat_value {order}
+                    LIMIT :limit
+                """)
+
         rows = conn.execute(sql, params).fetchall()
     return [dict(r._mapping) for r in rows]
 

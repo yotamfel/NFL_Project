@@ -49,10 +49,12 @@ export const api = {
     p.set('limit', limit)
     return get(`/draft?${p}`)
   },
-  getSteals: ({ minRound = 4, minAv = 50, limit = 50 } = {}) =>
-    get(`/draft/steals?min_round=${minRound}&min_career_av=${minAv}&limit=${limit}`),
-  getBusts: ({ maxRound = 2, maxAv = 15, limit = 50 } = {}) =>
-    get(`/draft/busts?max_round=${maxRound}&max_career_av=${maxAv}&limit=${limit}`),
+  getCustomDraft: ({ roundVal, roundOp, statVal, statOp, category = 'career_av', stat, scope = 'career', pos, limit = 50 } = {}) => {
+    const p = new URLSearchParams({ round_val: roundVal, round_op: roundOp, stat_val: statVal, stat_op: statOp, category, scope, limit })
+    if (pos)  p.set('pos', pos)
+    if (stat) p.set('stat', stat)
+    return get(`/draft/custom?${p}`)
+  },
 
   topPlayersByStat: (category, stat, { pos, season, min = 0, limit = 20 } = {}) => {
     const p = new URLSearchParams({ category, stat, min, limit })
