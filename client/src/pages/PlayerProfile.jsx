@@ -201,7 +201,7 @@ export default function PlayerProfile() {
 
   const toggleAdvanced = cat => setAdvancedSections(prev => {
     const next = new Set(prev)
-    if (next.has(cat)) next.delete(cat) else next.add(cat)
+    if (next.has(cat)) { next.delete(cat) } else { next.add(cat) }
     return next
   })
 
