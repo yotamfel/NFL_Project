@@ -1,0 +1,13 @@
+.git
+.gitignore
+*.md
+server/.env
+server/venv/
+server/.venv/
+server/__pycache__/
+server/ml/__pycache__/
+client/node_modules/
+client/dist/
+db_backups/
+.vscode/
+.idea/
