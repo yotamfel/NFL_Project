@@ -801,3 +801,62 @@ Vite's dev-server proxy (`/api/*` → `localhost:8000`) is configured in
 development without CORS issues — no `localhost:8000` hardcoded anywhere
 in the frontend code. Confirmed: `vite build` produces a clean production
 bundle (187 kB gzipped JS, 592 modules), dev server responds `200`.
+
+### Stage 8 — Connecting the frontend to the real API
+
+Every page now calls the real backend instead of the mock data. The
+structural change from stage 7 to stage 8 was exactly as small as
+planned: the mock data was already shaped to match the API responses, so
+the only edit in each page was the data source, not the layout or
+rendering logic.
+
+Three new files handle the plumbing that was implicit in the mock:
+`src/api.js` centralises all fetch calls (one `get` and one `post`
+helper, every endpoint exposed as a named function) so if an endpoint
+changes in the future there's one place to update; `src/hooks/useApi.js`
+is a small `useEffect`-based hook that exposes `{data, loading, error}`
+and cancels stale in-flight requests via `AbortController` when its deps
+change (necessary for the comparison page, where switching category fires
+a new request before the previous one might have returned);
+`src/components/Status.jsx` is a pair of `<Loading>` and `<ErrorMsg>`
+components so every page shows the same spinner and the same error card.
+
+Page-by-page notes on what changed and what was learned in the process:
+
+**PlayerSearch**: replaced the client-side filter with a real
+`/api/players/search?q=…` call, debounced at 250ms so a fast typist
+doesn't fire a request on every keystroke. The debounce ref is cleaned up
+on unmount.
+
+**PlayerProfile**: `useApi(() => api.getPlayer(id), [id])` — the `id`
+dependency means navigating from one player's page directly to another
+re-fetches automatically without a full page reload. A real-data
+discovery: Tom Brady's profile returns four categories (passing, offense,
+defense, punting) — every column definition added to stage 7 was needed,
+and the profile correctly shows only the categories the player actually
+appears in (no empty sections).
+
+**Comparison**: the most state-heavy page. Starts with `['MahoPa00',
+'BradTo00']` and exposes a live search input for adding up to four players
+(the same debounced search as PlayerSearch). Changing the category
+dropdown fires a new API request; `useApi`'s AbortController prevents the
+wrong category's result from landing if the user switches twice quickly.
+
+**DraftAnalysis**: the three API calls (picks, steals, busts) run
+simultaneously — `useApi` fires them all on mount rather than waiting for
+tabs to be clicked, so the data is already there when the user switches
+tabs. The filter inputs (year, team, pos) pass their values as query
+params to `/api/draft/picks`; the backend's own filtering logic handles
+the rest.
+
+**NaturalSearch**: the only non-`useApi` page (because the question is
+fired by a user action, not on mount). A try/catch around `api.askQuestion`
+maps the backend's `422` detail string directly to the error display —
+honest failures ("the question couldn't be translated to a query",
+"out-of-domain question") surface as readable text, not as "HTTP 422".
+
+End-to-end smoke test confirmed: `/health` 200, `/players/search?q=Brady`
+returns Tom Brady first, `/draft/steals` returns the correct list topped
+by Tom Brady (round 6, AV 184), and `/players/BradTo00` returns all four
+of his tracked categories (passing, offense, defense, punting) with draft
+slot (round 6, pick 199) intact.
