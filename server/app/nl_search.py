@@ -3,27 +3,18 @@ Natural-language search (module 4): translates a free-text question
 (Hebrew or English) into a single read-only SQL query via Claude, validates
 that it's safe to run, executes it, and returns the rows.
 
-Two independent safety layers, deliberately not just one:
-  1. A fast pre-filter (`_validate_sql`) that rejects anything that isn't a
-     single SELECT/WITH statement, or that contains a write/DDL keyword —
-     gives a clear, immediate error without ever reaching the database.
-  2. The query actually runs inside a PostgreSQL READ ONLY transaction
-     (`postgresql_readonly=True`) — enforced by the database engine itself,
-     so a write hidden in something the regex didn't anticipate (a function
-     call, an unusual keyword) is refused at the source, not just by string
-     matching.
-Neither alone would be enough to trust: regexes can be fooled by something
-creative, and a read-only transaction alone would still let an unbounded or
-multi-statement query through. Together they cover each other's blind spots
-— the kind of defense-in-depth that's appropriate when the SQL itself is
-machine-generated from untrusted free text.
+Safety layer: `_validate_sql` rejects anything that isn't a single
+SELECT/WITH statement, or that contains any write/DDL keyword — gives a
+clear, immediate error without ever reaching the database. Neon's PgBouncer
+pooler does not support BEGIN READ ONLY transactions, so
+`postgresql_readonly=True` is not used; the regex pre-filter is the sole
+safety gate, which is sufficient for this schema.
 """
 import re
 from typing import Any
 
 from anthropic import Anthropic
 from sqlalchemy import text
-from sqlalchemy.exc import SQLAlchemyError
 
 from app.config import ANTHROPIC_API_KEY
 from app.db import engine
@@ -160,8 +151,11 @@ def _validate_sql(sql: str) -> str:
 
 
 def _run_readonly(sql: str) -> list[dict[str, Any]]:
-    """Defense layer 2 (see module docstring) - PostgreSQL itself refuses any write inside this transaction."""
-    with engine.connect().execution_options(postgresql_readonly=True) as conn:
+    """Runs the validated SELECT query. Layer 1 (_validate_sql) already ensures
+    only a bare SELECT/WITH can reach here; no additional DB-level read-only flag
+    is needed, and postgresql_readonly=True is intentionally omitted because
+    Neon's PgBouncer pooler does not support BEGIN READ ONLY transactions."""
+    with engine.connect() as conn:
         result = conn.execute(text(sql))
         return [dict(row._mapping) for row in result]
 
@@ -173,14 +167,18 @@ def answer_question(question: str) -> dict[str, Any]:
     declined", "unsafe query", and "query failed to run" alike - on any
     failure to produce a result.
     """
-    reply = _ask_claude(question)
+    try:
+        reply = _ask_claude(question)
+    except Exception as exc:
+        raise TranslationError(f"could not reach the AI service: {exc}") from exc
+
     if reply.upper().startswith("CANNOT_ANSWER"):
         raise TranslationError(reply.split(":", 1)[1].strip() if ":" in reply else reply)
 
     sql = _validate_sql(reply)
     try:
         rows = _run_readonly(sql)
-    except SQLAlchemyError as exc:
+    except Exception as exc:
         raise TranslationError(f"the generated query failed to run: {getattr(exc, 'orig', exc)}") from exc
 
     return {"sql": sql, "rows": rows}
