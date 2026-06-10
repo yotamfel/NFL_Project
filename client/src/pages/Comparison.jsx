@@ -271,6 +271,19 @@ const ALL_TABLE_COLS = {
   ],
 }
 
+// Auto-select best comparison category based on player position
+const POS_CATEGORY = {
+  QB: 'passing',
+  RB: 'offense', FB: 'offense', HB: 'offense',
+  WR: 'offense', TE: 'offense',
+  OL: 'offense', OT: 'offense', OG: 'offense', C: 'offense', T: 'offense', G: 'offense',
+  DE: 'defense', DT: 'defense', DL: 'defense', NT: 'defense',
+  LB: 'defense', ILB: 'defense', OLB: 'defense', MLB: 'defense',
+  CB: 'defense', S: 'defense', FS: 'defense', SS: 'defense', DB: 'defense',
+  K: 'kicking',
+  P: 'punting',
+}
+
 const SUFFIXES = new Set(['II', 'III', 'IV', 'V', 'Jr.', 'Sr.', 'Jr', 'Sr'])
 function shortName(full = '') {
   const parts = full.trim().split(/\s+/).filter(p => !SUFFIXES.has(p))
@@ -289,6 +302,7 @@ export default function Comparison() {
   const [filtersOpen,   setFiltersOpen]   = useState(false)
   const [showAllStats,  setShowAllStats]  = useState(false)
   const [addPanelOpen,  setAddPanelOpen]  = useState(true)
+  const [compSeason,    setCompSeason]    = useState('')
 
   // Filters
   const [filterPos,    setFilterPos]    = useState('')
@@ -300,16 +314,19 @@ export default function Comparison() {
   const debounceRef = useRef(null)
   const { saveComparison } = useUser()
 
-  // Load comparison data
+  // Load comparison data (career or specific season)
   useEffect(() => {
     if (playerIds.length === 0) { setData(null); return }
     let cancelled = false
     setLoading(true); setError(null)
-    api.compareCareer(playerIds, category)
+    const req = compSeason
+      ? api.compareSeason(playerIds, category, parseInt(compSeason))
+      : api.compareCareer(playerIds, category)
+    req
       .then(r  => { if (!cancelled) { setData(r);          setLoading(false) } })
       .catch(e => { if (!cancelled) { setError(e.message); setLoading(false) } })
     return () => { cancelled = true }
-  }, [playerIds.join(','), category])
+  }, [playerIds.join(','), category, compSeason])
 
   // Search players to add
   useEffect(() => {
@@ -344,8 +361,15 @@ export default function Comparison() {
     return () => clearTimeout(debounceRef.current)
   }, [searchQuery, filterPos, filterSeason, filterCat, filterStat, filterMin])
 
-  const addPlayer = id => {
-    if (!playerIds.includes(id) && playerIds.length < 4) setPlayerIds(p => [...p, id])
+  const addPlayer = (id, pos) => {
+    if (!playerIds.includes(id) && playerIds.length < 4) {
+      setPlayerIds(p => [...p, id])
+      // Auto-set category from first player's position
+      if (playerIds.length === 0 && pos) {
+        const cat = POS_CATEGORY[pos.toUpperCase()]
+        if (cat) setCategory(cat)
+      }
+    }
     setSearchQuery(''); setSearchResults([])
     setSaved(false)
     setAddPanelOpen(false)
@@ -502,7 +526,7 @@ export default function Comparison() {
             {searchResults.length > 0 && (
               <ul className="absolute top-full mt-1 w-full bg-slate-800 border border-slate-700 rounded-xl overflow-hidden shadow-xl z-10 max-h-72 overflow-y-auto">
                 {searchResults.map((p, i) => (
-                  <li key={p.player_id} onClick={() => addPlayer(p.player_id)}
+                  <li key={p.player_id} onClick={() => addPlayer(p.player_id, p.pos)}
                     className="px-4 py-2.5 hover:bg-slate-700/80 cursor-pointer flex items-center justify-between text-sm border-b border-slate-700/60 last:border-0">
                     <div className="flex items-center gap-2.5">
                       <span className="w-2 h-2 rounded-full shrink-0" style={{ background: BAR_COLORS[i % 4] }} />
@@ -528,6 +552,31 @@ export default function Comparison() {
         </div>
       )}
 
+      {/* Career / Season toggle — visible once players are selected */}
+      {playerIds.length > 0 && (
+        <div className="flex items-center gap-3 flex-wrap">
+          <span className="text-xs text-slate-500 uppercase tracking-wider">Comparing:</span>
+          <div className="flex rounded-lg overflow-hidden border border-slate-700 text-xs">
+            <button
+              onClick={() => setCompSeason('')}
+              className={`px-3 py-1.5 transition-colors ${!compSeason ? 'bg-slate-600 text-white' : 'text-slate-500 hover:text-slate-300'}`}>
+              Career totals
+            </button>
+            <button
+              onClick={() => { if (!compSeason) setCompSeason(String(YEARS[0])) }}
+              className={`px-3 py-1.5 transition-colors ${compSeason ? 'bg-slate-600 text-white' : 'text-slate-500 hover:text-slate-300'}`}>
+              Single season
+            </button>
+          </div>
+          {compSeason && (
+            <select value={compSeason} onChange={e => setCompSeason(e.target.value)}
+              className="bg-slate-800 border border-slate-700 text-slate-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-slate-500">
+              {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
+          )}
+        </div>
+      )}
+
       {loading && <Loading text="Loading comparison…" />}
       {error   && <ErrorMsg message={error} />}
 
@@ -549,7 +598,9 @@ export default function Comparison() {
           <div className="rounded-2xl border border-slate-700/60 p-5 space-y-4"
             style={{ background: 'linear-gradient(160deg, #0f172a 0%, #1e293b 100%)' }}>
             <div className="flex items-center justify-between flex-wrap gap-3">
-              <h2 className="text-white font-bold capitalize">Career totals — {category}</h2>
+              <h2 className="text-white font-bold capitalize">
+                {compSeason ? `${compSeason} season` : 'Career totals'} — {category}
+              </h2>
               <div className="flex items-center gap-3 flex-wrap">
                 {data.players.map((p, i) => (
                   <span key={p.player_id} className="flex items-center gap-1.5 text-xs text-slate-400">
@@ -573,7 +624,9 @@ export default function Comparison() {
           {/* Stats table */}
           <div className="bg-slate-800/70 border border-slate-700/60 rounded-2xl p-5">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-white font-bold capitalize">Career stats — {category}</h2>
+              <h2 className="text-white font-bold capitalize">
+                {compSeason ? `${compSeason} stats` : 'Career stats'} — {category}
+              </h2>
               <div className="flex rounded-lg overflow-hidden border border-slate-700 text-xs">
                 <button
                   onClick={() => setShowAllStats(false)}
