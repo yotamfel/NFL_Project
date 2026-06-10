@@ -9,8 +9,8 @@ const LINKS = [
   { to: '/comparison', label: 'Compare' },
   { to: '/draft', label: 'Draft' },
   { to: '/search', label: 'Smart Search' },
-  { to: '/saved', label: 'Saved' },
   { to: '/trends', label: 'Trends' },
+  { to: '/saved', label: 'Saved' },
 ]
 
 export default function Nav() {
