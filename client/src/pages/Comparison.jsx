@@ -288,6 +288,7 @@ export default function Comparison() {
   const [saved,         setSaved]         = useState(false)
   const [filtersOpen,   setFiltersOpen]   = useState(false)
   const [showAllStats,  setShowAllStats]  = useState(false)
+  const [addPanelOpen,  setAddPanelOpen]  = useState(true)
 
   // Filters
   const [filterPos,    setFilterPos]    = useState('')
@@ -347,6 +348,7 @@ export default function Comparison() {
     if (!playerIds.includes(id) && playerIds.length < 4) setPlayerIds(p => [...p, id])
     setSearchQuery(''); setSearchResults([])
     setSaved(false)
+    setAddPanelOpen(false)
   }
   const removePlayer = id => { setPlayerIds(p => p.filter(x => x !== id)); setSaved(false) }
 
@@ -378,7 +380,7 @@ export default function Comparison() {
         </select>
       </div>
 
-      {/* Active player chips */}
+      {/* Active player chips + Add player toggle */}
       {playerIds.length > 0 && (
         <div className="flex gap-2 flex-wrap items-center">
           {displayPlayers.map((p, i) => (
@@ -392,11 +394,21 @@ export default function Comparison() {
             </div>
           ))}
           {playerIds.length >= 2 && <span className="text-xs font-black text-slate-600 px-1">VS</span>}
+          {playerIds.length < 4 && (
+            <button onClick={() => setAddPanelOpen(v => !v)}
+              className={`text-xs px-3 py-1.5 rounded-xl border transition-colors ${
+                addPanelOpen
+                  ? 'border-slate-600 text-slate-300 bg-slate-700/60'
+                  : 'border-dashed border-slate-700 text-slate-500 hover:text-slate-300 hover:border-slate-600'
+              }`}>
+              {addPanelOpen ? '✕ Close' : '＋ Add player'}
+            </button>
+          )}
         </div>
       )}
 
       {/* Add player panel */}
-      {playerIds.length < 4 && (
+      {playerIds.length < 4 && addPanelOpen && (
         <div className="rounded-2xl border border-slate-700/60 bg-slate-800/40 p-4 space-y-3">
           <div className="flex items-center justify-between">
             <p className="text-xs font-bold uppercase tracking-widest text-slate-500">
@@ -436,7 +448,7 @@ export default function Comparison() {
               <div className="rounded-xl bg-slate-900/60 border border-slate-700/40 p-3 space-y-2">
                 <p className="text-xs font-semibold text-slate-500">Filter by stat</p>
                 <div className="flex gap-2 flex-wrap items-center">
-                  <select value={filterCat} onChange={e => { setFilterCat(e.target.value); setFilterStat(''); setFilterMin('') }}
+                  <select value={filterCat} onChange={e => { const c = e.target.value; setFilterCat(c); setFilterStat(''); setFilterMin(''); if (c) setCategory(c) }}
                     className="bg-slate-800 border border-slate-700 text-slate-300 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-slate-500">
                     <option value="">Category…</option>
                     {CATEGORIES.map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
