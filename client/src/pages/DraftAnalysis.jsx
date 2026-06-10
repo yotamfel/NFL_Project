@@ -196,7 +196,11 @@ function DefinitionBuilder({ def, onChange, mode }) {
         <div>
           <p className={labelCls}>Stat category</p>
           <select value={def.category}
-            onChange={e => onChange({ ...def, category: e.target.value, stat: '', statVal: '' })}
+            onChange={e => {
+              const newCat = e.target.value
+              const firstStat = newCat !== 'career_av' ? (STAT_OPTIONS[newCat]?.[0]?.key ?? '') : ''
+              onChange({ ...def, category: newCat, stat: firstStat, statVal: '' })
+            }}
             className={`w-full ${inputCls}`}>
             {STAT_CATEGORIES.map(c => (
               <option key={c} value={c}>{c === 'career_av' ? 'Career AV' : cap(c)}</option>
