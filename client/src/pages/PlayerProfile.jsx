@@ -172,19 +172,27 @@ const COLS = {
   },
 }
 
-const CHART_LINES = {
+// Each category maps to an array of chart groups.
+// Each group is rendered as a separate CareerLineChart with its own Y-axis.
+const CHART_GROUPS = {
   passing: [
-    { dataKey: 'yds', label: 'Pass Yards', color: '#3b82f6' },
-    { dataKey: 'td',  label: 'TDs',        color: '#22c55e' },
-    { dataKey: 'int', label: 'INTs',       color: '#ef4444' },
+    [{ dataKey: 'yds', label: 'Pass Yards', color: '#3b82f6' }],
+    [
+      { dataKey: 'td',  label: 'TDs',  color: '#22c55e' },
+      { dataKey: 'int', label: 'INTs', color: '#ef4444' },
+    ],
   ],
   offense: [
-    { dataKey: 'yscm', label: 'Scrimmage Yards', color: '#f59e0b' },
-    { dataKey: 'rrtd', label: 'TDs',             color: '#22c55e' },
+    [
+      { dataKey: 'yscm', label: 'Scrimmage Yards', color: '#f59e0b' },
+      { dataKey: 'rrtd', label: 'TDs',             color: '#22c55e' },
+    ],
   ],
   defense: [
-    { dataKey: 'comb', label: 'Tackles', color: '#f87171' },
-    { dataKey: 'sk',   label: 'Sacks',   color: '#fbbf24' },
+    [
+      { dataKey: 'comb', label: 'Tackles', color: '#f87171' },
+      { dataKey: 'sk',   label: 'Sacks',   color: '#fbbf24' },
+    ],
   ],
 }
 
@@ -297,9 +305,9 @@ export default function PlayerProfile() {
       {categories.map(cat => {
         const colSet = COLS[cat.category]
         if (!colSet) return null
-        const isAdv = advancedSections.has(cat.category)
-        const cols  = isAdv ? colSet.advanced : colSet.basic
-        const lines = CHART_LINES[cat.category]
+        const isAdv      = advancedSections.has(cat.category)
+        const cols       = isAdv ? colSet.advanced : colSet.basic
+        const chartGroups = CHART_GROUPS[cat.category]
 
         return (
           <div key={cat.category} className="bg-slate-800/70 border border-slate-700/60 rounded-2xl p-5 space-y-4">
@@ -323,8 +331,12 @@ export default function PlayerProfile() {
               </div>
             </div>
 
-            {lines && cat.seasons.length > 1 && (
-              <CareerLineChart data={cat.seasons} xKey="season" lines={lines} />
+            {chartGroups && cat.seasons.length > 1 && (
+              <div className={chartGroups.length > 1 ? 'grid grid-cols-2 gap-3' : ''}>
+                {chartGroups.map((lines, i) => (
+                  <CareerLineChart key={i} data={cat.seasons} xKey="season" lines={lines} />
+                ))}
+              </div>
             )}
             <StatTable columns={cols} rows={cat.seasons} keyField="season" />
 
