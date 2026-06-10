@@ -79,6 +79,13 @@ export const api = {
     return get(`/trends/aggregate?${p}`)
   },
   getTrendMeta: category => get(`/trends/meta/${category}`),
+  getTeamBreakdown: ({ category, stat, agg = 'sum', pos, seasonFrom, seasonTo } = {}) => {
+    const p = new URLSearchParams({ category, stat, agg })
+    if (pos)        p.set('pos', pos)
+    if (seasonFrom) p.set('season_from', seasonFrom)
+    if (seasonTo)   p.set('season_to', seasonTo)
+    return get(`/trends/by_team?${p}`)
+  },
 
   askQuestion: question => post('/search/natural', { question }),
 }

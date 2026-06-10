@@ -60,6 +60,43 @@ def get_league_trend(
     return [dict(r._mapping) for r in rows]
 
 
+def get_team_breakdown(
+    category: str,
+    stat: str,
+    agg: str = "sum",
+    pos: str | None = None,
+    season_from: int | None = None,
+    season_to: int | None = None,
+) -> list[dict]:
+    if category not in _ALLOWED_STATS:
+        raise ValueError(f"unknown category {category!r}")
+    if stat not in _ALLOWED_STATS[category]:
+        raise ValueError(f"stat {stat!r} not allowed for category {category!r}")
+    if agg not in _AGG_MAP:
+        raise ValueError(f"agg must be one of {list(_AGG_MAP)}")
+
+    agg_expr = _AGG_MAP[agg](stat)
+    params: dict = {"pos": pos, "season_from": season_from, "season_to": season_to}
+
+    sql = text(f"""
+        SELECT UPPER(s.team) AS team,
+               {agg_expr} AS value,
+               COUNT(DISTINCT s.player_id) AS player_count
+        FROM {category}_seasons s
+        JOIN players p ON p.player_id = s.player_id
+        WHERE s.{stat} IS NOT NULL
+          AND (:pos IS NULL OR UPPER(p.pos) = UPPER(:pos))
+          AND (:season_from IS NULL OR s.season >= :season_from)
+          AND (:season_to   IS NULL OR s.season <= :season_to)
+        GROUP BY UPPER(s.team)
+        ORDER BY value DESC NULLS LAST
+    """)
+
+    with engine.connect() as conn:
+        rows = conn.execute(sql, params).fetchall()
+    return [dict(r._mapping) for r in rows]
+
+
 def get_trend_season_range(category: str) -> dict:
     sql = text(f"SELECT MIN(season) AS min_s, MAX(season) AS max_s FROM {category}_seasons")
     with engine.connect() as conn:

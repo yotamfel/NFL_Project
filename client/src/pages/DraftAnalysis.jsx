@@ -1,4 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
+import {
+  ScatterChart, Scatter, XAxis, YAxis, CartesianGrid,
+  Tooltip as RTooltip, ResponsiveContainer, Cell,
+} from 'recharts'
 import { api } from '../api'
 import { useApi } from '../hooks/useApi'
 import { Loading, ErrorMsg } from '../components/Status'
@@ -112,8 +117,22 @@ const AV_SCALE = [
   { range: '100+',   label: 'All-time elite',        color: '#a78bfa' },
 ]
 
+const LS_STEAL = 'draft_steal_def'
+const LS_BUST  = 'draft_bust_def'
+
 const DEFAULT_STEAL = { roundVal: 4, pos: '', category: 'career_av', scope: 'career', stat: '', statVal: '50' }
 const DEFAULT_BUST  = { roundVal: 2, pos: '', category: 'career_av', scope: 'career', stat: '', statVal: '15' }
+
+function loadDef(key, fallback) {
+  try { return JSON.parse(localStorage.getItem(key)) ?? fallback } catch { return fallback }
+}
+
+const POS_COLORS = {
+  QB: '#60a5fa', RB: '#4ade80', WR: '#fbbf24', TE: '#f97316',
+  OL: '#94a3b8', DL: '#f87171', LB: '#c084fc', CB: '#34d399',
+  S: '#38bdf8',  K: '#fb923c',  P: '#a78bfa',
+}
+function posColor(pos) { return POS_COLORS[pos?.toUpperCase()] ?? '#64748b' }
 
 function isComplete(def) {
   const val = parseFloat(def.statVal)
@@ -390,13 +409,69 @@ function useCustomDraft(def, mode) {
   return { results, loading, error }
 }
 
+// ── Scatter chart component ───────────────────────────────────────────────────
+function DraftScatter({ results, statLabel: yLabel }) {
+  const navigate = useNavigate()
+  if (!results || results.length < 3) return null
+  const dots = results
+    .filter(r => r.round != null && r.stat_value != null)
+    .map(r => ({ x: r.round, y: r.stat_value, name: r.player_name, pos: r.pos, id: r.player_id }))
+  if (dots.length < 3) return null
+
+  return (
+    <div className="rounded-2xl border border-slate-700/60 bg-slate-900/60 p-5">
+      <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-4">
+        Scatter — Round vs {yLabel}
+      </p>
+      <ResponsiveContainer width="100%" height={260}>
+        <ScatterChart margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+          <XAxis dataKey="x" type="number" name="Round"
+            domain={[1, 7]} ticks={[1,2,3,4,5,6,7]}
+            stroke="#475569" tick={{ fill: '#94a3b8', fontSize: 12 }} tickLine={false}
+            label={{ value: 'Round', position: 'insideBottom', offset: -2, fill: '#475569', fontSize: 11 }} />
+          <YAxis dataKey="y" type="number" name={yLabel}
+            stroke="#475569" tick={{ fill: '#94a3b8', fontSize: 12 }} width={48} />
+          <RTooltip
+            cursor={{ strokeDasharray: '3 3' }}
+            content={({ active, payload }) => {
+              if (!active || !payload?.length) return null
+              const d = payload[0]?.payload
+              return (
+                <div className="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs shadow-xl">
+                  <p className="text-white font-semibold">{d.name}</p>
+                  <p className="text-slate-400">{d.pos} · Round {d.x}</p>
+                  <p className="text-amber-300 font-mono">{yLabel}: {Number(d.y).toLocaleString()}</p>
+                </div>
+              )
+            }}
+          />
+          <Scatter data={dots} onClick={d => d.id && navigate(`/player/${d.id}`)}
+            style={{ cursor: 'pointer' }}>
+            {dots.map((d, i) => (
+              <Cell key={i} fill={posColor(d.pos)} fillOpacity={0.8} />
+            ))}
+          </Scatter>
+        </ScatterChart>
+      </ResponsiveContainer>
+      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
+        {[...new Set(dots.map(d => d.pos))].filter(Boolean).sort().map(p => (
+          <span key={p} className="flex items-center gap-1.5 text-xs text-slate-400">
+            <span className="w-2 h-2 rounded-full" style={{ background: posColor(p) }} />{p}
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function DraftAnalysis() {
   const [tab,     setTab]     = useState('picks')
   const [avInfo,  setAvInfo]  = useState(false)
   const [filters, setFilters] = useState({ year: '', team: '', pos: '' })
-  const [stealDef, setStealDef] = useState(DEFAULT_STEAL)
-  const [bustDef,  setBustDef]  = useState(DEFAULT_BUST)
+  const [stealDef, setStealDef] = useState(() => loadDef(LS_STEAL, DEFAULT_STEAL))
+  const [bustDef,  setBustDef]  = useState(() => loadDef(LS_BUST,  DEFAULT_BUST))
 
   const set = key => e => setFilters(f => ({ ...f, [key]: e.target.value }))
 
@@ -524,6 +599,11 @@ export default function DraftAnalysis() {
                 <span className="text-xl">💎</span>
                 <p className="text-emerald-400 font-bold">Draft Steals</p>
                 <span className="text-slate-600 text-xs ml-auto">Players who over-delivered on their draft slot</span>
+                <button
+                  onClick={() => { localStorage.setItem(LS_STEAL, JSON.stringify(stealDef)) }}
+                  className="text-xs px-2.5 py-1 rounded-lg border border-emerald-900/60 text-emerald-600 hover:text-emerald-400 transition-colors">
+                  💾 Save preset
+                </button>
               </div>
               <DefinitionBuilder def={stealDef} onChange={setStealDef} mode="steal" />
               <SystemRecommendation
@@ -541,10 +621,13 @@ export default function DraftAnalysis() {
           {sl && <Loading text="Searching…" />}
           {se && <ErrorMsg message={se} />}
           {steals && (
-            <div className="bg-slate-800/70 border border-emerald-900/40 rounded-2xl p-5">
-              <p className="text-xs text-slate-600 mb-3">{steals.length} players found</p>
-              <StatTable columns={stealCols} rows={steals} keyField="player_name" />
-            </div>
+            <>
+              <DraftScatter results={steals} statLabel={statLabel(stealDef)} />
+              <div className="bg-slate-800/70 border border-emerald-900/40 rounded-2xl p-5">
+                <p className="text-xs text-slate-600 mb-3">{steals.length} players found</p>
+                <StatTable columns={stealCols} rows={steals} keyField="player_name" />
+              </div>
+            </>
           )}
         </div>
       )}
@@ -560,6 +643,11 @@ export default function DraftAnalysis() {
                 <span className="text-xl">📉</span>
                 <p className="text-rose-400 font-bold">Draft Busts</p>
                 <span className="text-slate-600 text-xs ml-auto">High picks whose careers fell short</span>
+                <button
+                  onClick={() => { localStorage.setItem(LS_BUST, JSON.stringify(bustDef)) }}
+                  className="text-xs px-2.5 py-1 rounded-lg border border-rose-900/60 text-rose-600 hover:text-rose-400 transition-colors">
+                  💾 Save preset
+                </button>
               </div>
               <DefinitionBuilder def={bustDef} onChange={setBustDef} mode="bust" />
               <SystemRecommendation
@@ -577,10 +665,13 @@ export default function DraftAnalysis() {
           {bl && <Loading text="Searching…" />}
           {be && <ErrorMsg message={be} />}
           {busts && (
-            <div className="bg-slate-800/70 border border-rose-900/40 rounded-2xl p-5">
-              <p className="text-xs text-slate-600 mb-3">{busts.length} players found</p>
-              <StatTable columns={bustCols} rows={busts} keyField="player_name" />
-            </div>
+            <>
+              <DraftScatter results={busts} statLabel={statLabel(bustDef)} />
+              <div className="bg-slate-800/70 border border-rose-900/40 rounded-2xl p-5">
+                <p className="text-xs text-slate-600 mb-3">{busts.length} players found</p>
+                <StatTable columns={bustCols} rows={busts} keyField="player_name" />
+              </div>
+            </>
           )}
         </div>
       )}

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ReferenceLine, ResponsiveContainer, Label, Legend,
+  BarChart, Bar, Cell, LabelList,
 } from 'recharts'
 import { api } from '../api'
 import { Loading, ErrorMsg } from '../components/Status'
@@ -164,8 +165,11 @@ export default function LeagueTrends() {
   const [seasonTo,   setSeasonTo]   = useState('')
   const [metaRange,  setMetaRange]  = useState({ min: 1999, max: 2025 })
 
+  const [viewMode, setViewMode] = useState('over_time') // 'over_time' | 'by_team'
+
   const [raw1, setRaw1] = useState(null)
   const [raw2, setRaw2] = useState(null)
+  const [teamData, setTeamData] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error,   setError]   = useState(null)
   const timer = useRef()
@@ -201,18 +205,23 @@ export default function LeagueTrends() {
         seasonTo:   seasonTo   || undefined,
       }
       try {
-        const [d1, d2] = await Promise.all([
-          api.getTrend({ ...params, team: team1 || undefined }),
-          comparing ? api.getTrend({ ...params, team: team2 }) : Promise.resolve(null),
-        ])
-        setRaw1(d1); setRaw2(d2)
+        if (viewMode === 'by_team') {
+          const td = await api.getTeamBreakdown(params)
+          setTeamData(td); setRaw1(null); setRaw2(null)
+        } else {
+          const [d1, d2] = await Promise.all([
+            api.getTrend({ ...params, team: team1 || undefined }),
+            comparing ? api.getTrend({ ...params, team: team2 }) : Promise.resolve(null),
+          ])
+          setRaw1(d1); setRaw2(d2); setTeamData(null)
+        }
         setLoading(false)
       } catch (e) {
         setError(e.message); setLoading(false)
       }
     }, 350)
     return () => clearTimeout(timer.current)
-  }, [category, stat, agg, pos, team1, team2, seasonFrom, seasonTo, comparing])
+  }, [category, stat, agg, pos, team1, team2, seasonFrom, seasonTo, comparing, viewMode])
 
   // Merge datasets for chart
   const chartData = useMemo(() => {
@@ -373,14 +382,125 @@ export default function LeagueTrends() {
         </div>
       </div>
 
+      {/* View toggle */}
+      <div className="flex gap-1">
+        {[
+          { id: 'over_time', label: '📈 Over Time' },
+          { id: 'by_team',   label: '🏟️ By Team'   },
+        ].map(v => (
+          <button key={v.id} onClick={() => setViewMode(v.id)}
+            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              viewMode === v.id
+                ? 'bg-slate-700 text-white'
+                : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/60'
+            }`}>
+            {v.label}
+          </button>
+        ))}
+      </div>
+
       {/* States */}
       {loading && <Loading text="Loading trend data…" />}
       {error   && <ErrorMsg message={error} />}
-      {!loading && !error && raw1 && raw1.length === 0 && (
+      {!loading && !error && viewMode === 'over_time' && raw1 && raw1.length === 0 && (
+        <p className="text-slate-500 text-sm text-center py-10">No data found for this combination.</p>
+      )}
+      {!loading && !error && viewMode === 'by_team' && teamData && teamData.length === 0 && (
         <p className="text-slate-500 text-sm text-center py-10">No data found for this combination.</p>
       )}
 
-      {hasData && !loading && (
+      {/* ── By Team view ── */}
+      {viewMode === 'by_team' && teamData && teamData.length > 0 && !loading && (
+        <div className="space-y-5">
+          {/* Top 3 tiles */}
+          <div className="grid grid-cols-3 gap-3">
+            {teamData.slice(0, 3).map((row, i) => (
+              <div key={row.team} className="rounded-xl bg-slate-900/60 border border-slate-700/50 px-4 py-3">
+                <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">
+                  {['🥇', '🥈', '🥉'][i]} {i === 0 ? 'Top team' : i === 1 ? '2nd' : '3rd'}
+                </p>
+                <p className="text-xl font-black text-white mt-0.5">{row.team}</p>
+                <p className="text-sm text-slate-400 font-semibold">{fmtVal(row.value)}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Bar chart */}
+          <div className="rounded-2xl border border-slate-700/60 bg-slate-900/60 p-5">
+            <p className="text-sm font-semibold text-slate-300 mb-4">
+              {statInfo?.label ?? stat} by team — {aggInfo?.label}
+              {(seasonFrom || seasonTo) && (
+                <span className="text-slate-500 font-normal ml-2">
+                  {seasonFrom || metaRange.min}–{seasonTo || metaRange.max}
+                </span>
+              )}
+            </p>
+            <ResponsiveContainer width="100%" height={Math.max(320, teamData.length * 22)}>
+              <BarChart data={teamData} layout="vertical"
+                margin={{ top: 0, right: 60, left: 40, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" horizontal={false} />
+                <XAxis type="number" stroke="#475569"
+                  tick={{ fill: '#94a3b8', fontSize: 11 }} tickLine={false}
+                  tickFormatter={yFmt} />
+                <YAxis type="category" dataKey="team" stroke="#475569"
+                  tick={{ fill: '#94a3b8', fontSize: 11 }} tickLine={false} width={36} />
+                <Tooltip
+                  cursor={{ fill: '#1e293b' }}
+                  content={({ active, payload, label }) => {
+                    if (!active || !payload?.length) return null
+                    return (
+                      <div className="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs shadow-xl">
+                        <p className="text-white font-bold">{label}</p>
+                        <p className="text-slate-300">{fmtVal(payload[0]?.value)}</p>
+                      </div>
+                    )
+                  }}
+                />
+                <Bar dataKey="value" radius={[0, 3, 3, 0]}>
+                  {teamData.map((_, i) => (
+                    <Cell key={i}
+                      fill={i === 0 ? '#f59e0b' : i === 1 ? '#94a3b8' : i === 2 ? '#cd7c2f' : '#3b82f6'}
+                      fillOpacity={0.85} />
+                  ))}
+                  <LabelList dataKey="value" position="right"
+                    formatter={v => fmtVal(v)}
+                    style={{ fill: '#94a3b8', fontSize: 11 }} />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Team table */}
+          <div className="rounded-2xl border border-slate-700/60 bg-slate-900/60 p-5">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">All teams</p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-slate-500 text-xs border-b border-slate-800">
+                    <th className="text-left py-2 pr-4 font-medium w-8">#</th>
+                    <th className="text-left py-2 pr-6 font-medium">Team</th>
+                    <th className="text-right py-2 pr-6 font-medium">{statInfo?.label ?? stat}</th>
+                    <th className="text-right py-2 font-medium">Players</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {teamData.map((row, i) => (
+                    <tr key={row.team}
+                      className="border-t border-slate-800/60 hover:bg-slate-800/30 transition-colors">
+                      <td className="py-2 pr-4 text-slate-600 font-mono text-xs">{i + 1}</td>
+                      <td className="py-2 pr-6 text-white font-bold">{row.team}</td>
+                      <td className="py-2 pr-6 text-right text-white font-semibold">{fmtVal(row.value)}</td>
+                      <td className="py-2 text-right text-slate-500 text-xs">{row.player_count}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {hasData && !loading && viewMode === 'over_time' && (
         <>
           {/* Summary tiles — primary line only */}
           {summary && !comparing && (

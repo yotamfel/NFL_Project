@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { api } from '../api'
 import { Loading, ErrorMsg } from '../components/Status'
 import StatTable from '../components/StatTable'
@@ -303,6 +303,8 @@ export default function Comparison() {
   const [showAllStats,  setShowAllStats]  = useState(false)
   const [addPanelOpen,  setAddPanelOpen]  = useState(true)
   const [compSeason,    setCompSeason]    = useState('')
+  const [lbStat,        setLbStat]        = useState('')
+  const [lbData,        setLbData]        = useState(null)
 
   // Filters
   const [filterPos,    setFilterPos]    = useState('')
@@ -311,8 +313,30 @@ export default function Comparison() {
   const [filterStat,   setFilterStat]   = useState('')
   const [filterMin,    setFilterMin]    = useState('')
 
-  const debounceRef = useRef(null)
+  const debounceRef  = useRef(null)
+  const lbDebounce   = useRef(null)
   const { saveComparison } = useUser()
+
+  // Auto-select first stat for leaderboard when category changes
+  useEffect(() => {
+    const first = STAT_OPTIONS[category]?.[0]?.key ?? ''
+    setLbStat(first)
+  }, [category])
+
+  // Fetch leaderboard
+  useEffect(() => {
+    clearTimeout(lbDebounce.current)
+    if (!lbStat) return
+    lbDebounce.current = setTimeout(() => {
+      api.topPlayersByStat(category, lbStat, {
+        season: compSeason ? parseInt(compSeason) : undefined,
+        limit: 20,
+      })
+        .then(setLbData)
+        .catch(() => setLbData(null))
+    }, 300)
+    return () => clearTimeout(lbDebounce.current)
+  }, [category, lbStat, compSeason])
 
   // Load comparison data (career or specific season)
   useEffect(() => {
@@ -641,6 +665,71 @@ export default function Comparison() {
               </div>
             </div>
             <StatTable columns={tableCols} rows={data.career} keyField="player_id" />
+          </div>
+
+          {/* Leaderboard */}
+          <div className="bg-slate-800/70 border border-slate-700/60 rounded-2xl p-5">
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+              <div>
+                <h2 className="text-white font-bold">Top 20 Leaderboard</h2>
+                <p className="text-slate-500 text-xs mt-0.5">
+                  {compSeason ? `${compSeason} season` : 'Career totals'} — compared players highlighted
+                </p>
+              </div>
+              <select
+                value={lbStat}
+                onChange={e => setLbStat(e.target.value)}
+                className="bg-slate-900 border border-slate-700 text-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-slate-500">
+                {(STAT_OPTIONS[category] ?? []).map(s => (
+                  <option key={s.key} value={s.key}>{s.label}</option>
+                ))}
+              </select>
+            </div>
+            {lbData && lbData.length > 0 ? (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-slate-500 text-xs border-b border-slate-800">
+                    <th className="text-left py-2 pr-4 font-medium w-8">#</th>
+                    <th className="text-left py-2 pr-4 font-medium">Player</th>
+                    <th className="text-left py-2 pr-4 font-medium text-slate-600">Pos</th>
+                    <th className="text-right py-2 font-medium">
+                      {STAT_OPTIONS[category]?.find(s => s.key === lbStat)?.label ?? lbStat}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {lbData.map((p, i) => {
+                    const idx = playerIds.indexOf(p.player_id)
+                    const isCompared = idx !== -1
+                    return (
+                      <tr key={p.player_id}
+                        className={`border-t border-slate-800/60 transition-colors ${
+                          isCompared ? 'bg-amber-900/20 hover:bg-amber-900/30' : 'hover:bg-slate-800/30'
+                        }`}>
+                        <td className="py-2 pr-4 text-slate-600 font-mono text-xs">{i + 1}</td>
+                        <td className="py-2 pr-4">
+                          <span className={isCompared ? 'text-amber-300 font-semibold' : 'text-slate-200'}>
+                            {p.player_name}
+                          </span>
+                          {isCompared && (
+                            <span className="ml-2 text-xs px-1.5 py-0.5 rounded"
+                              style={{ background: `${BAR_COLORS[idx]}25`, color: BAR_COLORS[idx] }}>
+                              compared
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-2 pr-4 text-slate-500 text-xs">{p.pos}</td>
+                        <td className="py-2 text-right text-white font-semibold">
+                          {p.best_value?.toLocaleString() ?? '—'}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            ) : (
+              <p className="text-slate-600 text-sm text-center py-4">No data.</p>
+            )}
           </div>
         </>
       )}
