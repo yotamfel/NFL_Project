@@ -666,73 +666,73 @@ export default function Comparison() {
             </div>
             <StatTable columns={tableCols} rows={data.career} keyField="player_id" />
           </div>
-
-          {/* Leaderboard */}
-          <div className="bg-slate-800/70 border border-slate-700/60 rounded-2xl p-5">
-            <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-              <div>
-                <h2 className="text-white font-bold">Top 20 Leaderboard</h2>
-                <p className="text-slate-500 text-xs mt-0.5">
-                  {compSeason ? `${compSeason} season` : 'Career totals'} — compared players highlighted
-                </p>
-              </div>
-              <select
-                value={lbStat}
-                onChange={e => setLbStat(e.target.value)}
-                className="bg-slate-900 border border-slate-700 text-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-slate-500">
-                {(STAT_OPTIONS[category] ?? []).map(s => (
-                  <option key={s.key} value={s.key}>{s.label}</option>
-                ))}
-              </select>
-            </div>
-            {lbData && lbData.length > 0 ? (
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-slate-500 text-xs border-b border-slate-800">
-                    <th className="text-left py-2 pr-4 font-medium w-8">#</th>
-                    <th className="text-left py-2 pr-4 font-medium">Player</th>
-                    <th className="text-left py-2 pr-4 font-medium text-slate-600">Pos</th>
-                    <th className="text-right py-2 font-medium">
-                      {STAT_OPTIONS[category]?.find(s => s.key === lbStat)?.label ?? lbStat}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {lbData.map((p, i) => {
-                    const idx = playerIds.indexOf(p.player_id)
-                    const isCompared = idx !== -1
-                    return (
-                      <tr key={p.player_id}
-                        className={`border-t border-slate-800/60 transition-colors ${
-                          isCompared ? 'bg-amber-900/20 hover:bg-amber-900/30' : 'hover:bg-slate-800/30'
-                        }`}>
-                        <td className="py-2 pr-4 text-slate-600 font-mono text-xs">{i + 1}</td>
-                        <td className="py-2 pr-4">
-                          <span className={isCompared ? 'text-amber-300 font-semibold' : 'text-slate-200'}>
-                            {p.player_name}
-                          </span>
-                          {isCompared && (
-                            <span className="ml-2 text-xs px-1.5 py-0.5 rounded"
-                              style={{ background: `${BAR_COLORS[idx]}25`, color: BAR_COLORS[idx] }}>
-                              compared
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-2 pr-4 text-slate-500 text-xs">{p.pos}</td>
-                        <td className="py-2 text-right text-white font-semibold">
-                          {p.best_value?.toLocaleString() ?? '—'}
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            ) : (
-              <p className="text-slate-600 text-sm text-center py-4">No data.</p>
-            )}
-          </div>
         </>
       )}
+
+      {/* Leaderboard — always visible */}
+      <div className="bg-slate-800/70 border border-slate-700/60 rounded-2xl p-5">
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+          <div>
+            <h2 className="text-white font-bold">Top 20 Leaderboard</h2>
+            <p className="text-slate-500 text-xs mt-0.5">
+              {compSeason ? `${compSeason} season` : 'Career totals'} — {playerIds.length > 0 ? 'compared players highlighted' : 'add players above to highlight them'}
+            </p>
+          </div>
+          <select
+            value={lbStat}
+            onChange={e => setLbStat(e.target.value)}
+            className="bg-slate-900 border border-slate-700 text-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-slate-500">
+            {(STAT_OPTIONS[category] ?? []).map(s => (
+              <option key={s.key} value={s.key}>{s.label}</option>
+            ))}
+          </select>
+        </div>
+        {lbData && lbData.length > 0 ? (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-slate-500 text-xs border-b border-slate-800">
+                <th className="text-left py-2 pr-4 font-medium w-8">#</th>
+                <th className="text-left py-2 pr-4 font-medium">Player</th>
+                <th className="text-left py-2 pr-4 font-medium text-slate-600">Pos</th>
+                <th className="text-right py-2 font-medium">
+                  {STAT_OPTIONS[category]?.find(s => s.key === lbStat)?.label ?? lbStat}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {lbData.map((p, i) => {
+                const idx = playerIds.indexOf(p.player_id)
+                const isCompared = idx !== -1
+                return (
+                  <tr key={p.player_id}
+                    className={`border-t border-slate-800/60 transition-colors ${
+                      isCompared ? 'bg-amber-900/20 hover:bg-amber-900/30' : 'hover:bg-slate-800/30'
+                    }`}>
+                    <td className="py-2 pr-4 text-slate-600 font-mono text-xs">{i + 1}</td>
+                    <td className="py-2 pr-4">
+                      <span className={isCompared ? 'text-amber-300 font-semibold' : 'text-slate-200'}>
+                        {p.player_name}
+                      </span>
+                      {isCompared && (
+                        <span className="ml-2 text-xs px-1.5 py-0.5 rounded"
+                          style={{ background: `${BAR_COLORS[idx]}25`, color: BAR_COLORS[idx] }}>
+                          compared
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-2 pr-4 text-slate-500 text-xs">{p.pos}</td>
+                    <td className="py-2 text-right text-white font-semibold">
+                      {p.best_value?.toLocaleString() ?? '—'}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        ) : (
+          <p className="text-slate-600 text-sm text-center py-4">No data.</p>
+        )}
+      </div>
     </div>
   )
 }
