@@ -31,6 +31,18 @@ const FEATURE_CARDS = [
     href: '/draft',
     color: '#4ade80', dark: '#14532d',
   },
+  {
+    icon: '🤖', title: 'Smart Search',
+    desc: 'Ask anything in plain English — AI translates to stats',
+    href: '/search',
+    color: '#a78bfa', dark: '#2e1065',
+  },
+  {
+    icon: '📈', title: 'League Trends',
+    desc: 'Track how the whole league has evolved season by season',
+    href: '/trends',
+    color: '#f472b6', dark: '#500724',
+  },
 ]
 
 export default function PlayerSearch() {
@@ -163,7 +175,7 @@ export default function PlayerSearch() {
 
       {/* Feature cards */}
       {!results.length && !hasFilter && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-14">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-14">
           {FEATURE_CARDS.map(card => (
             <button key={card.href} onClick={() => navigate(card.href)}
               className="rounded-2xl overflow-hidden text-left hover:scale-[1.02] transition-transform"
