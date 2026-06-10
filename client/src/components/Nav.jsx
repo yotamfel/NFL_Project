@@ -1,7 +1,8 @@
-import { useState } from 'react'
-import { NavLink } from 'react-router-dom'
+import { useState, useEffect, useRef } from 'react'
+import { NavLink, useNavigate } from 'react-router-dom'
 import HelpModal from './HelpModal'
 import { useUser } from '../context/UserContext'
+import { api } from '../api'
 
 const LINKS = [
   { to: '/', label: 'Players', end: true },
@@ -12,8 +13,47 @@ const LINKS = [
 ]
 
 export default function Nav() {
-  const [helpOpen, setHelpOpen] = useState(false)
-  const { username, setUser }   = useUser()
+  const [helpOpen,       setHelpOpen]       = useState(false)
+  const [searchQ,        setSearchQ]        = useState('')
+  const [searchResults,  setSearchResults]  = useState([])
+  const [searchFocused,  setSearchFocused]  = useState(false)
+  const { username, setUser } = useUser()
+  const navigate    = useNavigate()
+  const debounceRef = useRef(null)
+  const containerRef = useRef(null)
+
+  // Search with debounce
+  useEffect(() => {
+    clearTimeout(debounceRef.current)
+    if (searchQ.length < 2) { setSearchResults([]); return }
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const results = await api.searchPlayers(searchQ, { limit: 8 })
+        setSearchResults(results)
+      } catch { setSearchResults([]) }
+    }, 280)
+    return () => clearTimeout(debounceRef.current)
+  }, [searchQ])
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = e => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setSearchFocused(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const selectPlayer = (id) => {
+    setSearchQ('')
+    setSearchResults([])
+    setSearchFocused(false)
+    navigate(`/player/${id}`)
+  }
+
+  const showDropdown = searchFocused && searchResults.length > 0
 
   return (
     <>
@@ -26,6 +66,7 @@ export default function Nav() {
               <span className="text-white"> DATA</span>
             </span>
           </NavLink>
+
           <div className="flex flex-wrap gap-x-1 gap-y-1">
             {LINKS.map(({ to, label, end }) => (
               <NavLink
@@ -45,7 +86,33 @@ export default function Nav() {
             ))}
           </div>
 
-          <div className="ml-auto flex items-center gap-2">
+          {/* Quick player search */}
+          <div ref={containerRef} className="relative ml-auto">
+            <div className="flex items-center gap-2 bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 focus-within:border-slate-500 transition-colors">
+              <span className="text-slate-500 text-xs">🔍</span>
+              <input
+                value={searchQ}
+                onChange={e => setSearchQ(e.target.value)}
+                onFocus={() => setSearchFocused(true)}
+                placeholder="Quick player search…"
+                className="bg-transparent text-sm text-slate-200 placeholder-slate-600 focus:outline-none w-44"
+              />
+            </div>
+            {showDropdown && (
+              <ul className="absolute top-full right-0 mt-1 w-64 bg-slate-800 border border-slate-700 rounded-xl overflow-hidden shadow-xl z-50 max-h-72 overflow-y-auto">
+                {searchResults.map(p => (
+                  <li key={p.player_id}
+                    onMouseDown={() => selectPlayer(p.player_id)}
+                    className="px-4 py-2.5 hover:bg-slate-700 cursor-pointer flex items-center justify-between text-sm border-b border-slate-700/60 last:border-0">
+                    <span className="text-white">{p.player_name}</span>
+                    <span className="text-slate-500 text-xs ml-2">{p.pos} · {p.last_season}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
             {username && (
               <button
                 onClick={() => {
