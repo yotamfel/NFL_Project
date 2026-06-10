@@ -10,6 +10,7 @@ const LINKS = [
   { to: '/draft', label: 'Draft' },
   { to: '/search', label: 'Smart Search' },
   { to: '/saved', label: 'Saved' },
+  { to: '/trends', label: 'Trends' },
 ]
 
 export default function Nav() {

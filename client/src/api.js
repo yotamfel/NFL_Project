@@ -63,5 +63,22 @@ export const api = {
     return get(`/players/top_by_stat?${p}`)
   },
 
+  getDraftRoundStats: ({ roundVal, roundOp, category = 'career_av', stat, scope = 'career', pos } = {}) => {
+    const p = new URLSearchParams({ round_val: roundVal, round_op: roundOp, category, scope })
+    if (stat) p.set('stat', stat)
+    if (pos)  p.set('pos', pos)
+    return get(`/draft/round_stats?${p}`)
+  },
+
+  getTrend: ({ category, stat, agg = 'sum', pos, team, seasonFrom, seasonTo } = {}) => {
+    const p = new URLSearchParams({ category, stat, agg })
+    if (pos)        p.set('pos', pos)
+    if (team)       p.set('team', team)
+    if (seasonFrom) p.set('season_from', seasonFrom)
+    if (seasonTo)   p.set('season_to', seasonTo)
+    return get(`/trends/aggregate?${p}`)
+  },
+  getTrendMeta: category => get(`/trends/meta/${category}`),
+
   askQuestion: question => post('/search/natural', { question }),
 }

@@ -3,7 +3,8 @@ from fastapi import APIRouter, Query
 
 from fastapi import HTTPException
 from app.data.draft import (DEFAULT_MIN_SEASONING_YEARS, find_busts, find_steals,
-                             get_custom_draft_rank, get_draft_picks)
+                             get_custom_draft_rank, get_draft_picks,
+                             get_draft_round_stats)
 
 router = APIRouter(prefix="/draft", tags=["draft"])
 
@@ -35,6 +36,24 @@ def custom_rank(
             category=category,   stat=stat,
             scope=scope,         pos=pos,
             limit=limit,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@router.get("/round_stats")
+def round_stats(
+    round_val: int       = Query(4, ge=1, le=7),
+    round_op:  str       = Query("gte"),
+    category:  str       = Query("career_av"),
+    stat:      str | None = Query(None),
+    scope:     str       = Query("career"),
+    pos:       str | None = Query(None),
+):
+    try:
+        return get_draft_round_stats(
+            round_val=round_val, round_op=round_op,
+            category=category, stat=stat, scope=scope, pos=pos,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))

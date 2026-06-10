@@ -19,40 +19,86 @@ const ROUNDS     = [1, 2, 3, 4, 5, 6, 7]
 
 const STAT_OPTIONS = {
   passing: [
-    { key: 'yds', label: 'Pass Yards' },
-    { key: 'td',  label: 'Touchdowns' },
-    { key: 'int', label: 'Interceptions' },
-    { key: 'cmp', label: 'Completions' },
-    { key: 'att', label: 'Attempts' },
+    { key: 'yds',      label: 'Pass Yards' },
+    { key: 'td',       label: 'Touchdowns' },
+    { key: 'int',      label: 'Interceptions' },
+    { key: 'cmp',      label: 'Completions' },
+    { key: 'att',      label: 'Attempts' },
+    { key: 'rate',     label: 'Passer Rating' },
+    { key: 'qbr',      label: 'QBR' },
+    { key: 'y_per_a',  label: 'Yards / Attempt' },
+    { key: 'any_per_a',label: 'ANY/A' },
+    { key: 'sk_pct',   label: 'Sack %' },
+    { key: '_4qc',     label: '4th-Qtr Comebacks' },
+    { key: 'gwd',      label: 'Game-Winning Drives' },
+    { key: 'sk',       label: 'Times Sacked' },
   ],
   offense: [
-    { key: 'yscm',     label: 'Scrimmage Yards' },
-    { key: 'rush_yds', label: 'Rush Yards' },
-    { key: 'rec_yds',  label: 'Rec Yards' },
-    { key: 'rec',      label: 'Receptions' },
-    { key: 'rush_td',  label: 'Rush TDs' },
-    { key: 'rec_td',   label: 'Rec TDs' },
+    { key: 'yscm',            label: 'Scrimmage Yards' },
+    { key: 'rush_yds',        label: 'Rush Yards' },
+    { key: 'rec_yds',         label: 'Rec Yards' },
+    { key: 'rec',             label: 'Receptions' },
+    { key: 'tgt',             label: 'Targets' },
+    { key: 'rush_td',         label: 'Rush TDs' },
+    { key: 'rec_td',          label: 'Rec TDs' },
+    { key: 'touch',           label: 'Total Touches' },
+    { key: 'ctch_pct',        label: 'Catch %' },
+    { key: 'y_per_tgt',       label: 'Yards / Target' },
+    { key: 'y_per_r',         label: 'Yards / Rush' },
+    { key: 'rec_first_downs', label: 'Rec 1st Downs' },
+    { key: 'rush_first_downs',label: 'Rush 1st Downs' },
+    { key: 'fmb',             label: 'Fumbles' },
   ],
   defense: [
-    { key: 'comb', label: 'Total Tackles' },
-    { key: 'sk',   label: 'Sacks' },
-    { key: 'int',  label: 'INTs' },
-    { key: 'pd',   label: 'Pass Deflections' },
-    { key: 'ff',   label: 'Forced Fumbles' },
+    { key: 'comb',        label: 'Total Tackles' },
+    { key: 'solo',        label: 'Solo Tackles' },
+    { key: 'ast',         label: 'Assisted Tackles' },
+    { key: 'sk',          label: 'Sacks' },
+    { key: 'int',         label: 'Interceptions' },
+    { key: 'pd',          label: 'Pass Deflections' },
+    { key: 'ff',          label: 'Forced Fumbles' },
+    { key: 'fr',          label: 'Fumble Recoveries' },
+    { key: 'tfl',         label: 'Tackles for Loss' },
+    { key: 'qb_hits',     label: 'QB Hits' },
+    { key: 'int_ret_yds', label: 'INT Return Yards' },
+    { key: 'int_td',      label: 'INT Return TDs' },
+    { key: 'fr_td',       label: 'Fumble Return TDs' },
+    { key: 'sfty',        label: 'Safeties' },
   ],
   kicking: [
-    { key: 'fgm_total', label: 'FG Made' },
-    { key: 'fga_total', label: 'FG Attempted' },
-    { key: 'xpm',       label: 'Extra Points Made' },
+    { key: 'fgm_total',   label: 'FG Made (total)' },
+    { key: 'fga_total',   label: 'FG Attempted' },
+    { key: 'xpm',         label: 'Extra Points Made' },
+    { key: 'xpa',         label: 'Extra Points Attempted' },
+    { key: 'fgm_40_49',   label: 'FG Made 40–49 yds' },
+    { key: 'fgm_50_plus', label: 'FG Made 50+ yds' },
+    { key: 'ko',          label: 'Kickoffs' },
+    { key: 'koyds',       label: 'Kickoff Yards' },
+    { key: 'tb',          label: 'Touchbacks' },
+    { key: 'tb_pct',      label: 'Touchback %' },
+    { key: 'koavg',       label: 'Kickoff Avg' },
   ],
   punting: [
-    { key: 'pnt',    label: 'Punts' },
-    { key: 'yds',    label: 'Punt Yards' },
-    { key: 'netyds', label: 'Net Yards' },
+    { key: 'pnt',      label: 'Punts' },
+    { key: 'yds',      label: 'Punt Yards' },
+    { key: 'netyds',   label: 'Net Yards' },
+    { key: 'y_per_p',  label: 'Yards / Punt' },
+    { key: 'ny_per_p', label: 'Net Yards / Punt' },
+    { key: 'pnt20',    label: 'Punts Inside 20' },
+    { key: 'in20_pct', label: 'Inside-20 %' },
+    { key: 'blck',     label: 'Blocked Punts' },
+    { key: 'retyds',   label: 'Return Yards Allowed' },
   ],
   returns: [
-    { key: 'kick_ret_yds', label: 'KR Yards' },
-    { key: 'punt_ret_yds', label: 'PR Yards' },
+    { key: 'kick_ret_yds',   label: 'KR Yards' },
+    { key: 'punt_ret_yds',   label: 'PR Yards' },
+    { key: 'kick_ret',       label: 'Kick Returns' },
+    { key: 'punt_ret',       label: 'Punt Returns' },
+    { key: 'kick_ret_td',    label: 'KR Touchdowns' },
+    { key: 'punt_ret_td',    label: 'PR Touchdowns' },
+    { key: 'y_per_kick_ret', label: 'Yards / KR' },
+    { key: 'y_per_punt_ret', label: 'Yards / PR' },
+    { key: 'apyd',           label: 'All-Purpose Yards' },
   ],
 }
 
@@ -88,88 +134,225 @@ function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1) }
 // ── Definition builder ────────────────────────────────────────────────────────
 function DefinitionBuilder({ def, onChange, mode }) {
   const isSteal  = mode === 'steal'
-  const accent   = isSteal ? 'emerald' : 'rose'
   const roundLabel = isSteal ? '≥ round' : '≤ round'
   const statLabel2 = isSteal ? '≥' : '≤'
 
-  const inputCls = `bg-slate-800 border border-${accent}-900/60 text-white rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:border-${accent}-500`
+  const inputCls = isSteal
+    ? 'bg-slate-800 border border-emerald-900/60 text-white rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:border-emerald-500'
+    : 'bg-slate-800 border border-rose-900/60 text-white rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:border-rose-500'
+
+  const labelCls = 'text-xs text-slate-500 font-medium mb-1'
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
         Define a "{isSteal ? 'Steal' : 'Bust'}"
       </p>
 
-      {/* Row 1: Round + Position */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <label className="flex items-center gap-2 text-sm">
-          <span className="text-slate-500">Draft {roundLabel}</span>
-          <select value={def.roundVal} onChange={e => onChange({ ...def, roundVal: parseInt(e.target.value) })}
-            className={inputCls}>
+      {/* Grid: Round · Position · Stat category · Stat · Scope · Threshold */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+
+        {/* Round */}
+        <div>
+          <p className={labelCls}>Draft round {isSteal ? '≥' : '≤'}</p>
+          <select value={def.roundVal}
+            onChange={e => onChange({ ...def, roundVal: parseInt(e.target.value) })}
+            className={`w-full ${inputCls}`}>
             {ROUNDS.map(r => <option key={r} value={r}>{r}</option>)}
           </select>
-        </label>
-        <label className="flex items-center gap-2 text-sm">
-          <span className="text-slate-500">Position</span>
-          <select value={def.pos} onChange={e => onChange({ ...def, pos: e.target.value })}
-            className={inputCls}>
-            <option value="">All</option>
+        </div>
+
+        {/* Position */}
+        <div>
+          <p className={labelCls}>Position</p>
+          <select value={def.pos}
+            onChange={e => onChange({ ...def, pos: e.target.value })}
+            className={`w-full ${inputCls}`}>
+            <option value="">All positions</option>
             {POSITIONS.map(p => <option key={p} value={p}>{p}</option>)}
           </select>
-        </label>
-      </div>
+        </div>
 
-      {/* Row 2: Stat definition */}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        <span className="text-slate-500 text-sm">with</span>
-
-        {/* Category */}
-        <select value={def.category}
-          onChange={e => onChange({ ...def, category: e.target.value, stat: '', statVal: '' })}
-          className={inputCls}>
-          {STAT_CATEGORIES.map(c => (
-            <option key={c} value={c}>{c === 'career_av' ? 'Career AV' : cap(c)}</option>
-          ))}
-        </select>
-
-        {/* Scope — only for non-career_av */}
-        {def.category !== 'career_av' && (
-          <select value={def.scope} onChange={e => onChange({ ...def, scope: e.target.value })}
-            className={inputCls}>
-            <option value="career">Career total</option>
-            <option value="season">Best season</option>
-          </select>
-        )}
-
-        {/* Stat — only for non-career_av */}
-        {def.category !== 'career_av' && (
-          <select value={def.stat}
-            onChange={e => onChange({ ...def, stat: e.target.value })}
-            className={inputCls}>
-            <option value="">Select stat…</option>
-            {(STAT_OPTIONS[def.category] ?? []).map(s => (
-              <option key={s.key} value={s.key}>{s.label}</option>
+        {/* Stat category */}
+        <div>
+          <p className={labelCls}>Stat category</p>
+          <select value={def.category}
+            onChange={e => onChange({ ...def, category: e.target.value, stat: '', statVal: '' })}
+            className={`w-full ${inputCls}`}>
+            {STAT_CATEGORIES.map(c => (
+              <option key={c} value={c}>{c === 'career_av' ? 'Career AV' : cap(c)}</option>
             ))}
           </select>
+        </div>
+
+        {/* Stat — hidden for career_av */}
+        {def.category !== 'career_av' && (
+          <div className="sm:col-span-2">
+            <p className={labelCls}>Stat</p>
+            <select value={def.stat}
+              onChange={e => onChange({ ...def, stat: e.target.value })}
+              className={`w-full ${inputCls}`}>
+              <option value="">Select a stat…</option>
+              {(STAT_OPTIONS[def.category] ?? []).map(s => (
+                <option key={s.key} value={s.key}>{s.label}</option>
+              ))}
+            </select>
+          </div>
         )}
 
-        <span className="text-slate-400 text-sm font-bold">{statLabel2}</span>
+        {/* Scope — hidden for career_av */}
+        {def.category !== 'career_av' && (
+          <div>
+            <p className={labelCls}>Scope</p>
+            <select value={def.scope}
+              onChange={e => onChange({ ...def, scope: e.target.value })}
+              className={`w-full ${inputCls}`}>
+              <option value="career">Career total</option>
+              <option value="season">Best season</option>
+            </select>
+          </div>
+        )}
 
-        <input type="number" min="0" value={def.statVal}
-          onChange={e => onChange({ ...def, statVal: e.target.value })}
-          placeholder="value"
-          className={`w-24 ${inputCls}`} />
+        {/* Threshold value */}
+        <div>
+          <p className={labelCls}>Threshold {isSteal ? '≥' : '≤'}</p>
+          <input type="number" min="0" value={def.statVal}
+            onChange={e => onChange({ ...def, statVal: e.target.value })}
+            placeholder="value"
+            className={`w-full ${inputCls}`} />
+        </div>
+
       </div>
 
       {/* Summary sentence */}
       {isComplete(def) && (
         <p className="text-xs" style={{ color: isSteal ? '#6ee7b7' : '#fca5a5' }}>
-          {isSteal ? 'Round' : 'Round 1–'}
-          {isSteal ? ` ${def.roundVal}+` : `${def.roundVal}`} picks
+          {isSteal ? `Round ${def.roundVal}+` : `Rounds 1–${def.roundVal}`} picks
           {def.pos ? ` (${def.pos})` : ''} with {statLabel(def)}{' '}
           {isSteal ? '≥' : '≤'} {Number(def.statVal).toLocaleString()}
         </p>
       )}
+    </div>
+  )
+}
+
+// ── System recommendation ─────────────────────────────────────────────────────
+function SystemRecommendation({ def, mode, onApply }) {
+  const [stats,   setStats]   = useState(null)
+  const [loading, setLoading] = useState(false)
+  const timer = useRef()
+
+  const hasValidStat = def.category === 'career_av' || !!def.stat
+
+  useEffect(() => {
+    if (!hasValidStat) { setStats(null); return }
+    clearTimeout(timer.current)
+    setStats(null)
+    setLoading(true)
+    timer.current = setTimeout(() => {
+      api.getDraftRoundStats({
+        roundVal: def.roundVal,
+        roundOp:  mode === 'steal' ? 'gte' : 'lte',
+        category: def.category,
+        stat:     def.category !== 'career_av' ? def.stat : undefined,
+        scope:    def.scope,
+        pos:      def.pos || undefined,
+      })
+        .then(s => { setStats(s); setLoading(false) })
+        .catch(() => setLoading(false))
+    }, 400)
+    return () => clearTimeout(timer.current)
+  }, [def.roundVal, def.pos, def.category, def.stat, def.scope, mode])
+
+  const isSteal = mode === 'steal'
+  const S = isSteal
+    ? { border: 'border-emerald-900/50', bg: 'bg-emerald-950/30', head: 'text-emerald-400', btn: 'border-emerald-800/60 text-emerald-400 hover:bg-emerald-900/40' }
+    : { border: 'border-rose-900/50',    bg: 'bg-rose-950/30',    head: 'text-rose-400',    btn: 'border-rose-800/60 text-rose-400 hover:bg-rose-900/40' }
+
+  if (!hasValidStat) return null
+  if (loading) return (
+    <p className="text-slate-600 text-xs animate-pulse pt-1">Computing recommendation…</p>
+  )
+  if (!stats || stats.count < 10) return null
+
+  const suggestion     = isSteal ? stats.p75 : stats.p25
+  const roundLabel     = isSteal ? `Round ${def.roundVal}+` : `Rounds 1–${def.roundVal}`
+  const posLabel       = def.pos ? ` ${def.pos}` : ''
+  const statName       = statLabel(def)
+  const isCareerNonAv  = def.category !== 'career_av' && def.scope !== 'season'
+  const scopeSuffix    = def.scope === 'season' ? ' (best season)' : def.category !== 'career_av' ? ' (career total)' : ''
+  const filterNote     = isCareerNonAv
+    ? 'Players with ≥16 career games and non-zero production only.'
+    : def.scope === 'season' ? 'Players with non-zero best season only.' : ''
+
+  return (
+    <div className={`rounded-xl border ${S.border} ${S.bg} p-3 space-y-2 mt-3`}>
+      <p className={`text-xs font-bold uppercase tracking-wider ${S.head}`}>System recommendation</p>
+
+      {/* Cohort + stat context */}
+      <p className="text-xs text-slate-400 leading-relaxed">
+        Among <span className="text-white font-semibold">{stats.count}</span> {roundLabel}{posLabel} picks
+        (≥4 seasons elapsed) — <span className="text-slate-300">{statName}{scopeSuffix}</span>:
+        avg = <span className="text-white font-semibold">{stats.avg}</span>,
+        median = <span className="text-white font-semibold">{stats.p50}</span>.
+        {filterNote && <span className="text-slate-600"> {filterNote}</span>}
+      </p>
+
+      {/* Percentile bar — raw totals */}
+      <div className="flex items-center gap-1 text-xs text-slate-500 pt-0.5">
+        <span className="w-5 text-right shrink-0">p25</span>
+        <span className="text-slate-600 px-1 font-mono shrink-0">{stats.p25}</span>
+        <div className="flex-1 h-1.5 rounded-full bg-slate-800 relative overflow-hidden">
+          <div className="absolute inset-y-0 left-0 rounded-full"
+            style={{ width: '25%', background: isSteal ? '#22c55e40' : '#f43f5e80' }} />
+          <div className="absolute inset-y-0 left-0 rounded-full"
+            style={{ width: '50%', background: isSteal ? '#22c55e60' : '#f43f5e60' }} />
+          <div className="absolute inset-y-0 left-0 rounded-full"
+            style={{ width: '75%', background: isSteal ? '#22c55e40' : '#f43f5e40' }} />
+        </div>
+        <span className="text-slate-600 px-1 font-mono shrink-0">{stats.p90}</span>
+        <span className="w-5 shrink-0">p90</span>
+      </div>
+      <div className="flex justify-between text-xs text-slate-600 px-6">
+        <span>p50: {stats.p50}</span>
+        <span>p75: {stats.p75}</span>
+      </div>
+
+      {/* Per-game row — only for career totals */}
+      {isCareerNonAv && stats.p50_pg != null && (
+        <div className="rounded-lg bg-slate-900/60 border border-slate-700/40 px-3 py-2 space-y-1">
+          <p className="text-xs text-slate-500 font-medium">Per game (normalized)</p>
+          <div className="flex gap-4 text-xs font-mono">
+            <span className="text-slate-600">p25 <span className="text-slate-400">{stats.p25_pg}</span></span>
+            <span className="text-slate-600">p50 <span className="text-slate-400">{stats.p50_pg}</span></span>
+            <span className="text-slate-600">p75 <span className="text-slate-400">{stats.p75_pg}</span></span>
+            <span className="text-slate-600">p90 <span className="text-slate-400">{stats.p90_pg}</span></span>
+          </div>
+          <p className="text-xs text-slate-600 leading-relaxed">
+            Per-game rates normalize for career length.{' '}
+            {isSteal
+              ? <>Top 25%: ≥ <span className="text-slate-400">{stats.p75_pg}</span> {statName}/game.</>
+              : <>Bottom 25%: ≤ <span className="text-slate-400">{stats.p25_pg}</span> {statName}/game.</>
+            }
+            {' '}The Apply button sets the career-total threshold.
+          </p>
+        </div>
+      )}
+
+      {/* Explanation + Apply */}
+      <div className="flex items-start justify-between gap-3 pt-1">
+        <p className="text-xs text-slate-400 leading-relaxed flex-1">
+          {isSteal
+            ? <>The top 25% of these picks had {statName} ≥ <span className="text-white font-semibold">{stats.p75}</span>. A late-round pick clearing that bar is a genuine steal.</>
+            : <>The bottom 25% of these picks had {statName} ≤ <span className="text-white font-semibold">{stats.p25}</span>. A high pick below that bar is considered a bust.</>
+          }
+        </p>
+        <button
+          onClick={() => onApply(suggestion)}
+          className={`shrink-0 text-xs px-3 py-1.5 rounded-lg border transition-colors ${S.btn}`}>
+          Apply ({suggestion})
+        </button>
+      </div>
     </div>
   )
 }
@@ -343,6 +526,10 @@ export default function DraftAnalysis() {
                 <span className="text-slate-600 text-xs ml-auto">Players who over-delivered on their draft slot</span>
               </div>
               <DefinitionBuilder def={stealDef} onChange={setStealDef} mode="steal" />
+              <SystemRecommendation
+                def={stealDef} mode="steal"
+                onApply={v => setStealDef(d => ({ ...d, statVal: String(v) }))}
+              />
             </div>
           </div>
 
@@ -375,6 +562,10 @@ export default function DraftAnalysis() {
                 <span className="text-slate-600 text-xs ml-auto">High picks whose careers fell short</span>
               </div>
               <DefinitionBuilder def={bustDef} onChange={setBustDef} mode="bust" />
+              <SystemRecommendation
+                def={bustDef} mode="bust"
+                onApply={v => setBustDef(d => ({ ...d, statVal: String(v) }))}
+              />
             </div>
           </div>
 
