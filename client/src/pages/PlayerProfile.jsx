@@ -183,9 +183,10 @@ const CHART_GROUPS = {
     ],
   ],
   offense: [
+    [{ dataKey: 'yscm', label: 'Scrimmage Yards', color: '#f59e0b' }],
     [
-      { dataKey: 'yscm', label: 'Scrimmage Yards', color: '#f59e0b' },
-      { dataKey: 'rrtd', label: 'TDs',             color: '#22c55e' },
+      { dataKey: 'rec_td',  label: 'Rec TDs',  color: '#22c55e' },
+      { dataKey: 'rush_td', label: 'Rush TDs', color: '#a78bfa' },
     ],
   ],
   defense: [
