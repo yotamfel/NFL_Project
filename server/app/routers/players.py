@@ -3,6 +3,7 @@ from fastapi import APIRouter, HTTPException, Query
 
 from app.data.players import get_player_profile, search_players, top_players_by_stat
 from app.data.snap_counts import get_snap_weeks, get_snap_seasons, get_snap_available_seasons
+from app.data.adv_receiving import get_adv_receiving
 from app.models import Player, PlayerProfile
 
 router = APIRouter(prefix="/players", tags=["players"])
@@ -34,6 +35,11 @@ def top_by_stat(
         return top_players_by_stat(category, stat, pos=pos, season=season, min_val=min, limit=limit)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
+
+
+@router.get("/{player_id}/adv_receiving")
+def adv_receiving(player_id: str):
+    return get_adv_receiving(player_id)
 
 
 @router.get("/{player_id}/snaps")

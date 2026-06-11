@@ -87,6 +87,8 @@ export const api = {
     return get(`/trends/by_team?${p}`)
   },
 
+  getAdvReceiving: id => get(`/players/${id}/adv_receiving`),
+
   getPlayerSnaps: (id, season) => {
     const p = new URLSearchParams()
     if (season) p.set('season', season)

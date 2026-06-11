@@ -207,6 +207,116 @@ function fmtHt(ht) {
   return `${ft}'${inch}"`
 }
 
+// ── Advanced Receiving section ────────────────────────────────────────────────
+const ADV_REC_POS = new Set(['WR','TE','RB','HB','FB'])
+
+function AdvReceivingSection({ playerId, pos, accentColor }) {
+  const { data, loading } = useApi(() => api.getAdvReceiving(playerId), [playerId])
+  if (!ADV_REC_POS.has(pos?.toUpperCase())) return null
+  if (loading) return null
+  if (!data || data.length === 0) return null
+
+  const fmt1 = v => v != null ? Number(v).toFixed(1) : '—'
+  const fmt2 = v => v != null ? Number(v).toFixed(2) : '—'
+  const fmtPct = v => v != null ? `${(Number(v)*100).toFixed(1)}%` : '—'
+
+  const cols = [
+    { key: 'season',     label: 'Season' },
+    { key: 'adot',       label: 'ADOT',    title: 'Average Depth of Target',         format: fmt1 },
+    { key: 'yac_r',      label: 'YAC/Rec', title: 'Yards After Catch per Reception', format: fmt1 },
+    { key: 'ybc_r',      label: 'YBC/Rec', title: 'Yards Before Catch per Reception',format: fmt1 },
+    { key: 'brk_tkl',    label: 'BrkTkl',  title: 'Broken Tackles',                  format: v => v ?? '—' },
+    { key: 'drop',       label: 'Drops',   title: 'Dropped Passes',                  format: v => v ?? '—' },
+    { key: 'drop_pct',   label: 'Drop%',   title: 'Drop Percentage',                 format: fmtPct },
+    { key: 'tgt_rating', label: 'TgtRtg',  title: 'Passer Rating When Targeted',     format: fmt1 },
+    { key: 'avg_sep',    label: 'Sep',     title: 'Avg Separation at Target (ft)',   format: fmt2 },
+    { key: 'avg_cushion',label: 'Cush',    title: 'Avg Cushion at Snap (ft)',        format: fmt2 },
+    { key: 'yac_oe',     label: 'YAC+',    title: 'YAC Above Expectation',           format: fmt2 },
+  ]
+
+  // Chart: ADOT + separation career trend
+  const chartData = data.map(r => ({
+    season: r.season,
+    adot:    r.adot    != null ? Number(r.adot).toFixed(1)    : null,
+    sep:     r.avg_sep != null ? Number(r.avg_sep).toFixed(2) : null,
+    yac_oe:  r.yac_oe  != null ? Number(r.yac_oe).toFixed(2)  : null,
+  }))
+
+  return (
+    <div className="bg-slate-800/70 border border-slate-700/60 rounded-2xl p-5 space-y-4">
+      <h2 className="text-white font-bold flex items-center gap-2">
+        <span className="w-1 h-5 rounded-full" style={{ background: accentColor }} />
+        Advanced Receiving
+        <span className="text-slate-600 text-xs font-normal ml-1">PFR 2018+ · NGS 2016+</span>
+      </h2>
+
+      {/* Mini chart: ADOT + YAC OE trend */}
+      {data.length > 1 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {[
+            { key: 'adot',   label: 'ADOT (Avg Depth of Target)', color: accentColor },
+            { key: 'yac_oe', label: 'YAC Above Expectation',       color: '#34d399' },
+          ].map(({ key, label, color }) => {
+            const pts = chartData.filter(d => d[key] != null)
+            if (pts.length < 2) return null
+            return (
+              <div key={key}>
+                <p className="text-xs text-slate-500 mb-2">{label}</p>
+                <ResponsiveContainer width="100%" height={100}>
+                  <BarChart data={pts} margin={{ top: 0, right: 8, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                    <XAxis dataKey="season" tick={{ fill: '#64748b', fontSize: 10 }} tickLine={false} stroke="#475569" />
+                    <YAxis tick={{ fill: '#64748b', fontSize: 10 }} tickLine={false} stroke="#475569" width={30} />
+                    <RTooltip cursor={{ fill: '#1e293b' }}
+                      content={({ active, payload, label: l }) => {
+                        if (!active || !payload?.length) return null
+                        return (
+                          <div className="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs shadow-xl">
+                            <p className="text-white font-bold">{l}</p>
+                            <p style={{ color }}>{label}: {payload[0]?.value}</p>
+                          </div>
+                        )
+                      }}
+                    />
+                    <Bar dataKey={key} fill={color} fillOpacity={0.75} radius={[2,2,0,0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Table */}
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-slate-500 text-xs border-b border-slate-800">
+              {cols.map(c => (
+                <th key={c.key} title={c.title ?? ''} className="text-right first:text-left py-2 px-2 font-medium cursor-help">
+                  {c.label}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {data.map(row => (
+              <tr key={row.season} className="border-t border-slate-800/60 hover:bg-slate-800/30 transition-colors">
+                {cols.map((c, i) => (
+                  <td key={c.key} className={`py-2 px-2 ${i === 0 ? 'text-slate-300 font-medium' : 'text-right text-white font-semibold'}`}>
+                    {c.format ? c.format(row[c.key]) : (row[c.key] ?? '—')}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="text-xs text-slate-600">Hover column headers for stat definitions. Sep/Cush/YAC+ from Next Gen Stats (2016+).</p>
+    </div>
+  )
+}
+
 // ── Snap Counts section ───────────────────────────────────────────────────────
 const SNAP_OFFENSE_POS = new Set(['QB','RB','WR','TE','OL','OT','OG','C','HB','FB'])
 const SNAP_DEFENSE_POS = new Set(['DE','DT','DL','NT','LB','ILB','OLB','MLB','CB','S','FS','SS','DB'])
@@ -493,6 +603,7 @@ export default function PlayerProfile() {
         )
       })}
 
+      <AdvReceivingSection playerId={player.player_id} pos={player.pos} accentColor={c.hex} />
       <SnapCountsSection playerId={player.player_id} pos={player.pos} accentColor={c.hex} />
 
       <div className="text-center pb-4">
