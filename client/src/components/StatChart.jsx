@@ -2,6 +2,7 @@ import {
   LineChart, Line,
   BarChart, Bar, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  ReferenceLine,
 } from 'recharts'
 
 const CHART_STYLE = {
@@ -11,15 +12,31 @@ const CHART_STYLE = {
 }
 
 // lines = [{dataKey, label, color}]
-export function CareerLineChart({ data, xKey, lines }) {
+// injuryMap = { season: games_missed } — seasons with 4+ missed games get a red marker
+export function CareerLineChart({ data, xKey, lines, injuryMap = {} }) {
+  const injurySeasons = Object.entries(injuryMap)
+    .filter(([, missed]) => missed >= 4)
+    .map(([s]) => Number(s))
+
   return (
     <ResponsiveContainer width="100%" height={260}>
       <LineChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
         <XAxis dataKey={xKey} stroke="#475569" tick={{ fill: '#94a3b8', fontSize: 12 }} />
         <YAxis stroke="#475569" tick={{ fill: '#94a3b8', fontSize: 12 }} />
-        <Tooltip {...CHART_STYLE} />
+        <Tooltip {...CHART_STYLE}
+          formatter={(value, name, props) => {
+            const season = props?.payload?.[xKey]
+            const missed = injuryMap[season]
+            const suffix = missed ? ` ⚕ ${missed} games missed` : ''
+            return [value, name + suffix]
+          }}
+        />
         <Legend wrapperStyle={{ fontSize: 12, color: '#94a3b8' }} />
+        {injurySeasons.map(s => (
+          <ReferenceLine key={s} x={s} stroke="#ef4444" strokeOpacity={0.35}
+            strokeWidth={8} strokeDasharray={null} />
+        ))}
         {lines.map(({ dataKey, label, color }) => (
           <Line
             key={dataKey}

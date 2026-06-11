@@ -207,6 +207,84 @@ function fmtHt(ht) {
   return `${ft}'${inch}"`
 }
 
+// ── Injury History section ────────────────────────────────────────────────────
+const STATUS_COLOR = { Out: '#ef4444', Doubtful: '#f97316', Questionable: '#f59e0b', Note: '#94a3b8' }
+
+function InjurySection({ playerId, accentColor }) {
+  const { data, loading } = useApi(() => api.getInjuries(playerId), [playerId])
+  if (loading) return null
+  const seasons = data?.seasons ?? []
+  if (!seasons.length) return null
+
+  const significant = seasons.filter(s => s.games_missed > 0 || s.games_doubtful > 0)
+  if (!significant.length) return null
+
+  return (
+    <div className="bg-slate-800/70 border border-slate-700/60 rounded-2xl p-5 space-y-4">
+      <h2 className="text-white font-bold flex items-center gap-2">
+        <span className="w-1 h-5 rounded-full" style={{ background: accentColor }} />
+        Injury History
+        <span className="text-slate-600 text-xs font-normal ml-1">2009+</span>
+      </h2>
+
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-slate-500 text-xs border-b border-slate-800">
+              <th className="text-left py-2 pr-4 font-medium">Season</th>
+              <th className="text-center py-2 pr-4 font-medium">
+                <span className="text-red-400">Out</span>
+              </th>
+              <th className="text-center py-2 pr-4 font-medium">
+                <span className="text-orange-400">Doubtful</span>
+              </th>
+              <th className="text-center py-2 pr-4 font-medium">
+                <span className="text-amber-400">Quest.</span>
+              </th>
+              <th className="text-left py-2 font-medium">Injuries</th>
+            </tr>
+          </thead>
+          <tbody>
+            {significant.map(row => (
+              <tr key={row.season}
+                className="border-t border-slate-800/60 hover:bg-slate-800/30 transition-colors">
+                <td className="py-2 pr-4 text-slate-300 font-medium">{row.season}</td>
+                <td className="py-2 pr-4 text-center">
+                  {row.games_missed > 0
+                    ? <span className="font-bold text-red-400">{row.games_missed}</span>
+                    : <span className="text-slate-700">—</span>}
+                </td>
+                <td className="py-2 pr-4 text-center">
+                  {row.games_doubtful > 0
+                    ? <span className="font-semibold text-orange-400">{row.games_doubtful}</span>
+                    : <span className="text-slate-700">—</span>}
+                </td>
+                <td className="py-2 pr-4 text-center">
+                  {row.games_questionable > 0
+                    ? <span className="text-amber-400">{row.games_questionable}</span>
+                    : <span className="text-slate-700">—</span>}
+                </td>
+                <td className="py-2">
+                  <div className="flex flex-wrap gap-1">
+                    {(row.injuries ?? []).map(inj => (
+                      <span key={inj} className="text-xs px-2 py-0.5 rounded-full bg-slate-700/60 text-slate-300">
+                        {inj}
+                      </span>
+                    ))}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="text-xs text-slate-600">
+        Red columns = games missed (Out). Seasons with 4+ missed games are highlighted on career charts.
+      </p>
+    </div>
+  )
+}
+
 // ── Advanced Receiving section ────────────────────────────────────────────────
 const ADV_REC_POS = new Set(['WR','TE','RB','HB','FB'])
 
@@ -454,7 +532,13 @@ function SnapCountsSection({ playerId, pos, accentColor }) {
 export default function PlayerProfile() {
   const { id } = useParams()
   const { data: profile, loading, error } = useApi(() => api.getPlayer(id), [id])
+  const { data: injData } = useApi(() => api.getInjuries(id), [id])
   const [advancedSections, setAdvancedSections] = useState(new Set())
+
+  // Build season -> games_missed map for chart annotations
+  const injuryMap = Object.fromEntries(
+    (injData?.seasons ?? []).map(s => [s.season, s.games_missed])
+  )
 
   const toggleAdvanced = cat => setAdvancedSections(prev => {
     const next = new Set(prev)
@@ -583,7 +667,7 @@ export default function PlayerProfile() {
             {chartGroups && cat.seasons.length > 1 && (
               <div className={chartGroups.length > 1 ? 'grid grid-cols-2 gap-3' : ''}>
                 {chartGroups.map((lines, i) => (
-                  <CareerLineChart key={i} data={cat.seasons} xKey="season" lines={lines} />
+                  <CareerLineChart key={i} data={cat.seasons} xKey="season" lines={lines} injuryMap={injuryMap} />
                 ))}
               </div>
             )}
@@ -603,6 +687,7 @@ export default function PlayerProfile() {
         )
       })}
 
+      <InjurySection playerId={player.player_id} accentColor={c.hex} />
       <AdvReceivingSection playerId={player.player_id} pos={player.pos} accentColor={c.hex} />
       <SnapCountsSection playerId={player.player_id} pos={player.pos} accentColor={c.hex} />
 
