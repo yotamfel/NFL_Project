@@ -455,7 +455,7 @@ export default function LeagueTrends() {
                   tick={{ fill: '#94a3b8', fontSize: 11 }} tickLine={false}
                   tickFormatter={yFmt} />
                 <YAxis type="category" dataKey="team" stroke="#475569"
-                  tick={{ fill: '#94a3b8', fontSize: 11 }} tickLine={false} width={36} />
+                  tick={{ fill: '#cbd5e1', fontSize: 12, fontWeight: 600 }} tickLine={false} width={44} />
                 <Tooltip
                   cursor={{ fill: '#1e293b' }}
                   content={({ active, payload, label }) => {

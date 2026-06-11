@@ -60,6 +60,24 @@ def get_league_trend(
     return [dict(r._mapping) for r in rows]
 
 
+# Maps historical/alternate PFR abbreviations to the canonical modern code.
+# Allows the by-team view to group all eras of a franchise together.
+_CANONICAL_TEAM: dict[str, str] = {
+    "NWE": "NE",  "KAN": "KC",  "GNB": "GB",  "NOR": "NO",
+    "SFO": "SF",  "TAM": "TB",  "LVR": "LV",  "OAK": "LV",
+    "LAR": "LA",  "STL": "LA",  "SDG": "LAC", "CLT": "IND",
+    "HTX": "HOU", "JAC": "JAX", "RAI": "LV",  "RAM": "LA",
+}
+
+def _canonical_team_sql() -> str:
+    """CASE expression that normalises alternate PFR team codes."""
+    cases = "\n".join(
+        f"    WHEN '{old}' THEN '{new}'"
+        for old, new in _CANONICAL_TEAM.items()
+    )
+    return f"CASE UPPER(s.team)\n{cases}\n    ELSE UPPER(s.team)\nEND"
+
+
 def get_team_breakdown(
     category: str,
     stat: str,
@@ -76,19 +94,22 @@ def get_team_breakdown(
         raise ValueError(f"agg must be one of {list(_AGG_MAP)}")
 
     agg_expr = _AGG_MAP[agg](stat)
+    team_expr = _canonical_team_sql()
     params: dict = {"pos": pos, "season_from": season_from, "season_to": season_to}
 
     sql = text(f"""
-        SELECT UPPER(s.team) AS team,
+        SELECT ({team_expr}) AS team,
                {agg_expr} AS value,
                COUNT(DISTINCT s.player_id) AS player_count
         FROM {category}_seasons s
         JOIN players p ON p.player_id = s.player_id
         WHERE s.{stat} IS NOT NULL
+          AND s.team IS NOT NULL
+          AND UPPER(s.team) NOT IN ('2TM', '3TM', '4TM')
           AND (:pos IS NULL OR UPPER(p.pos) = UPPER(:pos))
           AND (:season_from IS NULL OR s.season >= :season_from)
           AND (:season_to   IS NULL OR s.season <= :season_to)
-        GROUP BY UPPER(s.team)
+        GROUP BY ({team_expr})
         ORDER BY value DESC NULLS LAST
     """)
 
