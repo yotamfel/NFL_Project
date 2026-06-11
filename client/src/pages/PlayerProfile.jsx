@@ -529,6 +529,104 @@ function SnapCountsSection({ playerId, pos, accentColor }) {
   )
 }
 
+// ── Next Gen Stats section ────────────────────────────────────────────────────
+const NGS_QB_POS  = new Set(['QB'])
+const NGS_RB_POS  = new Set(['RB','HB','FB'])
+
+function NgsSection({ playerId, pos, accentColor }) {
+  const isQB = NGS_QB_POS.has(pos?.toUpperCase())
+  const isRB = NGS_RB_POS.has(pos?.toUpperCase())
+  if (!isQB && !isRB) return null
+
+  const statType = isQB ? 'passing' : 'rushing'
+  const { data, loading } = useApi(() => api.getNgsStats(playerId, statType), [playerId, statType])
+  if (loading) return null
+
+  const rows = isQB ? (data?.passing ?? []) : (data?.rushing ?? [])
+  if (!rows.length) return null
+
+  const dec2 = v => v != null ? Number(v).toFixed(2) : '—'
+  const dec1 = v => v != null ? Number(v).toFixed(1) : '—'
+  const pct1 = v => v != null ? `${Number(v).toFixed(1)}%` : '—'
+
+  const passingCols = [
+    { key: 'season',          label: 'Season', title: 'Season' },
+    { key: 'avg_ttt',         label: 'TT',     title: 'Avg Time to Throw (seconds)',           format: dec2 },
+    { key: 'avg_iay',         label: 'IAY',    title: 'Avg Intended Air Yards per attempt',    format: dec1 },
+    { key: 'avg_cay',         label: 'CAY',    title: 'Avg Completed Air Yards per completion',format: dec1 },
+    { key: 'avg_adot_sticks', label: 'ADOTS',  title: 'Avg Air Yards to the Sticks (1st down)',format: dec1 },
+    { key: 'aggressiveness',  label: 'Aggr%',  title: 'Aggressiveness: % throws into tight windows', format: pct1 },
+    { key: 'cpoe',            label: 'CPOE',   title: 'Completion % Over Expected',            format: dec2 },
+    { key: 'max_air_dist',    label: 'MaxDist',title: 'Max Completed Air Distance',            format: dec1 },
+  ]
+
+  const rushingCols = [
+    { key: 'season',      label: 'Season',  title: 'Season' },
+    { key: 'efficiency',  label: 'Eff',     title: 'NGS Rushing Efficiency Score',              format: dec2 },
+    { key: 'avg_tlos',    label: 'TLOS',    title: 'Avg Time to Line of Scrimmage (seconds)',   format: dec2 },
+    { key: 'ryoe_per_att',label: 'RYOE/A',  title: 'Rush Yards Over Expected per Attempt',     format: dec2 },
+    { key: 'rush_pct_oe', label: 'RPOE%',   title: 'Rush % Over Expected',                     format: dec1 },
+    { key: 'pct_8box',    label: '8-Box%',  title: '% of rushes vs 8+ defenders in the box',  format: pct1 },
+  ]
+
+  const cols = isQB ? passingCols : rushingCols
+
+  // Chart lines config
+  const passingLines = [
+    { dataKey: 'cpoe',         label: 'CPOE',   color: accentColor },
+    { dataKey: 'aggressiveness',label: 'Aggr%', color: '#f59e0b' },
+  ]
+  const rushingLines = [
+    { dataKey: 'ryoe_per_att', label: 'RYOE/A',   color: accentColor },
+    { dataKey: 'efficiency',   label: 'Efficiency',color: '#34d399' },
+  ]
+  const chartLines = isQB ? passingLines : rushingLines
+
+  const title = isQB ? 'Next Gen Stats — Passing' : 'Next Gen Stats — Rushing'
+
+  return (
+    <div className="bg-slate-800/70 border border-slate-700/60 rounded-2xl p-5 space-y-4">
+      <h2 className="text-white font-bold flex items-center gap-2">
+        <span className="w-1 h-5 rounded-full" style={{ background: accentColor }} />
+        {title}
+        <span className="text-slate-600 text-xs font-normal ml-1">NGS 2016+</span>
+      </h2>
+
+      {rows.length > 1 && (
+        <CareerLineChart data={rows} xKey="season" lines={chartLines} />
+      )}
+
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-slate-500 text-xs border-b border-slate-800">
+              {cols.map(c => (
+                <th key={c.key} title={c.title}
+                  className="text-right first:text-left py-2 px-2 font-medium cursor-help">
+                  {c.label}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map(row => (
+              <tr key={row.season} className="border-t border-slate-800/60 hover:bg-slate-800/30 transition-colors">
+                {cols.map((c, i) => (
+                  <td key={c.key}
+                    className={`py-2 px-2 ${i === 0 ? 'text-slate-300 font-medium' : 'text-right text-white font-semibold'}`}>
+                    {c.format ? c.format(row[c.key]) : (row[c.key] ?? '—')}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="text-xs text-slate-600">Hover column headers for stat definitions.</p>
+    </div>
+  )
+}
+
 export default function PlayerProfile() {
   const { id } = useParams()
   const { data: profile, loading, error } = useApi(() => api.getPlayer(id), [id])
@@ -689,6 +787,7 @@ export default function PlayerProfile() {
 
       <InjurySection playerId={player.player_id} accentColor={c.hex} />
       <AdvReceivingSection playerId={player.player_id} pos={player.pos} accentColor={c.hex} />
+      <NgsSection playerId={player.player_id} pos={player.pos} accentColor={c.hex} />
       <SnapCountsSection playerId={player.player_id} pos={player.pos} accentColor={c.hex} />
 
       <div className="text-center pb-4">

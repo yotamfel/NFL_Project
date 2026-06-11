@@ -100,5 +100,11 @@ export const api = {
     return get(`/players/${id}/snaps?${p}`)
   },
 
+  getNgsStats: (id, statType) => {
+    const p = new URLSearchParams()
+    if (statType) p.set('stat_type', statType)
+    return get(`/players/${id}/ngs?${p}`)
+  },
+
   askQuestion: question => post('/search/natural', { question }),
 }

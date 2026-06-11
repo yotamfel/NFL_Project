@@ -5,6 +5,7 @@ from app.data.players import get_player_profile, search_players, top_players_by_
 from app.data.snap_counts import get_snap_weeks, get_snap_seasons, get_snap_available_seasons
 from app.data.adv_receiving import get_adv_receiving
 from app.data.injuries import get_injury_seasons, get_injury_weeks
+from app.data.ngs import get_ngs_passing, get_ngs_rushing
 from app.models import Player, PlayerProfile
 
 router = APIRouter(prefix="/players", tags=["players"])
@@ -51,6 +52,15 @@ def injuries(
 @router.get("/{player_id}/adv_receiving")
 def adv_receiving(player_id: str):
     return get_adv_receiving(player_id)
+
+
+@router.get("/{player_id}/ngs")
+def ngs_stats(player_id: str, stat_type: str | None = Query(None, description="passing or rushing")):
+    if stat_type == "rushing":
+        return {"rushing": get_ngs_rushing(player_id)}
+    if stat_type == "passing":
+        return {"passing": get_ngs_passing(player_id)}
+    return {"passing": get_ngs_passing(player_id), "rushing": get_ngs_rushing(player_id)}
 
 
 @router.get("/{player_id}/snaps")
