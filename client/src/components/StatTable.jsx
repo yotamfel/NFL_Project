@@ -7,7 +7,7 @@ export default function StatTable({ columns, rows, keyField = 'id' }) {
   }
   return (
     <div className="overflow-x-auto rounded-lg border border-slate-700">
-      <table className="w-full text-sm">
+      <table className="min-w-full text-sm">
         <thead>
           <tr className="bg-slate-800 text-slate-400">
             {columns.map(col => (

@@ -688,7 +688,8 @@ export default function Comparison() {
           </select>
         </div>
         {lbData && lbData.length > 0 ? (
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="min-w-full text-sm">
             <thead>
               <tr className="text-slate-500 text-xs border-b border-slate-800">
                 <th className="text-left py-2 pr-4 font-medium w-8">#</th>
@@ -729,6 +730,7 @@ export default function Comparison() {
               })}
             </tbody>
           </table>
+          </div>
         ) : (
           <p className="text-slate-600 text-sm text-center py-4">No data.</p>
         )}
