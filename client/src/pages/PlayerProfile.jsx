@@ -1,5 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip,
+  ResponsiveContainer, ReferenceLine,
+} from 'recharts'
 import { api } from '../api'
 import { useApi } from '../hooks/useApi'
 import { Loading, ErrorMsg } from '../components/Status'
@@ -203,6 +207,140 @@ function fmtHt(ht) {
   return `${ft}'${inch}"`
 }
 
+// ── Snap Counts section ───────────────────────────────────────────────────────
+const SNAP_OFFENSE_POS = new Set(['QB','RB','WR','TE','OL','OT','OG','C','HB','FB'])
+const SNAP_DEFENSE_POS = new Set(['DE','DT','DL','NT','LB','ILB','OLB','MLB','CB','S','FS','SS','DB'])
+
+function SnapCountsSection({ playerId, pos, accentColor }) {
+  const [snapData,     setSnapData]     = useState(null)
+  const [selectedSeason, setSelectedSeason] = useState(null)
+  const [weekData,     setWeekData]     = useState(null)
+  const [loading,      setLoading]      = useState(true)
+
+  // Primary snap type for this position
+  const snapKey = SNAP_DEFENSE_POS.has(pos?.toUpperCase()) ? 'defense_pct'
+    : pos?.toUpperCase() === 'K' || pos?.toUpperCase() === 'P' ? 'st_pct'
+    : 'offense_pct'
+  const snapLabel = snapKey === 'defense_pct' ? 'Def Snap %'
+    : snapKey === 'st_pct' ? 'ST Snap %' : 'Off Snap %'
+
+  useEffect(() => {
+    setLoading(true)
+    api.getPlayerSnaps(playerId).then(d => {
+      setSnapData(d)
+      if (d.available?.length) setSelectedSeason(d.available[0])
+      setLoading(false)
+    }).catch(() => setLoading(false))
+  }, [playerId])
+
+  useEffect(() => {
+    if (!selectedSeason) return
+    api.getPlayerSnaps(playerId, selectedSeason).then(d => setWeekData(d.weeks))
+  }, [playerId, selectedSeason])
+
+  if (loading) return (
+    <div className="rounded-2xl border border-slate-700/60 bg-slate-800/70 p-5">
+      <p className="text-slate-500 text-xs animate-pulse">Loading snap counts…</p>
+    </div>
+  )
+  if (!snapData || !snapData.available?.length) return null
+
+  const seasons    = snapData.seasons ?? []
+  const available  = snapData.available ?? []
+
+  // Weekly bars for the selected season
+  const weeks = (weekData ?? []).filter(w => w.game_type === 'REG').map(w => ({
+    week: `W${w.week}`,
+    pct:  Math.round((w[snapKey] ?? 0) * 100),
+    opp:  w.opponent,
+  }))
+
+  // Career trend bars
+  const careerBars = seasons.map(s => ({
+    season: s.season,
+    pct: Math.round(((s[snapKey === 'defense_pct' ? 'avg_def_pct' : snapKey === 'st_pct' ? 'avg_st_pct' : 'avg_off_pct']) ?? 0) * 100),
+  }))
+
+  return (
+    <div className="bg-slate-800/70 border border-slate-700/60 rounded-2xl p-5 space-y-5">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <h2 className="text-white font-bold flex items-center gap-2">
+          <span className="w-1 h-5 rounded-full" style={{ background: accentColor }} />
+          Snap Counts
+        </h2>
+        <select
+          value={selectedSeason ?? ''}
+          onChange={e => setSelectedSeason(Number(e.target.value))}
+          className="bg-slate-900 border border-slate-700 text-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none">
+          {available.map(yr => <option key={yr} value={yr}>{yr}</option>)}
+        </select>
+      </div>
+
+      {/* Weekly breakdown for selected season */}
+      {weeks.length > 0 && (
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">
+            {selectedSeason} — {snapLabel} by week
+          </p>
+          <ResponsiveContainer width="100%" height={160}>
+            <BarChart data={weeks} margin={{ top: 0, right: 8, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+              <XAxis dataKey="week" stroke="#475569" tick={{ fill: '#64748b', fontSize: 10 }} tickLine={false} />
+              <YAxis domain={[0, 100]} stroke="#475569" tick={{ fill: '#64748b', fontSize: 10 }}
+                tickFormatter={v => `${v}%`} width={36} />
+              <ReferenceLine y={100} stroke="#334155" strokeDasharray="3 3" />
+              <RTooltip
+                cursor={{ fill: '#1e293b' }}
+                content={({ active, payload, label }) => {
+                  if (!active || !payload?.length) return null
+                  const d = payload[0]?.payload
+                  return (
+                    <div className="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs shadow-xl">
+                      <p className="text-white font-bold">{label} vs {d.opp}</p>
+                      <p style={{ color: accentColor }}>{snapLabel}: {d.pct}%</p>
+                    </div>
+                  )
+                }}
+              />
+              <Bar dataKey="pct" radius={[2, 2, 0, 0]} fill={accentColor} fillOpacity={0.8} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      {/* Career snap % trend */}
+      {careerBars.length > 1 && (
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">
+            Career — avg {snapLabel} per season
+          </p>
+          <ResponsiveContainer width="100%" height={120}>
+            <BarChart data={careerBars} margin={{ top: 0, right: 8, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+              <XAxis dataKey="season" stroke="#475569" tick={{ fill: '#64748b', fontSize: 10 }} tickLine={false} />
+              <YAxis domain={[0, 100]} stroke="#475569" tick={{ fill: '#64748b', fontSize: 10 }}
+                tickFormatter={v => `${v}%`} width={36} />
+              <RTooltip
+                cursor={{ fill: '#1e293b' }}
+                content={({ active, payload, label }) => {
+                  if (!active || !payload?.length) return null
+                  return (
+                    <div className="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs shadow-xl">
+                      <p className="text-white font-bold">{label}</p>
+                      <p style={{ color: accentColor }}>{snapLabel}: {payload[0]?.value}%</p>
+                    </div>
+                  )
+                }}
+              />
+              <Bar dataKey="pct" radius={[2, 2, 0, 0]} fill={accentColor} fillOpacity={0.6} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function PlayerProfile() {
   const { id } = useParams()
   const { data: profile, loading, error } = useApi(() => api.getPlayer(id), [id])
@@ -354,6 +492,8 @@ export default function PlayerProfile() {
           </div>
         )
       })}
+
+      <SnapCountsSection playerId={player.player_id} pos={player.pos} accentColor={c.hex} />
 
       <div className="text-center pb-4">
         <Link to="/comparison" className="text-sm transition-colors hover:opacity-80"

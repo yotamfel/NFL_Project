@@ -87,5 +87,11 @@ export const api = {
     return get(`/trends/by_team?${p}`)
   },
 
+  getPlayerSnaps: (id, season) => {
+    const p = new URLSearchParams()
+    if (season) p.set('season', season)
+    return get(`/players/${id}/snaps?${p}`)
+  },
+
   askQuestion: question => post('/search/natural', { question }),
 }
