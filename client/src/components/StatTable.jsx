@@ -19,7 +19,7 @@ export default function StatTable({ columns, rows, keyField = 'id' }) {
                   )}
                 </span>
                 {col.desc && (
-                  <div className="pointer-events-none absolute top-full left-0 mt-1 z-50
+                  <div className="pointer-events-none absolute bottom-full right-0 mb-1 z-50
                     hidden group-hover:block w-56 rounded-lg bg-slate-950 border border-slate-700
                     px-3 py-2 text-xs text-slate-300 shadow-xl font-normal whitespace-normal leading-relaxed">
                     {col.desc}
