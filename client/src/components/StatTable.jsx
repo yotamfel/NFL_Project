@@ -6,7 +6,7 @@ export default function StatTable({ columns, rows, keyField = 'id' }) {
     return <p className="text-slate-500 text-sm py-4 text-center">No data</p>
   }
   return (
-    <div className="overflow-x-auto rounded-lg border border-slate-700">
+    <div className="scroll-x rounded-lg border border-slate-700">
       <table className="min-w-full text-sm">
         <thead>
           <tr className="bg-slate-800 text-slate-400">

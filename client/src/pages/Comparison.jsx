@@ -688,7 +688,7 @@ export default function Comparison() {
           </select>
         </div>
         {lbData && lbData.length > 0 ? (
-          <div className="overflow-x-auto">
+          <div className="scroll-x">
           <table className="min-w-full text-sm">
             <thead>
               <tr className="text-slate-500 text-xs border-b border-slate-800">
