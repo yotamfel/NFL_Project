@@ -112,8 +112,8 @@ export default function Saved() {
                 </div>
               </summary>
               {s.rows.length > 0 && (
-                <div className="border-t border-slate-700/60 overflow-x-auto">
-                  <table className="w-full text-xs">
+                <div className="border-t border-slate-700/60 scroll-x">
+                  <table className="min-w-full text-xs">
                     <thead>
                       <tr className="bg-slate-900/60">
                         {Object.keys(s.rows[0]).map(k => (

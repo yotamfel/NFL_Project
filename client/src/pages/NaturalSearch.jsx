@@ -113,7 +113,7 @@ export default function NaturalSearch() {
               <span className="text-slate-700 group-open:text-violet-500 transition-colors">▶</span>
               Generated SQL
             </summary>
-            <pre className="px-5 pb-4 pt-2 text-xs text-violet-300 font-mono overflow-x-auto border-t border-slate-800">
+            <pre className="px-5 pb-4 pt-2 text-xs text-violet-300 font-mono scroll-x border-t border-slate-800">
               {result.sql}
             </pre>
           </details>
@@ -124,8 +124,8 @@ export default function NaturalSearch() {
               <span className="text-xs text-slate-500 uppercase tracking-wider">Results</span>
               <span className="text-xs text-violet-400 font-semibold">{result.rows.length} rows</span>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+            <div className="scroll-x">
+              <table className="min-w-full text-sm">
                 <thead>
                   <tr style={{ background: 'rgba(139,92,246,0.08)' }}>
                     {Object.keys(result.rows[0] ?? {}).map(k => (

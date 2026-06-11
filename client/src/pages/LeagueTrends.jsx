@@ -485,8 +485,8 @@ export default function LeagueTrends() {
           {/* Team table */}
           <div className="rounded-2xl border border-slate-700/60 bg-slate-900/60 p-5">
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">All teams</p>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+            <div className="scroll-x">
+              <table className="min-w-full text-sm">
                 <thead>
                   <tr className="text-slate-500 text-xs border-b border-slate-800">
                     <th className="text-left py-2 pr-4 font-medium w-8">#</th>
@@ -614,8 +614,8 @@ export default function LeagueTrends() {
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">
               Season breakdown
             </p>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+            <div className="scroll-x">
+              <table className="min-w-full text-sm">
                 <thead>
                   <tr className="text-slate-500 text-xs border-b border-slate-800">
                     <th className="text-left py-2 pr-6 font-medium">Season</th>

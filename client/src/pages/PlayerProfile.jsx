@@ -227,8 +227,8 @@ function InjurySection({ playerId, accentColor }) {
         <span className="text-slate-600 text-xs font-normal ml-1">2009+</span>
       </h2>
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+      <div className="scroll-x">
+        <table className="min-w-full text-sm">
           <thead>
             <tr className="text-slate-500 text-xs border-b border-slate-800">
               <th className="text-left py-2 pr-4 font-medium">Season</th>
@@ -366,8 +366,8 @@ function AdvReceivingSection({ playerId, pos, accentColor }) {
       )}
 
       {/* Table */}
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+      <div className="scroll-x">
+        <table className="min-w-full text-sm">
           <thead>
             <tr className="text-slate-500 text-xs border-b border-slate-800">
               {cols.map(c => (
@@ -596,8 +596,8 @@ function NgsSection({ playerId, pos, accentColor }) {
         <CareerLineChart data={rows} xKey="season" lines={chartLines} />
       )}
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+      <div className="scroll-x">
+        <table className="min-w-full text-sm">
           <thead>
             <tr className="text-slate-500 text-xs border-b border-slate-800">
               {cols.map(c => (
