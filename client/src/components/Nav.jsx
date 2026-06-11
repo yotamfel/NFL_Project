@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import HelpModal from './HelpModal'
 import { useUser } from '../context/UserContext'
 import { api } from '../api'
 
@@ -11,10 +10,10 @@ const LINKS = [
   { to: '/search', label: 'Smart Search' },
   { to: '/trends', label: 'Trends' },
   { to: '/saved', label: 'Saved' },
+  { to: '/guide', label: 'Guide' },
 ]
 
 export default function Nav() {
-  const [helpOpen,       setHelpOpen]       = useState(false)
   const [searchQ,        setSearchQ]        = useState('')
   const [searchResults,  setSearchResults]  = useState([])
   const [searchFocused,  setSearchFocused]  = useState(false)
@@ -113,30 +112,20 @@ export default function Nav() {
             )}
           </div>
 
-          <div className="flex items-center gap-2">
-            {username && (
-              <button
-                onClick={() => {
-                  const n = window.prompt('Change username:', username)
-                  if (n && n.trim().length >= 2) setUser(n.trim())
-                }}
-                title="Change username"
-                className="text-xs text-amber-500/70 hover:text-amber-400 transition-colors font-semibold hidden sm:block"
-              >
-                {username}
-              </button>
-            )}
+          {username && (
             <button
-              onClick={() => setHelpOpen(true)}
-              title="How to use / מדריך שימוש"
-              className="flex items-center justify-center w-7 h-7 rounded-full border border-slate-700 text-slate-500 hover:text-white hover:border-slate-500 transition-colors text-sm font-bold"
+              onClick={() => {
+                const n = window.prompt('Change username:', username)
+                if (n && n.trim().length >= 2) setUser(n.trim())
+              }}
+              title="Change username"
+              className="text-xs text-amber-500/70 hover:text-amber-400 transition-colors font-semibold hidden sm:block"
             >
-              ?
+              {username}
             </button>
-          </div>
+          )}
         </div>
       </nav>
-      {helpOpen && <HelpModal onClose={() => setHelpOpen(false)} />}
     </>
   )
 }

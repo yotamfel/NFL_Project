@@ -9,6 +9,7 @@ import DraftAnalysis from './pages/DraftAnalysis'
 import NaturalSearch from './pages/NaturalSearch'
 import Saved from './pages/Saved'
 import LeagueTrends from './pages/LeagueTrends'
+import Guide from './pages/Guide'
 
 function AppInner() {
   const { username } = useUser()
@@ -25,6 +26,7 @@ function AppInner() {
           <Route path="/search" element={<NaturalSearch />} />
           <Route path="/saved" element={<Saved />} />
           <Route path="/trends" element={<LeagueTrends />} />
+          <Route path="/guide" element={<Guide />} />
         </Routes>
       </main>
     </div>
