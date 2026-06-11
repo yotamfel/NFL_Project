@@ -53,17 +53,43 @@ def create_table(conn):
     print("Table injuries ready.")
 
 
-def _build_id_map():
+def _build_id_map(engine):
+    """Primary map: gsis_id -> pfr_id via ff_playerids (only pfr_ids in our DB).
+    Fallback map: (full_name, pos) -> pfr_id — unique name+position combos only."""
+    with engine.connect() as conn:
+        rows = conn.execute(text("SELECT player_name, pos, player_id FROM players")).fetchall()
+
+    our_pfr_ids: set[str] = {r[2] for r in rows}
+
+    # name+pos map: unique (name, pos) combos only
+    np_counts: dict[tuple, int] = {}
+    np_to_pfr:  dict[tuple, str] = {}
+    # also name-only map for unique names
+    name_counts: dict[str, int] = {}
+    name_to_pfr:  dict[str, str] = {}
+    for player_name, pos, player_id in rows:
+        key = (player_name, pos)
+        np_counts[key] = np_counts.get(key, 0) + 1
+        np_to_pfr[key] = player_id
+        name_counts[player_name] = name_counts.get(player_name, 0) + 1
+        name_to_pfr[player_name] = player_id
+
+    np_to_pfr   = {k: v for k, v in np_to_pfr.items()   if np_counts[k]   == 1}
+    name_to_pfr = {k: v for k, v in name_to_pfr.items() if name_counts[k] == 1}
+
+    # Primary map: only keep ff_playerids entries where pfr_id is in our DB
     ids = (nfl.load_ff_playerids().to_pandas()
            [['gsis_id', 'pfr_id']]
            .dropna()
            .query("gsis_id != '' and pfr_id != ''")
+           .pipe(lambda df: df[df['pfr_id'].isin(our_pfr_ids)])
            .set_index('gsis_id')['pfr_id']
            .to_dict())
-    return ids
+
+    return ids, np_to_pfr, name_to_pfr
 
 
-def load_year(year: int, id_map: dict, engine) -> int:
+def load_year(year: int, id_map: dict, np_map: dict, name_map: dict, engine) -> int:
     print(f"  {year}...", end=" ", flush=True)
     try:
         df = nfl.load_injuries(seasons=year).to_pandas()
@@ -78,8 +104,20 @@ def load_year(year: int, id_map: dict, engine) -> int:
     # Keep only rows with an actual status designation
     df = df[df['report_status'].notna() & (df['report_status'] != '')]
 
-    # Link player IDs
+    # Primary link: gsis_id -> pfr_id
     df['player_id'] = df['gsis_id'].map(id_map)
+
+    # Fallback 1: match by (full_name, position) — handles duplicate names
+    unlinked = df['player_id'].isna()
+    if unlinked.any() and 'full_name' in df.columns and 'position' in df.columns:
+        df.loc[unlinked, 'player_id'] = df.loc[unlinked].apply(
+            lambda r: np_map.get((r['full_name'], r['position'])), axis=1
+        )
+    # Fallback 2: match by full_name alone (unique names only)
+    unlinked = df['player_id'].isna()
+    if unlinked.any() and 'full_name' in df.columns:
+        df.loc[unlinked, 'player_id'] = df.loc[unlinked, 'full_name'].map(name_map)
+
     df = df[df['player_id'].notna()]
 
     df = df.rename(columns={'report_primary_injury': 'primary_injury'})
@@ -108,12 +146,12 @@ def load_injuries(years=None):
         create_table(conn)
 
     print("Building player ID map...")
-    id_map = _build_id_map()
-    print(f"  {len(id_map):,} gsis->pfr mappings")
+    id_map, np_map, name_map = _build_id_map(engine)
+    print(f"  {len(id_map):,} gsis->pfr mappings, {len(np_map):,} name+pos fallbacks, {len(name_map):,} name-only fallbacks")
 
     total = 0
     for yr in years:
-        total += load_year(yr, id_map, engine)
+        total += load_year(yr, id_map, np_map, name_map, engine)
 
     print(f"\nDone. {total:,} total rows inserted.")
 
