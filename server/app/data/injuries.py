@@ -23,11 +23,22 @@ def get_injury_seasons(player_id: str) -> list[dict]:
         GROUP BY season
         ORDER BY season
     """)
-    # Games actually played — used to catch IR absences not in weekly reports
+    # Games actually played — union all position tables (no stats table; data is split by position)
     stats_sql = text("""
-        SELECT season, SUM(g) AS games_played
-        FROM stats
-        WHERE player_id = :pid AND game_type = 'REG'
+        SELECT season, MAX(g) AS games_played
+        FROM (
+            SELECT player_id, season, g FROM passing_seasons WHERE player_id = :pid
+            UNION ALL
+            SELECT player_id, season, g FROM offense_seasons  WHERE player_id = :pid
+            UNION ALL
+            SELECT player_id, season, g FROM defense_seasons  WHERE player_id = :pid
+            UNION ALL
+            SELECT player_id, season, g FROM kicking_seasons  WHERE player_id = :pid
+            UNION ALL
+            SELECT player_id, season, g FROM punting_seasons  WHERE player_id = :pid
+            UNION ALL
+            SELECT player_id, season, g FROM returns_seasons  WHERE player_id = :pid
+        ) t
         GROUP BY season
         ORDER BY season
     """)
@@ -50,7 +61,8 @@ def get_injury_seasons(player_id: str) -> list[dict]:
         inj = injury_map.get(season, {})
         gp  = stats_map.get(season)
         exp = _expected_games(season)
-        games_missed_approx = max(0, exp - gp) if gp is not None else None
+        # Only trust approx when player actually played some games (gp=0 means data missing/season not started)
+        games_missed_approx = max(0, exp - gp) if gp else None
 
         result.append({
             'season':              season,
