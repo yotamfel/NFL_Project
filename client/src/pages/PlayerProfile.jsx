@@ -402,16 +402,14 @@ function AdvReceivingSection({ playerId, pos, accentColor }) {
         <table className="min-w-full text-sm">
           <thead>
             <tr className="text-slate-500 text-xs border-b border-slate-800">
-              {cols.map(c => (
+              {cols.map((c, i) => (
                 <th key={c.key}
-                  className="text-right first:text-left py-2 px-2 font-medium"
+                  className={`py-2 px-2 font-medium ${i === 0 ? 'text-left' : 'text-right'}`}
                   onMouseEnter={c.desc ? e => showTip(e, c.desc) : undefined}
                   onMouseLeave={c.desc ? () => setColTip(null) : undefined}
                 >
-                  <span className="flex items-center justify-end first:justify-start gap-1">
-                    {c.label}
-                    {c.desc && <span className="text-slate-600 text-xs select-none cursor-help">ⓘ</span>}
-                  </span>
+                  {c.label}
+                  {c.desc && <span className="text-slate-600 text-xs select-none cursor-help ml-1">ⓘ</span>}
                 </th>
               ))}
             </tr>
@@ -651,16 +649,14 @@ function NgsSection({ playerId, pos, accentColor }) {
         <table className="min-w-full text-sm">
           <thead>
             <tr className="text-slate-500 text-xs border-b border-slate-800">
-              {cols.map(c => (
+              {cols.map((c, i) => (
                 <th key={c.key}
-                  className="text-right first:text-left py-2 px-2 font-medium"
+                  className={`py-2 px-2 font-medium ${i === 0 ? 'text-left' : 'text-right'}`}
                   onMouseEnter={c.desc ? e => showTip(e, c.desc) : undefined}
                   onMouseLeave={c.desc ? () => setColTip(null) : undefined}
                 >
-                  <span className="flex items-center justify-end first:justify-start gap-1">
-                    {c.label}
-                    {c.desc && <span className="text-slate-600 text-xs select-none cursor-help">ⓘ</span>}
-                  </span>
+                  {c.label}
+                  {c.desc && <span className="text-slate-600 text-xs select-none cursor-help ml-1">ⓘ</span>}
                 </th>
               ))}
             </tr>
