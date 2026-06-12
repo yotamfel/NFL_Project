@@ -43,7 +43,7 @@ const CONTENT = {
           },
           {
             title: 'Stats tables — Basic / Advanced',
-            body: 'Each stat category (Passing, Offense, Defense, Kicking, Punting, Returns) has a Basic and an Advanced view. Toggle with the buttons above the table. Hover any column header to see a full definition of that stat. Scroll the table horizontally if needed.',
+            body: 'Each stat category (Passing, Offense, Defense, Kicking, Punting, Returns) has a Basic and an Advanced view. Toggle with the buttons above the table. Hover any column header (look for the ⓘ icon) to see a full definition of that stat. This works on all tables in the profile — including Advanced Receiving and Next Gen Stats. Scroll tables horizontally if needed.',
           },
           {
             title: 'Career charts',
@@ -366,7 +366,7 @@ const CONTENT = {
           },
           {
             title: 'טבלאות סטטיסטיקה — Basic / Advanced',
-            body: 'כל קטגוריית סטטיסטיקה (Passing, Offense, Defense, Kicking, Punting, Returns) מגיעה בתצוגה Basic ו-Advanced. החלף ביניהן עם הכפתורים מעל הטבלה. עמוד על כותרת עמודה כדי לראות הסבר מלא של הסטטיסטיקה. ניתן לגלול את הטבלה ימינה אם רחבה מדי.',
+            body: 'כל קטגוריית סטטיסטיקה (Passing, Offense, Defense, Kicking, Punting, Returns) מגיעה בתצוגה Basic ו-Advanced. החלף ביניהן עם הכפתורים מעל הטבלה. עמוד על כותרת עמודה (חפש את סמל ⓘ) לקבלת הגדרה מלאה של הסטטיסטיקה — עובד בכל הטבלאות בפרופיל, כולל Advanced Receiving ו-Next Gen Stats. ניתן לגלול את הטבלה ימינה אם רחבה מדי.',
           },
           {
             title: 'Career Charts',
