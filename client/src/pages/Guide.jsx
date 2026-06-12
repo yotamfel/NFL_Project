@@ -51,7 +51,14 @@ const CONTENT = {
           },
           {
             title: 'Injury History (2009+)',
-            body: 'Shows a season-by-season breakdown of how many games the player was listed as Out, Doubtful, or Questionable on the injury report. The injury type badges (e.g. Knee, Hamstring) come from the weekly injury reports. Only shown when there is meaningful injury history.',
+            body: [
+              'G column — shows games played vs. games expected that season (e.g. 5/16). A low number signals a long absence even if the weekly injury report has few entries.',
+              'Missed column — the larger of: (1) games officially listed as Out on the weekly injury report, or (2) estimated missed games calculated from games played. When the estimate is used, a † mark appears.',
+              '† (estimated) — the player likely went on IR mid-season. The weekly injury report stops listing IR players, so this column fills the gap.',
+              'Doubtful / Quest. — count of games listed as Doubtful or Questionable on the official report.',
+              'Injury badges — body parts flagged in weekly reports (Knee, Hamstring, etc.).',
+              'Career charts show red shaded bands for seasons with 4+ missed games (official or estimated).',
+            ],
           },
           {
             title: 'Advanced Receiving (WR / TE / RB) — PFR 2018+, NGS 2016+',
@@ -367,7 +374,14 @@ const CONTENT = {
           },
           {
             title: 'Injury History — היסטוריית פציעות (2009+)',
-            body: 'מציג פירוט עונתי של כמה משחקים השחקן היה מדורג כ-Out, Doubtful או Questionable בדוחות הפציעות הרשמיים. תגיות סוג הפציעה (Knee, Hamstring וכד\') מגיעות מדוחות שבועיים. הסקציה מופיעה רק כשיש היסטוריית פציעות משמעותית.',
+            body: [
+              'עמודת G — משחקים שהשחקן שיחק מתוך הצפוי באותה עונה (למשל 5/16). מספר נמוך מצביע על היעדרות ארוכה גם אם אין רישומים רשמיים.',
+              'עמודת Missed — הגבוה מבין: (1) משחקים שהשחקן רוּשם כ-Out בדוח השבועי, או (2) משחקים חסרים מוערכים מתוך נתוני G. כשנעשה שימוש בהערכה מופיע סימן †.',
+              '† (מוערך) — השחקן כנראה נכנס ל-IR (Injured Reserve) באמצע העונה. דוח הפציעות השבועי מפסיק לציין שחקני IR, ולכן העמודה הזו ממלאת את הפער.',
+              'Doubtful / Quest. — מספר משחקים שהשחקן נרשם כ-Doubtful או Questionable בדוח הרשמי.',
+              'תגיות פציעה — איברי גוף שסומנו בדוחות השבועיים (Knee, Hamstring וכד\').',
+              'גרפי קריירה מציגים פסים אדומים בעונות עם 4+ משחקים חסרים (רשמי או מוערך).',
+            ],
           },
           {
             title: 'Advanced Receiving — WR / TE / RB (PFR 2018+, NGS 2016+)',
