@@ -216,8 +216,18 @@ function InjurySection({ playerId, accentColor }) {
   const seasons = data?.seasons ?? []
   if (!seasons.length) return null
 
-  const significant = seasons.filter(s => s.games_missed > 0 || s.games_doubtful > 0)
+  // Show seasons with official Out/Doubtful entries OR 4+ estimated missed games (IR)
+  const significant = seasons.filter(s =>
+    s.games_missed > 0 ||
+    s.games_doubtful > 0 ||
+    (s.games_missed_approx ?? 0) >= 4
+  )
   if (!significant.length) return null
+
+  // Whether any row uses estimated missed games (shows footnote)
+  const hasEst = significant.some(s =>
+    (s.games_missed_approx ?? 0) > s.games_missed && (s.games_missed_approx ?? 0) >= 4
+  )
 
   return (
     <div className="bg-slate-800/70 border border-slate-700/60 rounded-2xl p-5 space-y-4">
@@ -232,8 +242,9 @@ function InjurySection({ playerId, accentColor }) {
           <thead>
             <tr className="text-slate-500 text-xs border-b border-slate-800">
               <th className="text-left py-2 pr-4 font-medium">Season</th>
+              <th className="text-center py-2 pr-4 font-medium">G</th>
               <th className="text-center py-2 pr-4 font-medium">
-                <span className="text-red-400">Out</span>
+                <span className="text-red-400">Missed</span>
               </th>
               <th className="text-center py-2 pr-4 font-medium">
                 <span className="text-orange-400">Doubtful</span>
@@ -245,41 +256,56 @@ function InjurySection({ playerId, accentColor }) {
             </tr>
           </thead>
           <tbody>
-            {significant.map(row => (
-              <tr key={row.season}
-                className="border-t border-slate-800/60 hover:bg-slate-800/30 transition-colors">
-                <td className="py-2 pr-4 text-slate-300 font-medium">{row.season}</td>
-                <td className="py-2 pr-4 text-center">
-                  {row.games_missed > 0
-                    ? <span className="font-bold text-red-400">{row.games_missed}</span>
-                    : <span className="text-slate-700">—</span>}
-                </td>
-                <td className="py-2 pr-4 text-center">
-                  {row.games_doubtful > 0
-                    ? <span className="font-semibold text-orange-400">{row.games_doubtful}</span>
-                    : <span className="text-slate-700">—</span>}
-                </td>
-                <td className="py-2 pr-4 text-center">
-                  {row.games_questionable > 0
-                    ? <span className="text-amber-400">{row.games_questionable}</span>
-                    : <span className="text-slate-700">—</span>}
-                </td>
-                <td className="py-2">
-                  <div className="flex flex-wrap gap-1">
-                    {(row.injuries ?? []).map(inj => (
-                      <span key={inj} className="text-xs px-2 py-0.5 rounded-full bg-slate-700/60 text-slate-300">
-                        {inj}
-                      </span>
-                    ))}
-                  </div>
-                </td>
-              </tr>
-            ))}
+            {significant.map(row => {
+              const approx = row.games_missed_approx ?? 0
+              // Show estimated if it's higher than official (IR absences)
+              const showEst = approx >= 4 && approx > row.games_missed
+              const missedDisplay = showEst ? approx : row.games_missed
+              return (
+                <tr key={row.season}
+                  className="border-t border-slate-800/60 hover:bg-slate-800/30 transition-colors">
+                  <td className="py-2 pr-4 text-slate-300 font-medium">{row.season}</td>
+                  <td className="py-2 pr-4 text-center text-slate-400 text-xs">
+                    {row.games_played != null
+                      ? `${row.games_played}/${row.games_expected}`
+                      : <span className="text-slate-700">—</span>}
+                  </td>
+                  <td className="py-2 pr-4 text-center">
+                    {missedDisplay > 0
+                      ? <span className="font-bold text-red-400">
+                          {missedDisplay}{showEst ? <sup className="text-slate-500 font-normal ml-0.5">†</sup> : null}
+                        </span>
+                      : <span className="text-slate-700">—</span>}
+                  </td>
+                  <td className="py-2 pr-4 text-center">
+                    {row.games_doubtful > 0
+                      ? <span className="font-semibold text-orange-400">{row.games_doubtful}</span>
+                      : <span className="text-slate-700">—</span>}
+                  </td>
+                  <td className="py-2 pr-4 text-center">
+                    {row.games_questionable > 0
+                      ? <span className="text-amber-400">{row.games_questionable}</span>
+                      : <span className="text-slate-700">—</span>}
+                  </td>
+                  <td className="py-2">
+                    <div className="flex flex-wrap gap-1">
+                      {(row.injuries ?? []).map(inj => (
+                        <span key={inj} className="text-xs px-2 py-0.5 rounded-full bg-slate-700/60 text-slate-300">
+                          {inj}
+                        </span>
+                      ))}
+                    </div>
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>
       <p className="text-xs text-slate-600">
-        Red columns = games missed (Out). Seasons with 4+ missed games are highlighted on career charts.
+        G = games played / expected. Missed = games listed Out on official injury report.
+        {hasEst && <> <sup>†</sup> estimated from games played — player likely on IR.</>}
+        {' '}Seasons with 4+ missed games show red bands on career charts.
       </p>
     </div>
   )
@@ -634,8 +660,12 @@ export default function PlayerProfile() {
   const [advancedSections, setAdvancedSections] = useState(new Set())
 
   // Build season -> games_missed map for chart annotations
+  // Use the larger of official Out count vs. estimated missed (catches IR absences)
   const injuryMap = Object.fromEntries(
-    (injData?.seasons ?? []).map(s => [s.season, s.games_missed])
+    (injData?.seasons ?? []).map(s => [
+      s.season,
+      Math.max(s.games_missed ?? 0, s.games_missed_approx ?? 0)
+    ])
   )
 
   const toggleAdvanced = cat => setAdvancedSections(prev => {
