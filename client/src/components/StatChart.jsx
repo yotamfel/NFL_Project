@@ -13,13 +13,13 @@ const CHART_STYLE = {
 
 // lines = [{dataKey, label, color}]
 // injuryMap = { season: games_missed } — seasons with 4+ missed games get a red marker
-export function CareerLineChart({ data, xKey, lines, injuryMap = {} }) {
+export function CareerLineChart({ data, xKey, lines, injuryMap = {}, height = 260 }) {
   const injurySeasons = Object.entries(injuryMap)
     .filter(([, missed]) => missed >= 4)
     .map(([s]) => Number(s))
 
   return (
-    <ResponsiveContainer width="100%" height={260}>
+    <ResponsiveContainer width="100%" height={height}>
       <LineChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
         <XAxis dataKey={xKey} stroke="#475569" tick={{ fill: '#94a3b8', fontSize: 12 }} />

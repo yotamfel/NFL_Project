@@ -207,6 +207,38 @@ function fmtHt(ht) {
   return `${ft}'${inch}"`
 }
 
+// ── Selectable career chart ───────────────────────────────────────────────────
+// availableStats = [{key, label}]  defaultLines = [{dataKey, label, color}]
+function SelectableChart({ data, xKey, defaultLines, availableStats, injuryMap = {}, height = 220 }) {
+  const [lines, setLines] = useState(defaultLines)
+  const updateLine = (idx, key) => {
+    const stat = availableStats.find(s => s.key === key)
+    if (!stat) return
+    setLines(prev => prev.map((l, i) => i === idx ? { ...l, dataKey: key, label: stat.label } : l))
+  }
+  return (
+    <div className="space-y-2">
+      <div className="flex gap-3 flex-wrap">
+        {lines.map((line, idx) => (
+          <div key={idx} className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full shrink-0" style={{ background: line.color }} />
+            <select
+              value={line.dataKey}
+              onChange={e => updateLine(idx, e.target.value)}
+              className="bg-slate-900 border border-slate-700 text-slate-300 text-xs rounded-lg px-2 py-1 focus:outline-none focus:border-slate-500 cursor-pointer"
+            >
+              {availableStats.map(s => (
+                <option key={s.key} value={s.key}>{s.label}</option>
+              ))}
+            </select>
+          </div>
+        ))}
+      </div>
+      <CareerLineChart data={data} xKey={xKey} lines={lines} injuryMap={injuryMap} height={height} />
+    </div>
+  )
+}
+
 // ── Injury History section ────────────────────────────────────────────────────
 const STATUS_COLOR = { Out: '#ef4444', Doubtful: '#f97316', Questionable: '#f59e0b', Note: '#94a3b8' }
 
@@ -344,14 +376,6 @@ function AdvReceivingSection({ playerId, pos, accentColor }) {
     { key: 'yac_oe',     label: 'YAC+',    desc: 'YAC Above Expectation per reception — positive means the player gains more YAC than models predict. (NGS)', format: fmt2 },
   ]
 
-  // Chart: ADOT + separation career trend
-  const chartData = data.map(r => ({
-    season: r.season,
-    adot:    r.adot    != null ? Number(r.adot).toFixed(1)    : null,
-    sep:     r.avg_sep != null ? Number(r.avg_sep).toFixed(2) : null,
-    yac_oe:  r.yac_oe  != null ? Number(r.yac_oe).toFixed(2)  : null,
-  }))
-
   return (
     <div className="bg-slate-800/70 border border-slate-700/60 rounded-2xl p-5 space-y-4">
       <h2 className="text-white font-bold flex items-center gap-2">
@@ -360,42 +384,20 @@ function AdvReceivingSection({ playerId, pos, accentColor }) {
         <span className="text-slate-600 text-xs font-normal ml-1">PFR 2018+ · NGS 2016+</span>
       </h2>
 
-      {/* Mini chart: ADOT + YAC OE trend */}
-      {data.length > 1 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {[
-            { key: 'adot',   label: 'ADOT (Avg Depth of Target)', color: accentColor },
-            { key: 'yac_oe', label: 'YAC Above Expectation',       color: '#34d399' },
-          ].map(({ key, label, color }) => {
-            const pts = chartData.filter(d => d[key] != null)
-            if (pts.length < 2) return null
-            return (
-              <div key={key}>
-                <p className="text-xs text-slate-500 mb-2">{label}</p>
-                <ResponsiveContainer width="100%" height={100}>
-                  <BarChart data={pts} margin={{ top: 0, right: 8, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-                    <XAxis dataKey="season" tick={{ fill: '#64748b', fontSize: 10 }} tickLine={false} stroke="#475569" />
-                    <YAxis tick={{ fill: '#64748b', fontSize: 10 }} tickLine={false} stroke="#475569" width={30} />
-                    <RTooltip cursor={{ fill: '#1e293b' }}
-                      content={({ active, payload, label: l }) => {
-                        if (!active || !payload?.length) return null
-                        return (
-                          <div className="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs shadow-xl">
-                            <p className="text-white font-bold">{l}</p>
-                            <p style={{ color }}>{label}: {payload[0]?.value}</p>
-                          </div>
-                        )
-                      }}
-                    />
-                    <Bar dataKey={key} fill={color} fillOpacity={0.75} radius={[2,2,0,0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            )
-          })}
-        </div>
-      )}
+      {/* Charts */}
+      {data.length > 1 && (() => {
+        const advStats = cols.filter(c => c.key !== 'season').map(c => ({ key: c.key, label: c.label }))
+        return (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <SelectableChart data={data} xKey="season"
+              defaultLines={[{ dataKey: 'adot', label: 'ADOT', color: accentColor }]}
+              availableStats={advStats} height={160} />
+            <SelectableChart data={data} xKey="season"
+              defaultLines={[{ dataKey: 'yac_oe', label: 'YAC+', color: '#34d399' }]}
+              availableStats={advStats} height={160} />
+          </div>
+        )
+      })()}
 
       {/* Table */}
       <div className="scroll-x">
@@ -642,7 +644,8 @@ function NgsSection({ playerId, pos, accentColor }) {
       </h2>
 
       {rows.length > 1 && (
-        <CareerLineChart data={rows} xKey="season" lines={chartLines} />
+        <SelectableChart data={rows} xKey="season" defaultLines={chartLines}
+          availableStats={cols.filter(c => c.key !== 'season').map(c => ({ key: c.key, label: c.label }))} />
       )}
 
       <div className="scroll-x">
@@ -824,13 +827,26 @@ export default function PlayerProfile() {
               </div>
             </div>
 
-            {chartGroups && cat.seasons.length > 1 && (
-              <div className={chartGroups.length > 1 ? 'grid grid-cols-2 gap-3' : ''}>
-                {chartGroups.map((lines, i) => (
-                  <CareerLineChart key={i} data={cat.seasons} xKey="season" lines={lines} injuryMap={injuryMap} />
-                ))}
-              </div>
-            )}
+            {chartGroups && cat.seasons.length > 1 && (() => {
+              const colSet = COL_SETS[cat.category]
+              const availableStats = colSet
+                ? [
+                    ...(colSet.basic   ?? []),
+                    ...(colSet.advanced ?? []),
+                  ]
+                    .filter(c => c.key !== 'season' && c.key !== 'team')
+                    .reduce((acc, c) => acc.find(x => x.key === c.key) ? acc : [...acc, c], [])
+                    .map(c => ({ key: c.key, label: c.label }))
+                : []
+              return (
+                <div className={chartGroups.length > 1 ? 'grid grid-cols-2 gap-3' : ''}>
+                  {chartGroups.map((lines, i) => (
+                    <SelectableChart key={i} data={cat.seasons} xKey="season"
+                      defaultLines={lines} availableStats={availableStats} injuryMap={injuryMap} />
+                  ))}
+                </div>
+              )
+            })()}
             <StatTable columns={cols} rows={cat.seasons} keyField="season" />
 
             {cat.career && (
