@@ -316,6 +316,7 @@ const ADV_REC_POS = new Set(['WR','TE','RB','HB','FB'])
 
 function AdvReceivingSection({ playerId, pos, accentColor }) {
   const { data, loading } = useApi(() => api.getAdvReceiving(playerId), [playerId])
+  const [colTip, setColTip] = useState(null)
   if (!ADV_REC_POS.has(pos?.toUpperCase())) return null
   if (loading) return null
   if (!data || data.length === 0) return null
@@ -324,18 +325,23 @@ function AdvReceivingSection({ playerId, pos, accentColor }) {
   const fmt2 = v => v != null ? Number(v).toFixed(2) : '—'
   const fmtPct = v => v != null ? `${(Number(v)*100).toFixed(1)}%` : '—'
 
+  const showTip = (e, text) => {
+    const r = e.currentTarget.getBoundingClientRect()
+    setColTip({ text, x: Math.min(r.left, window.innerWidth - 236 - 12), y: r.bottom + 6 })
+  }
+
   const cols = [
     { key: 'season',     label: 'Season' },
-    { key: 'adot',       label: 'ADOT',    title: 'Average Depth of Target',         format: fmt1 },
-    { key: 'yac_r',      label: 'YAC/Rec', title: 'Yards After Catch per Reception', format: fmt1 },
-    { key: 'ybc_r',      label: 'YBC/Rec', title: 'Yards Before Catch per Reception',format: fmt1 },
-    { key: 'brk_tkl',    label: 'BrkTkl',  title: 'Broken Tackles',                  format: v => v ?? '—' },
-    { key: 'drop',       label: 'Drops',   title: 'Dropped Passes',                  format: v => v ?? '—' },
-    { key: 'drop_pct',   label: 'Drop%',   title: 'Drop Percentage',                 format: fmtPct },
-    { key: 'tgt_rating', label: 'TgtRtg',  title: 'Passer Rating When Targeted',     format: fmt1 },
-    { key: 'avg_sep',    label: 'Sep',     title: 'Avg Separation at Target (ft)',   format: fmt2 },
-    { key: 'avg_cushion',label: 'Cush',    title: 'Avg Cushion at Snap (ft)',        format: fmt2 },
-    { key: 'yac_oe',     label: 'YAC+',    title: 'YAC Above Expectation',           format: fmt2 },
+    { key: 'adot',       label: 'ADOT',    desc: 'Average Depth of Target — how deep (yards) the ball travels on passes thrown to this receiver.',         format: fmt1 },
+    { key: 'yac_r',      label: 'YAC/Rec', desc: 'Yards After Catch per reception — yards gained after the ball is caught.',                               format: fmt1 },
+    { key: 'ybc_r',      label: 'YBC/Rec', desc: 'Yards Before Catch per reception — air yards on completions only.',                                      format: fmt1 },
+    { key: 'brk_tkl',    label: 'BrkTkl',  desc: 'Broken Tackles — number of tackle attempts the player evaded after the catch.',                          format: v => v ?? '—' },
+    { key: 'drop',       label: 'Drops',   desc: 'Dropped Passes — catchable targets that were not held.',                                                  format: v => v ?? '—' },
+    { key: 'drop_pct',   label: 'Drop%',   desc: 'Drop Percentage — drops divided by catchable targets. Lower is better.',                                  format: fmtPct },
+    { key: 'tgt_rating', label: 'TgtRtg',  desc: 'Passer Rating when this player is the intended target (0–158.3 scale).',                                 format: fmt1 },
+    { key: 'avg_sep',    label: 'Sep',     desc: 'Avg Separation (ft) from the nearest defender at the moment of the throw. Higher = more open. (NGS)',    format: fmt2 },
+    { key: 'avg_cushion',label: 'Cush',    desc: 'Avg Cushion (ft) between receiver and corner at the snap. Higher = more room to work. (NGS)',            format: fmt2 },
+    { key: 'yac_oe',     label: 'YAC+',    desc: 'YAC Above Expectation per reception — positive means the player gains more YAC than models predict. (NGS)', format: fmt2 },
   ]
 
   // Chart: ADOT + separation career trend
@@ -397,8 +403,15 @@ function AdvReceivingSection({ playerId, pos, accentColor }) {
           <thead>
             <tr className="text-slate-500 text-xs border-b border-slate-800">
               {cols.map(c => (
-                <th key={c.key} title={c.title ?? ''} className="text-right first:text-left py-2 px-2 font-medium cursor-help">
-                  {c.label}
+                <th key={c.key}
+                  className="text-right first:text-left py-2 px-2 font-medium"
+                  onMouseEnter={c.desc ? e => showTip(e, c.desc) : undefined}
+                  onMouseLeave={c.desc ? () => setColTip(null) : undefined}
+                >
+                  <span className="flex items-center justify-end first:justify-start gap-1">
+                    {c.label}
+                    {c.desc && <span className="text-slate-600 text-xs select-none cursor-help">ⓘ</span>}
+                  </span>
                 </th>
               ))}
             </tr>
@@ -416,7 +429,13 @@ function AdvReceivingSection({ playerId, pos, accentColor }) {
           </tbody>
         </table>
       </div>
-      <p className="text-xs text-slate-600">Hover column headers for stat definitions. Sep/Cush/YAC+ from Next Gen Stats (2016+).</p>
+      <p className="text-xs text-slate-600">Sep/Cush/YAC+ from Next Gen Stats (2016+).</p>
+      {colTip && (
+        <div style={{ position: 'fixed', top: colTip.y, left: colTip.x, zIndex: 9999 }}
+          className="pointer-events-none w-56 rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-xs text-slate-300 shadow-xl whitespace-normal leading-relaxed">
+          {colTip.text}
+        </div>
+      )}
     </div>
   )
 }
@@ -562,6 +581,7 @@ const NGS_RB_POS  = new Set(['RB','HB','FB'])
 function NgsSection({ playerId, pos, accentColor }) {
   const isQB = NGS_QB_POS.has(pos?.toUpperCase())
   const isRB = NGS_RB_POS.has(pos?.toUpperCase())
+  const [colTip, setColTip] = useState(null)
   if (!isQB && !isRB) return null
 
   const statType = isQB ? 'passing' : 'rushing'
@@ -575,24 +595,29 @@ function NgsSection({ playerId, pos, accentColor }) {
   const dec1 = v => v != null ? Number(v).toFixed(1) : '—'
   const pct1 = v => v != null ? `${Number(v).toFixed(1)}%` : '—'
 
+  const showTip = (e, text) => {
+    const r = e.currentTarget.getBoundingClientRect()
+    setColTip({ text, x: Math.min(r.left, window.innerWidth - 236 - 12), y: r.bottom + 6 })
+  }
+
   const passingCols = [
-    { key: 'season',          label: 'Season', title: 'Season' },
-    { key: 'avg_ttt',         label: 'TT',     title: 'Avg Time to Throw (seconds)',           format: dec2 },
-    { key: 'avg_iay',         label: 'IAY',    title: 'Avg Intended Air Yards per attempt',    format: dec1 },
-    { key: 'avg_cay',         label: 'CAY',    title: 'Avg Completed Air Yards per completion',format: dec1 },
-    { key: 'avg_adot_sticks', label: 'ADOTS',  title: 'Avg Air Yards to the Sticks (1st down)',format: dec1 },
-    { key: 'aggressiveness',  label: 'Aggr%',  title: 'Aggressiveness: % throws into tight windows', format: pct1 },
-    { key: 'cpoe',            label: 'CPOE',   title: 'Completion % Over Expected',            format: dec2 },
-    { key: 'max_air_dist',    label: 'MaxDist',title: 'Max Completed Air Distance',            format: dec1 },
+    { key: 'season',          label: 'Season' },
+    { key: 'avg_ttt',         label: 'TT',      desc: 'Avg Time to Throw (sec) — how long the QB holds the ball before releasing. Lower = quicker release.',                                                    format: dec2 },
+    { key: 'avg_iay',         label: 'IAY',     desc: 'Avg Intended Air Yards — average depth of all pass attempts (completed or not). Measures how deep the QB throws.',                                       format: dec1 },
+    { key: 'avg_cay',         label: 'CAY',     desc: 'Avg Completed Air Yards — air yards on completions only. Compared to IAY, shows how much the QB converts deep attempts.',                               format: dec1 },
+    { key: 'avg_adot_sticks', label: 'ADOTS',   desc: 'Avg Air Yards to the Sticks — how far past (positive) or short of (negative) the first-down marker the QB targets.',                                    format: dec1 },
+    { key: 'aggressiveness',  label: 'Aggr%',   desc: 'Aggressiveness — % of throws into tight windows (≤1 yard of separation). Higher = more willing to test the defense.',                                   format: pct1 },
+    { key: 'cpoe',            label: 'CPOE',    desc: 'Completion % Over Expected — how much better or worse the QB completes passes vs. model predictions based on throw difficulty. Best single accuracy metric.', format: dec2 },
+    { key: 'max_air_dist',    label: 'MaxDist', desc: 'Max Completed Air Distance — the longest completed pass (air yards) in a single game that season.',                                                      format: dec1 },
   ]
 
   const rushingCols = [
-    { key: 'season',      label: 'Season',  title: 'Season' },
-    { key: 'efficiency',  label: 'Eff',     title: 'NGS Rushing Efficiency Score',              format: dec2 },
-    { key: 'avg_tlos',    label: 'TLOS',    title: 'Avg Time to Line of Scrimmage (seconds)',   format: dec2 },
-    { key: 'ryoe_per_att',label: 'RYOE/A',  title: 'Rush Yards Over Expected per Attempt',     format: dec2 },
-    { key: 'rush_pct_oe', label: 'RPOE%',   title: 'Rush % Over Expected',                     format: dec1 },
-    { key: 'pct_8box',    label: '8-Box%',  title: '% of rushes vs 8+ defenders in the box',  format: pct1 },
+    { key: 'season',       label: 'Season' },
+    { key: 'efficiency',   label: 'Eff',    desc: 'NGS Rushing Efficiency Score — composite metric measuring how efficiently the RB uses blocks and hits gaps.',                                              format: dec2 },
+    { key: 'avg_tlos',     label: 'TLOS',   desc: 'Avg Time to Line of Scrimmage (sec) — how quickly the RB reaches the LOS. Lower can indicate decisiveness.',                                             format: dec2 },
+    { key: 'ryoe_per_att', label: 'RYOE/A', desc: 'Rush Yards Over Expected per Attempt — yards gained above what an average back would given the same blocking. Best single metric for true RB impact.',    format: dec2 },
+    { key: 'rush_pct_oe',  label: 'RPOE%',  desc: 'Rush % Over Expected — similar to RYOE but expressed as a rate rather than raw yards.',                                                                   format: dec1 },
+    { key: 'pct_8box',     label: '8-Box%', desc: '% of rush attempts where 8+ defenders were in the box. Higher = the offense faced stacked fronts, making rushing harder.',                               format: pct1 },
   ]
 
   const cols = isQB ? passingCols : rushingCols
@@ -627,9 +652,15 @@ function NgsSection({ playerId, pos, accentColor }) {
           <thead>
             <tr className="text-slate-500 text-xs border-b border-slate-800">
               {cols.map(c => (
-                <th key={c.key} title={c.title}
-                  className="text-right first:text-left py-2 px-2 font-medium cursor-help">
-                  {c.label}
+                <th key={c.key}
+                  className="text-right first:text-left py-2 px-2 font-medium"
+                  onMouseEnter={c.desc ? e => showTip(e, c.desc) : undefined}
+                  onMouseLeave={c.desc ? () => setColTip(null) : undefined}
+                >
+                  <span className="flex items-center justify-end first:justify-start gap-1">
+                    {c.label}
+                    {c.desc && <span className="text-slate-600 text-xs select-none cursor-help">ⓘ</span>}
+                  </span>
                 </th>
               ))}
             </tr>
@@ -648,7 +679,12 @@ function NgsSection({ playerId, pos, accentColor }) {
           </tbody>
         </table>
       </div>
-      <p className="text-xs text-slate-600">Hover column headers for stat definitions.</p>
+      {colTip && (
+        <div style={{ position: 'fixed', top: colTip.y, left: colTip.x, zIndex: 9999 }}
+          className="pointer-events-none w-56 rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-xs text-slate-300 shadow-xl whitespace-normal leading-relaxed">
+          {colTip.text}
+        </div>
+      )}
     </div>
   )
 }
