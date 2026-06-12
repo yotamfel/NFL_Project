@@ -47,7 +47,7 @@ const CONTENT = {
           },
           {
             title: 'Career charts',
-            body: 'Charts above each table show the key career trend lines. Red shaded bands mark seasons where the player missed 4 or more games due to injury, helping explain dips in performance.',
+            body: 'Charts above each table show career trend lines. Each line has a colored dropdown — click it to switch to any other stat from the table (including Advanced stats). Defaults are pre-selected to the most meaningful metrics. Red shaded bands mark seasons where the player missed 4 or more games due to injury.',
           },
           {
             title: 'Injury History (2009+)',
@@ -370,7 +370,7 @@ const CONTENT = {
           },
           {
             title: 'Career Charts',
-            body: 'הגרפים מעל כל טבלה מציגים את קו המגמה של הקריירה. פסי אדום מסמנים עונות שבהן השחקן החסיר 4 משחקים ומעלה עקב פציעה — מה שמסביר ירידות בביצועים.',
+            body: 'הגרפים מעל כל טבלה מציגים קווי מגמה של הקריירה. לכל קו יש Dropdown צבעוני — לחץ עליו כדי לעבור לכל Stat אחר מהטבלה (כולל Advanced). ברירות המחדל מראש הן המדדים המשמעותיים ביותר. פסים אדומים מסמנים עונות שבהן השחקן החסיר 4 משחקים ומעלה עקב פציעה.',
           },
           {
             title: 'Injury History — היסטוריית פציעות (2009+)',
