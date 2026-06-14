@@ -62,7 +62,12 @@ jobs:
         working-directory: etl
         run: python run_ngs_stats.py
 
-      # ── Rebuild career aggregation views (always last) ────────────────────
+      # ── Rebuild career aggregation views ─────────────────────────────────
       - name: Rebuild career views
         working-directory: etl
         run: python build_career_views.py
+
+      # ── Anomaly detection (runs last, needs updated career views) ────────
+      - name: Detect season anomalies
+        working-directory: etl
+        run: python detect_anomalies.py

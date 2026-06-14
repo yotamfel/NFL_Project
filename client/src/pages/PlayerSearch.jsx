@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../api'
 import { posColor } from '../utils/posColors'
+import AnomalyFeed from '../components/AnomalyFeed'
 
 const POSITIONS = ['QB', 'RB', 'WR', 'TE', 'OL', 'DL', 'LB', 'CB', 'S', 'K', 'P']
 const YEARS = Array.from({ length: 26 }, (_, i) => 2025 - i)
@@ -99,7 +100,7 @@ export default function PlayerSearch() {
   const clearFilters = () => { setPos(''); setSeason(''); setTeam('') }
 
   return (
-    <div className="max-w-2xl mx-auto pt-10 pb-24">
+    <div className="max-w-3xl mx-auto pt-10 pb-24">
 
       {/* Hero */}
       <div className="text-center mb-10">
@@ -189,20 +190,25 @@ export default function PlayerSearch() {
 
       {/* Feature cards */}
       {!results.length && !hasFilter && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-14">
-          {FEATURE_CARDS.map(card => (
-            <button key={card.href} onClick={() => navigate(card.href)}
-              className="rounded-2xl overflow-hidden text-left hover:scale-[1.02] transition-transform"
-              style={{ background: `linear-gradient(160deg, ${card.dark} 0%, #1e293b 100%)`, border: `1px solid ${card.color}22` }}>
-              <div className="h-1 w-full" style={{ background: `linear-gradient(90deg, ${card.color}, transparent)` }} />
-              <div className="p-5">
-                <div className="text-2xl mb-3">{card.icon}</div>
-                <h3 className="text-white font-bold mb-1">{card.title}</h3>
-                <p className="text-slate-400 text-sm leading-relaxed">{card.desc}</p>
-              </div>
-            </button>
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-14">
+            {FEATURE_CARDS.map(card => (
+              <button key={card.href} onClick={() => navigate(card.href)}
+                className="rounded-2xl overflow-hidden text-left hover:scale-[1.02] transition-transform"
+                style={{ background: `linear-gradient(160deg, ${card.dark} 0%, #1e293b 100%)`, border: `1px solid ${card.color}22` }}>
+                <div className="h-1 w-full" style={{ background: `linear-gradient(90deg, ${card.color}, transparent)` }} />
+                <div className="p-5">
+                  <div className="text-2xl mb-3">{card.icon}</div>
+                  <h3 className="text-white font-bold mb-1">{card.title}</h3>
+                  <p className="text-slate-400 text-sm leading-relaxed">{card.desc}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+          <div className="mt-12">
+            <AnomalyFeed limit={10} />
+          </div>
+        </>
       )}
     </div>
   )
