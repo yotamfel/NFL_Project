@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { toPng } from 'html-to-image'
 import { exportTableAsCsv, csvFilename } from '../utils/exportCsv'
+import { useUser } from '../context/UserContext'
 
 function CsvIcon() {
   return (
@@ -20,6 +21,15 @@ function ImageIcon() {
       <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
       <circle cx="8.5" cy="8.5" r="1.5"/>
       <polyline points="21 15 16 10 5 21"/>
+    </svg>
+  )
+}
+
+function BookmarkIcon({ filled }) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'}
+      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
     </svg>
   )
 }
@@ -148,13 +158,41 @@ function TableExportModal({ columns, rows, title, onClose }) {
   )
 }
 
-// Combined CSV + PNG export buttons — place inside a parent with className="relative group"
+// Combined CSV + PNG + Save buttons — place inside a parent with className="relative group"
 export function TableExportButtons({ columns, rows, title }) {
   const [modal, setModal] = useState(false)
+  const { saveTable, removeTable, isTableSaved } = useUser() || {}
+
   if (!rows?.length) return null
+
   const csvCols = columns.map(({ key, label }) => ({ key, label }))
+  const isSaved = title ? (isTableSaved?.(title) ?? false) : false
+
+  const handleSave = () => {
+    if (isSaved) {
+      removeTable?.(title)
+    } else {
+      saveTable?.({
+        title,
+        columns: csvCols,
+        rows,
+      })
+    }
+  }
+
   return (
     <>
+      {title && (
+        <button
+          onClick={handleSave}
+          title={isSaved ? 'Remove from saved' : 'Save table'}
+          className={`absolute top-1 right-[60px] z-10 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-slate-700/60 ${
+            isSaved ? 'text-amber-400' : 'text-slate-500 hover:text-slate-200'
+          }`}
+        >
+          <BookmarkIcon filled={isSaved} />
+        </button>
+      )}
       <button
         onClick={() => setModal(true)}
         title="Download as PNG"

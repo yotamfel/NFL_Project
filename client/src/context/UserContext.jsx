@@ -2,31 +2,50 @@ import { createContext, useContext, useState, useCallback } from 'react'
 
 const Ctx = createContext(null)
 
-const EMPTY = { players: [], comparisons: [], searches: [], notes: [] }
+const EMPTY = { players: [], comparisons: [], searches: [], notes: [], charts: [], tables: [] }
 
 function loadSaved(username) {
   if (!username) return EMPTY
-  try { return JSON.parse(localStorage.getItem(`nfl_saved_${username}`)) ?? EMPTY }
+  try {
+    const data = JSON.parse(localStorage.getItem(`nfl_saved_${username}`)) ?? EMPTY
+    return { ...EMPTY, ...data }
+  }
   catch { return EMPTY }
+}
+
+function loadDashboards(username) {
+  if (!username) return []
+  try { return JSON.parse(localStorage.getItem(`nfl_dashboards_${username}`)) ?? [] }
+  catch { return [] }
 }
 
 function persist(username, data) {
   if (username) localStorage.setItem(`nfl_saved_${username}`, JSON.stringify(data))
 }
 
+function persistDashboards(username, dashboards) {
+  if (username) localStorage.setItem(`nfl_dashboards_${username}`, JSON.stringify(dashboards))
+}
+
 export function UserProvider({ children }) {
   const [username, setUsername] = useState(() => localStorage.getItem('nfl_username') ?? '')
   const [saved, setSaved]       = useState(() => loadSaved(localStorage.getItem('nfl_username') ?? ''))
+  const [dashboards, setDashboards] = useState(() => loadDashboards(localStorage.getItem('nfl_username') ?? ''))
 
   const setUser = name => {
     const n = name.trim()
     localStorage.setItem('nfl_username', n)
     setUsername(n)
     setSaved(loadSaved(n))
+    setDashboards(loadDashboards(n))
   }
 
   const upd = useCallback(fn => {
     setSaved(prev => { const next = fn(prev); persist(username, next); return next })
+  }, [username])
+
+  const updDash = useCallback(fn => {
+    setDashboards(prev => { const next = fn(prev); persistDashboards(username, next); return next })
   }, [username])
 
   // ── Players ──────────────────────────────────────────────────────────
@@ -76,13 +95,52 @@ export function UserProvider({ children }) {
     notes: d.notes.map(n => n.id === id ? { ...n, text } : n),
   }))
 
+  // ── Charts ────────────────────────────────────────────────────────────
+  const saveChart = chart => upd(d => {
+    const existing = d.charts.find(c => c.title === chart.title)
+    if (existing) return d
+    return { ...d, charts: [{ ...chart, id: Date.now().toString(), savedAt: new Date().toISOString() }, ...d.charts] }
+  })
+  const removeChart   = title => upd(d => ({ ...d, charts: d.charts.filter(c => c.title !== title) }))
+  const isChartSaved  = title => saved.charts.some(c => c.title === title)
+
+  // ── Tables ────────────────────────────────────────────────────────────
+  const saveTable = table => upd(d => {
+    const existing = d.tables.find(t => t.title === table.title)
+    if (existing) return d
+    return { ...d, tables: [{ ...table, id: Date.now().toString(), savedAt: new Date().toISOString() }, ...d.tables] }
+  })
+  const removeTable   = title => upd(d => ({ ...d, tables: d.tables.filter(t => t.title !== title) }))
+  const isTableSaved  = title => saved.tables.some(t => t.title === title)
+
+  // ── Dashboards ────────────────────────────────────────────────────────
+  const saveDashboard = name => {
+    const id = Date.now().toString()
+    updDash(ds => [{
+      id,
+      name,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      widgets: [],
+    }, ...ds])
+    return id
+  }
+  const removeDashboard  = id => updDash(ds => ds.filter(d => d.id !== id))
+  const updateDashboard  = (id, changes) => updDash(ds =>
+    ds.map(d => d.id === id ? { ...d, ...changes, updatedAt: new Date().toISOString() } : d)
+  )
+  const getDashboard     = id => dashboards.find(d => d.id === id)
+
   return (
     <Ctx.Provider value={{
-      username, setUser, saved,
+      username, setUser, saved, dashboards,
       savePlayer, removePlayer, isPlayerSaved, updatePlayerNote,
       saveComparison, removeComparison, updateComparisonNote,
       saveSearch, removeSearch, updateSearchNote,
       addNote, removeNote, updateNote,
+      saveChart, removeChart, isChartSaved,
+      saveTable, removeTable, isTableSaved,
+      saveDashboard, removeDashboard, updateDashboard, getDashboard,
     }}>
       {children}
     </Ctx.Provider>

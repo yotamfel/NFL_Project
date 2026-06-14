@@ -271,6 +271,10 @@ const CONTENT = {
             body: 'Players you bookmark with the ★ button on their profile appear here. Click the name to go to their profile.',
           },
           {
+            title: 'Saved charts & tables',
+            body: 'Hover over any career chart or stat table — a bookmark icon (🔖) appears in the top-right corner. Click it to save that chart or table to your Saved list. Saved charts and tables can then be added to a Dashboard.',
+          },
+          {
             title: 'Notes on saved items',
             body: 'Every saved item (player, comparison, or search) can have a personal note. Click "+ Add a note…" below the item to write one. Click an existing note to edit it. Notes save automatically when you press Enter, click Save, or click away. Press Escape to cancel.',
           },
@@ -285,6 +289,37 @@ const CONTENT = {
           {
             title: 'Notes tab',
             body: 'The Notes tab is a free-form scratchpad. Type anything and press Enter (or click Save) to add a note. Click any existing note to edit it — it opens as a text area; Enter saves, Shift+Enter adds a new line, Escape cancels. Delete a note with the × button.',
+          },
+        ],
+      },
+      {
+        id: 'dashboard',
+        icon: '🗂️',
+        title: 'Dashboard',
+        subsections: [
+          {
+            title: 'Creating a dashboard',
+            body: 'Go to the Dashboard tab and type a name in the text box, then click Create. Your new dashboard opens immediately in the builder.',
+          },
+          {
+            title: 'Adding widgets',
+            body: 'The left sidebar has three tabs — Charts, Tables, and Widgets. Charts and Tables show items you\'ve previously saved (use the bookmark icon on any chart or table to save it). Click any item in the sidebar to add it to the canvas. The Widgets tab lets you add text headings and free-form text blocks.',
+          },
+          {
+            title: 'Arranging & resizing',
+            body: 'Drag a widget by its title bar (the ⠿ handle) to move it. Drag the bottom-right corner of any widget to resize it. The canvas snaps to a 12-column grid.',
+          },
+          {
+            title: 'Widget settings',
+            body: 'Click a widget to select it. A settings panel appears at the bottom of the canvas. For chart widgets, you can toggle the injury overlay on or off and change the color of each line using the color pickers. For text widgets, click directly in the widget to edit the content.',
+          },
+          {
+            title: 'Exporting as PNG',
+            body: 'Click the "Export PNG" button in the top toolbar to save the dashboard canvas as a high-resolution image. The export captures the currently visible portion of the canvas.',
+          },
+          {
+            title: 'Dashboard name',
+            body: 'Click the dashboard name in the top toolbar to rename it.',
           },
         ],
       },
@@ -651,6 +686,10 @@ const CONTENT = {
             body: 'שחקנים שסימנת עם ★ בפרופיל שלהם מופיעים כאן. לחץ על השם כדי לעבור לפרופיל.',
           },
           {
+            title: 'גרפים וטבלאות שמורים',
+            body: 'רחף מעל גרף קריירה או טבלת סטטיסטיקות — אייקון הסימניה (🔖) יופיע בפינה הימנית העליונה. לחץ עליו כדי לשמור את הגרף או הטבלה. פריטים שמורים אלה ניתן להוסיף לדשבורד.',
+          },
+          {
             title: 'הערות על פריטים שמורים',
             body: 'לכל פריט שמור (שחקן, השוואה, או חיפוש) ניתן להוסיף הערה אישית. לחץ על "+ Add a note…" מתחת לפריט כדי לכתוב אחת. לחץ על הערה קיימת כדי לערוך אותה. ההערה נשמרת אוטומטית בלחיצה על Enter, כפתור Save, או לחיצה מחוץ לשדה. לחץ Escape לביטול.',
           },
@@ -665,6 +704,37 @@ const CONTENT = {
           {
             title: 'טאב Notes',
             body: 'טאב Notes הוא לוח כתיבה חופשי. הקלד כל דבר ולחץ Enter (או כפתור Save) להוספת הערה. לחץ על הערה קיימת כדי לערוך אותה — היא נפתחת כ-Textarea; Enter שומר, Shift+Enter מוסיף שורה, Escape מבטל. מחק הערה עם כפתור ×.',
+          },
+        ],
+      },
+      {
+        id: 'dashboard',
+        icon: '🗂️',
+        title: 'Dashboard',
+        subsections: [
+          {
+            title: 'יצירת דשבורד',
+            body: 'עבור לטאב Dashboard, הקלד שם בתיבת הטקסט ולחץ Create. הדשבורד החדש נפתח מיד בבנאי.',
+          },
+          {
+            title: 'הוספת ווידג\'טים',
+            body: 'הסרגל השמאלי מכיל שלושה טאבים — Charts, Tables, ו-Widgets. Charts ו-Tables מציגים פריטים ששמרת קודם (השתמש באייקון הסימניה על כל גרף או טבלה). לחץ על פריט בסרגל להוספתו לקנבס. טאב Widgets מאפשר הוספת כותרות ובלוקי טקסט חופשי.',
+          },
+          {
+            title: 'סידור ושינוי גודל',
+            body: 'גרור ווידג\'ט בשורת הכותרת שלו (ידית ⠿) להזזתו. גרור את הפינה הימנית התחתונה לשינוי הגודל. הקנבס מסתנכרן לרשת 12 עמודות.',
+          },
+          {
+            title: 'הגדרות ווידג\'ט',
+            body: 'לחץ על ווידג\'ט לבחירתו. פאנל הגדרות מופיע בתחתית הקנבס. לגרפים: ניתן להפעיל/לכבות שכבת פציעות ולשנות את צבע כל קו. לטקסט: לחץ ישירות בתוך הווידג\'ט לעריכה.',
+          },
+          {
+            title: 'ייצוא כ-PNG',
+            body: 'לחץ "Export PNG" בסרגל הכלים העליון לשמירת הקנבס כתמונה ברזולוציה גבוהה.',
+          },
+          {
+            title: 'שינוי שם',
+            body: 'לחץ על שם הדשבורד בסרגל הכלים העליון לשינויו.',
           },
         ],
       },

@@ -8,6 +8,8 @@ const TABS = [
   { id: 'players',     label: 'Players',     icon: '⭐' },
   { id: 'comparisons', label: 'Comparisons', icon: '⚖️' },
   { id: 'searches',    label: 'Searches',    icon: '🔍' },
+  { id: 'charts',      label: 'Charts',      icon: '📈' },
+  { id: 'tables',      label: 'Tables',      icon: '📋' },
   { id: 'notes',       label: 'Notes',       icon: '📝' },
 ]
 
@@ -17,10 +19,11 @@ function fmt(iso) {
 
 export default function Saved() {
   const { username, saved, removePlayer, removeComparison, removeSearch, removeNote, addNote, updateNote,
-          updatePlayerNote, updateComparisonNote, updateSearchNote } = useUser()
+          updatePlayerNote, updateComparisonNote, updateSearchNote,
+          removeChart, removeTable } = useUser()
   const [tab, setTab]         = useState('players')
   const [note, setNote]       = useState('')
-  const [editingNote, setEditingNote] = useState(null)  // { type: 'player'|'comparison'|'search', id }
+  const [editingNote, setEditingNote] = useState(null)
   const [noteText, setNoteText]       = useState('')
   const navigate              = useNavigate()
 
@@ -36,7 +39,14 @@ export default function Saved() {
     setEditingNote(null)
   }
 
-  const total = saved.players.length + saved.comparisons.length + saved.searches.length + saved.notes.length
+  const countFor = id => {
+    if (['players', 'comparisons', 'searches', 'notes'].includes(id)) return saved[id]?.length ?? 0
+    if (id === 'charts') return saved.charts?.length ?? 0
+    if (id === 'tables') return saved.tables?.length ?? 0
+    return 0
+  }
+
+  const total = TABS.reduce((sum, t) => sum + countFor(t.id), 0)
 
   return (
     <div className="space-y-5 max-w-3xl mx-auto">
@@ -59,9 +69,9 @@ export default function Saved() {
             }`}>
             <span>{t.icon}</span>
             {t.label}
-            {saved[t.id]?.length > 0 && (
+            {countFor(t.id) > 0 && (
               <span className="text-xs bg-slate-600 text-slate-300 rounded-full px-1.5 py-0.5 leading-none">
-                {saved[t.id].length}
+                {countFor(t.id)}
               </span>
             )}
           </button>
@@ -181,6 +191,57 @@ export default function Saved() {
                 </div>
               )}
             </details>
+          ))}
+        </div>
+      )}
+
+      {/* ── Charts ──────────────────────────────────────────────── */}
+      {tab === 'charts' && (
+        <div className="space-y-2">
+          {(saved.charts || []).length === 0 && (
+            <Empty
+              text="No saved charts yet."
+              sub="Hover over any chart and click the bookmark icon to save it."
+            />
+          )}
+          {(saved.charts || []).map(c => (
+            <div key={c.id} className="rounded-xl px-4 py-3 border border-slate-700/60 bg-slate-800/50">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-white font-semibold text-sm truncate">{c.title}</p>
+                  <p className="text-slate-500 text-xs mt-0.5">
+                    {c.chartType} · {c.config?.lines?.length ?? 0} line{(c.config?.lines?.length ?? 0) !== 1 ? 's' : ''}
+                    {' · '}{fmt(c.savedAt)}
+                  </p>
+                </div>
+                <button onClick={() => removeChart(c.title)} className="text-slate-600 hover:text-red-400 transition-colors text-lg leading-none shrink-0">×</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── Tables ──────────────────────────────────────────────── */}
+      {tab === 'tables' && (
+        <div className="space-y-2">
+          {(saved.tables || []).length === 0 && (
+            <Empty
+              text="No saved tables yet."
+              sub="Hover over any table and click the bookmark icon to save it."
+            />
+          )}
+          {(saved.tables || []).map(t => (
+            <div key={t.id} className="rounded-xl px-4 py-3 border border-slate-700/60 bg-slate-800/50">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-white font-semibold text-sm truncate">{t.title}</p>
+                  <p className="text-slate-500 text-xs mt-0.5">
+                    {t.columns?.length} cols · {t.rows?.length} rows · {fmt(t.savedAt)}
+                  </p>
+                </div>
+                <button onClick={() => removeTable(t.title)} className="text-slate-600 hover:text-red-400 transition-colors text-lg leading-none shrink-0">×</button>
+              </div>
+            </div>
           ))}
         </div>
       )}

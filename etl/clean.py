@@ -143,7 +143,7 @@ CATEGORIES = {
     ),
     "offense": dict(
         folder="Offense Tables", file_tpl="{year} offense.csv",
-        header=(0, 1), id_column_raw="-9999",
+        header=(0, 1), id_column_raw=("-9999", "Player-additional"),
         overrides={
             ("Receiving", "Yds"): "rec_yds", ("Rushing", "Yds"): "rush_yds",
             ("Receiving", "TD"): "rec_td", ("Rushing", "TD"): "rush_td",
@@ -156,7 +156,7 @@ CATEGORIES = {
     ),
     "defense": dict(
         folder="Defense Tables", file_tpl="{year} defense.csv",
-        header=(0, 1), id_column_raw="-9999",
+        header=(0, 1), id_column_raw=("-9999", "Player-additional"),
         overrides={
             ("Def Interceptions", "Yds"): "int_ret_yds", ("Fumbles", "Yds"): "fum_ret_yds",
             "IntTD": "int_td", "FRTD": "fr_td", "QBHits": "qb_hits",
@@ -165,7 +165,7 @@ CATEGORIES = {
     ),
     "kicking": dict(
         folder="Kicking Tables", file_tpl="{year} kicking.csv",
-        header=(0, 1), id_column_raw="-9999",
+        header=(0, 1), id_column_raw=("-9999", "Player-additional"),
         overrides={
             ("0-19", "FGA"): "fga_0_19", ("0-19", "FGM"): "fgm_0_19",
             ("20-29", "FGA"): "fga_20_29", ("20-29", "FGM"): "fgm_20_29",
@@ -180,12 +180,12 @@ CATEGORIES = {
     ),
     "punting": dict(
         folder="Punting Tables", file_tpl="{year} punting.csv",
-        header=(0, 1), id_column_raw="-9999",
+        header=(0, 1), id_column_raw=("-9999", "Player-additional"),
         overrides={},
     ),
     "returns": dict(
         folder="Returns Tables", file_tpl="{year} Returns.csv",
-        header=(0, 1), id_column_raw="-9999",
+        header=(0, 1), id_column_raw=("-9999", "Player-additional"),
         overrides={
             ("Punt Returns", "Ret"): "punt_ret", ("Kick Returns", "Ret"): "kick_ret",
             ("Punt Returns", "Yds"): "punt_ret_yds", ("Kick Returns", "Yds"): "kick_ret_yds",
@@ -230,7 +230,7 @@ def _infer_numeric_types(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def load_category(category: str, years=range(2000, 2025)) -> pd.DataFrame:
+def load_category(category: str, years=range(1970, 2025)) -> pd.DataFrame:
     cfg = CATEGORIES[category]
     folder = RAW_BASE / cfg["folder"]
     frames = []

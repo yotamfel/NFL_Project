@@ -6,6 +6,7 @@ import {
   ReferenceLine,
 } from 'recharts'
 import { exportChartAsPng } from '../utils/exportChart'
+import { useUser } from '../context/UserContext'
 
 const CHART_STYLE = {
   contentStyle: { backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px' },
@@ -51,32 +52,69 @@ function DownloadIcon() {
   )
 }
 
+function BookmarkIcon({ filled }) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'}
+      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+    </svg>
+  )
+}
+
 // lines = [{dataKey, label, color}]
 // injuryMap = { season: games_missed } — seasons with 4+ missed games get a red marker
 // exportPrefix = prepended to line labels in the exported PNG title (e.g. "Patrick Mahomes — passing")
-export function CareerLineChart({ data, xKey, lines, injuryMap = {}, height = 260, exportPrefix }) {
+// hideActions = true in dashboard context (no save/download buttons shown)
+export function CareerLineChart({ data, xKey, lines, injuryMap = {}, height = 260, exportPrefix, hideActions }) {
   const wrapperRef = useRef(null)
+  const { saveChart, removeChart, isChartSaved } = useUser() || {}
+
   const injurySeasons = Object.entries(injuryMap)
     .filter(([, missed]) => missed >= 4)
     .map(([s]) => Number(s))
 
+  const title = exportPrefix
+    ? `${exportPrefix} — ${lines.map(l => l.label).join(' / ')}`
+    : lines.map(l => l.label).join(' / ')
+
+  const isSaved = isChartSaved?.(title) ?? false
+
   const handleExport = () => {
     if (!wrapperRef.current) return
-    const statLabel = lines.map(l => l.label).join(' / ')
-    const title    = exportPrefix ? `${exportPrefix} — ${statLabel}` : statLabel
     const filename = `${title.replace(/[^a-z0-9 \-—]/gi, '').replace(/\s+/g, '_')}.png`
     exportChartAsPng(wrapperRef.current, title, filename)
   }
 
+  const handleSave = () => {
+    if (isSaved) {
+      removeChart?.(title)
+    } else {
+      saveChart?.({ title, chartType: 'CareerLine', data, config: { xKey, lines, injuryMap } })
+    }
+  }
+
   return (
     <div ref={wrapperRef} className="relative group">
-      <button
-        onClick={handleExport}
-        title="Download chart as PNG"
-        className="absolute top-1 right-1 z-10 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity text-slate-500 hover:text-slate-200 hover:bg-slate-700/60"
-      >
-        <DownloadIcon />
-      </button>
+      {!hideActions && (
+        <>
+          <button
+            onClick={handleSave}
+            title={isSaved ? 'Remove from saved' : 'Save chart'}
+            className={`absolute top-1 right-8 z-10 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-slate-700/60 ${
+              isSaved ? 'text-amber-400' : 'text-slate-500 hover:text-slate-200'
+            }`}
+          >
+            <BookmarkIcon filled={isSaved} />
+          </button>
+          <button
+            onClick={handleExport}
+            title="Download chart as PNG"
+            className="absolute top-1 right-1 z-10 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity text-slate-500 hover:text-slate-200 hover:bg-slate-700/60"
+          >
+            <DownloadIcon />
+          </button>
+        </>
+      )}
       <ResponsiveContainer width="100%" height={height}>
       <LineChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
@@ -107,16 +145,39 @@ export function CareerLineChart({ data, xKey, lines, injuryMap = {}, height = 26
 }
 
 // Generic wrapper that adds a hover download button to any chart
-export function ExportableChart({ title, filename, children }) {
+// chartData = { chartType, config, data } — when provided, also shows a save button
+export function ExportableChart({ title, filename, children, chartData }) {
   const wrapperRef = useRef(null)
+  const { saveChart, removeChart, isChartSaved } = useUser() || {}
+
+  const isSaved = chartData ? (isChartSaved?.(title) ?? false) : false
+
   const handleExport = () => {
     if (!wrapperRef.current) return
     const fn = filename
       || `${(title || 'chart').replace(/[^a-z0-9 \-—]/gi, '').replace(/\s+/g, '_')}.png`
     exportChartAsPng(wrapperRef.current, title, fn)
   }
+
+  const handleSave = () => {
+    if (isSaved) {
+      removeChart?.(title)
+    } else {
+      saveChart?.({ title, ...chartData })
+    }
+  }
+
   return (
     <div ref={wrapperRef} className="relative group">
+      {chartData && (
+        <button onClick={handleSave}
+          title={isSaved ? 'Remove from saved' : 'Save chart'}
+          className={`absolute top-1 right-8 z-10 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-slate-700/60 ${
+            isSaved ? 'text-amber-400' : 'text-slate-500 hover:text-slate-200'
+          }`}>
+          <BookmarkIcon filled={isSaved} />
+        </button>
+      )}
       <button onClick={handleExport} title="Download as PNG"
         className="absolute top-1 right-1 z-10 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity text-slate-500 hover:text-slate-200 hover:bg-slate-700/60">
         <DownloadIcon />

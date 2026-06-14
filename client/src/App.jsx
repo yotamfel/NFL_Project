@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, useLocation } from 'react-router-dom'
 import { useUser, UserProvider } from './context/UserContext'
 import Nav from './components/Nav'
 import UsernameSetup from './components/UsernameSetup'
@@ -12,14 +12,18 @@ import Saved from './pages/Saved'
 import LeagueTrends from './pages/LeagueTrends'
 import Guide from './pages/Guide'
 import AdminAi from './pages/AdminAi'
+import Dashboard from './pages/Dashboard'
+import DashboardBuilder from './pages/DashboardBuilder'
 
 function AppInner() {
   const { username } = useUser()
+  const location = useLocation()
+  const isBuilder = /^\/dashboard\/.+/.test(location.pathname)
   return (
     <div className="min-h-screen flex flex-col bg-slate-950">
       {!username && <UsernameSetup />}
       <Nav />
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-6">
+      <main className={`flex-1 w-full mx-auto ${isBuilder ? '' : 'max-w-6xl px-4 py-6'}`}>
         <Routes>
           <Route path="/" element={<PlayerSearch />} />
           <Route path="/players" element={<PlayerLanding />} />
@@ -31,6 +35,8 @@ function AppInner() {
           <Route path="/trends" element={<LeagueTrends />} />
           <Route path="/guide" element={<Guide />} />
           <Route path="/admin/ai" element={<AdminAi />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/dashboard/:id" element={<DashboardBuilder />} />
         </Routes>
       </main>
     </div>
