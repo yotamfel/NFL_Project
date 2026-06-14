@@ -1,9 +1,11 @@
+import { useRef } from 'react'
 import {
   LineChart, Line,
   BarChart, Bar, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   ReferenceLine,
 } from 'recharts'
+import { exportChartAsPng } from '../utils/exportChart'
 
 const CHART_STYLE = {
   contentStyle: { backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px' },
@@ -38,15 +40,44 @@ function InjuryTooltip({ active, payload, label, injuryMap, xKey }) {
   )
 }
 
+function DownloadIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+      <polyline points="7 10 12 15 17 10"/>
+      <line x1="12" y1="15" x2="12" y2="3"/>
+    </svg>
+  )
+}
+
 // lines = [{dataKey, label, color}]
 // injuryMap = { season: games_missed } — seasons with 4+ missed games get a red marker
-export function CareerLineChart({ data, xKey, lines, injuryMap = {}, height = 260 }) {
+// exportPrefix = prepended to line labels in the exported PNG title (e.g. "Patrick Mahomes — passing")
+export function CareerLineChart({ data, xKey, lines, injuryMap = {}, height = 260, exportPrefix }) {
+  const wrapperRef = useRef(null)
   const injurySeasons = Object.entries(injuryMap)
     .filter(([, missed]) => missed >= 4)
     .map(([s]) => Number(s))
 
+  const handleExport = () => {
+    if (!wrapperRef.current) return
+    const statLabel = lines.map(l => l.label).join(' / ')
+    const title    = exportPrefix ? `${exportPrefix} — ${statLabel}` : statLabel
+    const filename = `${title.replace(/[^a-z0-9 \-—]/gi, '').replace(/\s+/g, '_')}.png`
+    exportChartAsPng(wrapperRef.current, title, filename)
+  }
+
   return (
-    <ResponsiveContainer width="100%" height={height}>
+    <div ref={wrapperRef} className="relative group">
+      <button
+        onClick={handleExport}
+        title="Download chart as PNG"
+        className="absolute top-1 right-1 z-10 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity text-slate-500 hover:text-slate-200 hover:bg-slate-700/60"
+      >
+        <DownloadIcon />
+      </button>
+      <ResponsiveContainer width="100%" height={height}>
       <LineChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
         <XAxis dataKey={xKey} stroke="#475569" tick={{ fill: '#94a3b8', fontSize: 12 }} />
@@ -71,6 +102,7 @@ export function CareerLineChart({ data, xKey, lines, injuryMap = {}, height = 26
         ))}
       </LineChart>
     </ResponsiveContainer>
+    </div>
   )
 }
 

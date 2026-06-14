@@ -210,7 +210,7 @@ function fmtHt(ht) {
 
 // ── Selectable career chart ───────────────────────────────────────────────────
 // availableStats = [{key, label}]  defaultLines = [{dataKey, label, color}]
-function SelectableChart({ data, xKey, defaultLines, availableStats, injuryMap = {}, height = 220 }) {
+function SelectableChart({ data, xKey, defaultLines, availableStats, injuryMap = {}, height = 220, exportPrefix }) {
   const [lines, setLines] = useState(defaultLines)
   const updateLine = (idx, key) => {
     const stat = availableStats.find(s => s.key === key)
@@ -235,7 +235,7 @@ function SelectableChart({ data, xKey, defaultLines, availableStats, injuryMap =
           </div>
         ))}
       </div>
-      <CareerLineChart data={data} xKey={xKey} lines={lines} injuryMap={injuryMap} height={height} />
+      <CareerLineChart data={data} xKey={xKey} lines={lines} injuryMap={injuryMap} height={height} exportPrefix={exportPrefix} />
     </div>
   )
 }
@@ -938,7 +938,8 @@ export default function PlayerProfile() {
                 <div className={chartGroups.length > 1 ? 'grid grid-cols-2 gap-3' : ''}>
                   {chartGroups.map((lines, i) => (
                     <SelectableChart key={i} data={cat.seasons} xKey="season"
-                      defaultLines={lines} availableStats={availableStats} injuryMap={injuryMap} />
+                      defaultLines={lines} availableStats={availableStats} injuryMap={injuryMap}
+                      exportPrefix={`${player.player_name} — ${cat.category}`} />
                   ))}
                 </div>
               )
