@@ -54,7 +54,8 @@ def _view_sql(category: str, columns) -> str:
          "max(season) as last_season"] + sums + maxes
     )
     return f"""
-create or replace view {category}_career as
+drop view if exists {category}_career;
+create view {category}_career as
 select player_id,
     {select_cols}
 from {category}_seasons
