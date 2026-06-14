@@ -114,8 +114,8 @@ export default function NaturalSearch() {
           <div className="flex items-start gap-2 text-xs text-amber-500/70 bg-amber-500/5 border border-amber-500/15 rounded-lg px-4 py-2.5">
             <span className="mt-0.5 shrink-0">⚠</span>
             <span>
-              Database covers <strong className="text-amber-400/80">2000–2025 only</strong>.
-              Career totals for players who started before 2000 are incomplete.
+              Seasonal stats cover <strong className="text-amber-400/80">1970–2025</strong>.
+              Draft data starts 2000. Combine data starts 1987. Players who debuted before 1970 have partial coverage.
             </span>
           </div>
 

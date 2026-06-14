@@ -128,7 +128,7 @@ export default function PlayerLanding() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-black text-white mb-1">Player Search</h1>
-        <p className="text-slate-500 text-sm">11,000+ players · 2000–2025</p>
+        <p className="text-slate-500 text-sm">20,000+ players · 1970–2025</p>
       </div>
 
       {/* Search input */}

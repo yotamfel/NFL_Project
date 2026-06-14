@@ -95,6 +95,7 @@ CATEGORY_CFG = {
     "combine": {
         "url_tpl":  "/draft/{year}-combine.htm",
         "table_id": "combine_data",
+        "table_id_fallbacks": ["stathead_table"],  # pre-2000 PFR uses this id
         "folder":   "Combine Tables",
         "file_tpl": "{year} combine.csv",
         "grouped":  False,
@@ -148,7 +149,7 @@ def _close_driver():
 # ---------------------------------------------------------------------------
 
 
-CF_SOLVE_WAIT = 10  # seconds to wait for Cloudflare JS challenge to auto-resolve
+CF_SOLVE_WAIT = 12  # seconds to wait for Cloudflare JS challenge to auto-resolve
 
 
 def fetch_html(url: str) -> str:

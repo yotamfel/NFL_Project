@@ -32,40 +32,42 @@ or English — into a single read-only PostgreSQL query.
 
 ### Core identity
 players(player_id PK, player_name, pos, first_season, last_season, n_seasons)
-  Canonical player identity, 2000-2025. Everything else links to it via player_id.
+  Canonical player identity. first_season and last_season accurately reflect
+  the player's actual NFL debut and final season (coverage 1970-2025 for most
+  categories). Everything else links to it via player_id.
 
 ### Box-score stats
 Six categories, each with a `*_seasons` table (one row per player-season)
 and a `*_career` view (lifetime totals per player):
 
-  passing_seasons / passing_career
+  passing_seasons / passing_career  [coverage: 1970-2025]
     cmp, att, yds, td, int, sk, sack_yds_lost, rate (passer rating),
     cmp_pct, y_per_a, ay_per_a, ny_per_a, any_per_a, y_per_c,
     "_1d" (first downs), "_4qc" (4th-quarter comebacks), gwd (game-winning drives)
 
-  offense_seasons / offense_career   (rushing + receiving combined)
+  offense_seasons / offense_career   (rushing + receiving combined)  [coverage: 1970-2025]
     att (rush attempts), rush_yds, rush_td, rush_first_downs,
     tgt, rec, rec_yds, rec_td, rec_first_downs,
     y_per_a (rush), y_per_r (rec), ctch_pct, y_per_tgt,
     touch, yscm (yards from scrimmage), rrtd (rush+rec TDs), fmb
 
-  defense_seasons / defense_career
+  defense_seasons / defense_career  [coverage: 1970-2025]
     comb (combined tackles), solo, ast, sk (sacks), int,
     int_ret_yds, int_td, pd (passes defended), ff (forced fumbles),
     fr (fumble recoveries), fum_ret_yds, fr_td, tfl, qb_hits, sfty, lng
 
-  kicking_seasons / kicking_career
+  kicking_seasons / kicking_career  [coverage: 1970-2025]
     fgm_total, fga_total, fg_pct,
     fgm_0_19/20_29/30_39/40_49/50_plus (makes by distance),
     fga_0_19/20_29/30_39/40_49/50_plus (attempts by distance),
     lng (longest FG), xpm, xpa, xp_pct,
     ko (kickoffs), koyds, tb (touchbacks), tb_pct, koavg
 
-  punting_seasons / punting_career
+  punting_seasons / punting_career  [coverage: 1970-2025]
     pnt, yds, y_per_p, netyds, ny_per_p, retyds,
     tb, tb_pct, pnt20 (inside 20), in20_pct, blck, lng
 
-  returns_seasons / returns_career
+  returns_seasons / returns_career  [coverage: 1970-2025]
     punt_ret, punt_ret_yds, punt_ret_td, punt_ret_lng, y_per_punt_ret,
     kick_ret, kick_ret_yds, kick_ret_td, kick_ret_lng, y_per_kick_ret, apyd
 
@@ -81,7 +83,7 @@ draft(draft_year, round, pick, team, player_name, pos, age, college,
 combine_seasons(season, player_id, player_name, pos, school, ht, wt,
                 "_40yd", vertical, bench, broad_jump, "_3cone", shuttle,
                 drafted_tm_per_rnd_per_yr)
-  Pre-draft workout measurements. ht is text "feet_inches" e.g. '6_2'.
+  Pre-draft workout measurements. Coverage: 1987-2025. ht is text "feet_inches" e.g. '6_2'.
 
 ### Supplementary tables (newer data)
 snap_counts(player_id, season, week, game_type, team, opponent,
@@ -150,24 +152,19 @@ injuries(player_id, season, week, game_type, team,
 9. injuries.report_status 'Out' = missed the game; 'Questionable'/'Doubtful'
    = may have played. To count games missed, filter on report_status = 'Out'
    AND game_type = 'REG'.
-9. DATA STARTS AT 2000. IMPORTANT: players.first_season is NOT the player's
-   actual NFL debut year — it is the earliest season in this database (floor
-   of 2000). Every player in the DB has first_season >= 2000, including
-   players who debuted in 1985 or 1998. You CANNOT use first_season to
-   detect pre-2000 starters. Use your own knowledge instead.
+9. DATA COVERAGE: seasonal stats (passing/offense/defense/kicking/punting/returns)
+   go back to 1970. players.first_season accurately reflects the player's actual
+   NFL debut year (within the 1970-2025 window). Draft data starts 2000 only.
+   Combine data starts 1987.
 
-   Players whose careers started before 2000 (incomplete in this DB):
-   Brett Favre, Jerry Rice, Emmitt Smith, Barry Sanders, Peyton Manning,
-   Randy Moss, Marvin Harrison, Tim Brown, Reggie White, Bruce Smith,
-   Junior Seau, Ray Lewis, Champ Bailey, Terrell Davis, Shannon Sharpe,
-   Derrick Brooks, John Lynch, Warren Sapp, Tony Gonzalez, Jason Taylor.
+   Players whose careers started BEFORE 1970 have incomplete stats in this DB
+   (e.g., Jim Brown retired 1965, Johnny Unitas debuted 1956). For pre-1970
+   players, add a data_note: 'career began before 1970 — stats from 1970 only'.
 
-   - Career LEADERBOARD (top N by career stat): alias columns as
-     career_X_since_2000, e.g. "yds AS career_yds_since_2000". Do NOT
-     add a WHERE filter on first_season (it won't work — see above).
-   - Individual player career query: if the player is on the list above,
-     add 'stats from 2000 only — career began before 2000' AS data_note.
-     For players NOT on the list, no data_note needed.
+   - Career leaderboards: use column aliases that describe the stat, e.g.
+     "yds AS career_passing_yds". No need for "_since_2000" any more.
+   - NGS/advanced tables (adv_receiving, ngs_passing, ngs_rushing, snap_counts)
+     still have limited coverage — see rules 7-8 above.
 
 ## How to respond
 
@@ -184,7 +181,7 @@ CANNOT_ANSWER: <a short reason, in the same language as the question>
 
 Question: Who are the top 5 QBs by career passing touchdowns?
 SQL:
-SELECT p.player_name, pc.td AS career_td_since_2000
+SELECT p.player_name, pc.td AS career_passing_td
 FROM passing_career pc
 JOIN players p USING (player_id)
 ORDER BY pc.td DESC
@@ -201,9 +198,8 @@ LIMIT 50
 Question: What were Jerry Rice's career receiving stats?
 SQL:
 SELECT p.player_name,
-       oc.rec_yds AS career_rec_yds_since_2000,
-       oc.rec_td  AS career_rec_td_since_2000,
-       'stats from 2000 only — career began before 2000' AS data_note
+       oc.rec_yds AS career_rec_yds,
+       oc.rec_td  AS career_rec_td
 FROM offense_career oc
 JOIN players p USING (player_id)
 WHERE p.player_name = 'Jerry Rice'

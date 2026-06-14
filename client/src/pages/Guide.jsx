@@ -216,7 +216,7 @@ const CONTENT = {
           },
           {
             title: 'Limitations',
-            body: 'The AI only has access to data in this database (2000–2025, standard season stats + combine + draft). It cannot answer questions about play-by-play events, individual game logs, or real-time data. If it cannot find the data, it will say so.',
+            body: 'The AI only has access to data in this database (seasonal stats 1970–2025, combine from 1987, draft from 2000). It cannot answer questions about play-by-play events, individual game logs, or real-time data. If it cannot find the data, it will say so.',
           },
           {
             title: 'Feedback',
@@ -631,7 +631,7 @@ const CONTENT = {
           },
           {
             title: 'מגבלות',
-            body: 'ה-AI ניגש רק לנתונים שבבסיס הנתונים (2000–2025, סטטיסטיקות עונה רגילה + Combine + Draft). הוא לא יכול לענות על שאלות Play-by-Play, Game Logs פרטניים, או נתונים בזמן אמת. אם הנתון לא קיים, הוא יאמר זאת ישירות.',
+            body: 'ה-AI ניגש רק לנתונים שבבסיס הנתונים (סטטיסטיקות עונה 1970–2025, Combine מ-1987, Draft מ-2000). הוא לא יכול לענות על שאלות Play-by-Play, Game Logs פרטניים, או נתונים בזמן אמת. אם הנתון לא קיים, הוא יאמר זאת ישירות.',
           },
           {
             title: 'Feedback — משוב',
@@ -925,8 +925,8 @@ export default function Guide() {
 
       <p className="text-center text-slate-600 text-xs pb-4">
         {isHe
-          ? 'מקור נתונים: Pro Football Reference · Next Gen Stats · 2000–2025 · 11,000+ שחקנים'
-          : 'Data: Pro Football Reference · Next Gen Stats · 2000–2025 · 11,000+ players'}
+          ? 'מקור נתונים: Pro Football Reference · Next Gen Stats · 1970–2025 · 20,000+ שחקנים'
+          : 'Data: Pro Football Reference · Next Gen Stats · 1970–2025 · 20,000+ players'}
       </p>
     </div>
   )

@@ -32,8 +32,8 @@ _SYSTEM = """\
 You are a concise NFL analyst. Given a player's career stats summary, write a
 3-to-5 sentence analytical paragraph (no bullet points, no headers). Mention
 their position, career longevity, key statistical achievements, and one
-interesting observation about their career arc. If the data note says stats
-start from 2000, acknowledge the incomplete coverage in one short phrase.
+interesting observation about their career arc. If the data note says the player's
+career started before 1970, acknowledge that the stats shown are from 1970 onward.
 Write in English, in present-perfect tense where appropriate. Be specific —
 use the numbers provided."""
 
@@ -56,15 +56,9 @@ def _build_prompt(profile) -> str:
         f"Seasons in DB: {p.first_season}–{p.last_season} ({p.n_seasons} seasons)",
     ]
 
-    pre2000_names = {
-        "Brett Favre", "Jerry Rice", "Emmitt Smith", "Barry Sanders",
-        "Peyton Manning", "Randy Moss", "Marvin Harrison", "Tim Brown",
-        "Reggie White", "Bruce Smith", "Junior Seau", "Ray Lewis",
-        "Champ Bailey", "Terrell Davis", "Shannon Sharpe", "Derrick Brooks",
-        "John Lynch", "Warren Sapp", "Tony Gonzalez", "Jason Taylor",
-    }
-    if p.player_name in pre2000_names:
-        lines.append("Note: this player's career started before 2000 — stats are from 2000 onward only.")
+    # Players whose careers began before 1970 (pre-merger era) have partial coverage
+    if p.first_season and p.first_season <= 1970:
+        lines.append("Note: this player's career started before 1970 — stats shown are from 1970 onward only.")
 
     lines.append("")
     lines.append("Career stats:")
