@@ -23,11 +23,9 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip'
-          cache-dependency-path: etl/requirements.txt
 
       - name: Install ETL dependencies
-        run: pip install -r etl/requirements.txt
+        run: pip install --no-cache-dir -r etl/requirements.txt
 
       # ── Core box-score stats (also runs supplement_players internally) ─────
       - name: Supplement seasons (passing / offense / defense / kicking / punting / returns)
