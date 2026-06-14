@@ -4,7 +4,8 @@
  * title row above, then triggers a browser download.
  */
 export async function exportChartAsPng(wrapperEl, title, filename = 'chart.png') {
-  const svg = wrapperEl.querySelector('svg')
+  // Skip SVGs inside buttons (e.g. the download icon itself)
+  const svg = [...wrapperEl.querySelectorAll('svg')].find(s => !s.closest('button'))
   if (!svg) return
 
   const { width: W, height: H } = svg.getBoundingClientRect()
