@@ -107,6 +107,15 @@ export default function NaturalSearch() {
             </button>
           </div>
 
+          {/* Data-coverage notice */}
+          <div className="flex items-start gap-2 text-xs text-amber-500/70 bg-amber-500/5 border border-amber-500/15 rounded-lg px-4 py-2.5">
+            <span className="mt-0.5 shrink-0">⚠</span>
+            <span>
+              Database covers <strong className="text-amber-400/80">2000–2025 only</strong>.
+              Career totals for players who started before 2000 are incomplete.
+            </span>
+          </div>
+
           <details className="rounded-xl overflow-hidden group border border-slate-800"
             style={{ background: '#0a0a0f' }}>
             <summary className="px-5 py-3 text-sm text-slate-500 cursor-pointer hover:text-slate-300 select-none flex items-center gap-2">

@@ -141,6 +141,14 @@ injuries(player_id, season, week, game_type, team,
 8. injuries.report_status 'Out' = missed the game; 'Questionable'/'Doubtful'
    = may have played. To count games missed, filter on report_status = 'Out'
    AND game_type = 'REG'.
+9. DATA STARTS AT 2000. Career totals for players whose careers began before
+   2000 are INCOMPLETE — their pre-2000 seasons are missing entirely (e.g.
+   Brett Favre, Jerry Rice, Emmitt Smith). players.first_season tells you
+   when a player first appears in the database.
+   - For "all-time career leaders" queries: add WHERE p.first_season >= 2000
+     and alias the result clearly, e.g. "career_yds_since_2000".
+   - If the user asks about a specific player who started before 2000, include
+     a note column: 'stats from 2000 only' AS data_note (or similar).
 
 ## How to respond
 
