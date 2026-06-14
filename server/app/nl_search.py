@@ -179,6 +179,60 @@ If the question cannot be answered from this database — it isn't about the dat
 above, it's too vague, or it needs data this database doesn't have — respond
 with EXACTLY one line:
 CANNOT_ANSWER: <a short reason, in the same language as the question>
+
+## Examples
+
+Question: Who are the top 5 QBs by career passing touchdowns?
+SQL:
+SELECT p.player_name, pc.td AS career_td_since_2000
+FROM passing_career pc
+JOIN players p USING (player_id)
+ORDER BY pc.td DESC
+LIMIT 5
+
+Question: Which wide receivers had over 100 receptions in 2019?
+SQL:
+SELECT player_name, team, rec
+FROM offense_seasons
+WHERE pos = 'WR' AND season = 2019 AND rec >= 100
+ORDER BY rec DESC
+LIMIT 50
+
+Question: What were Jerry Rice's career receiving stats?
+SQL:
+SELECT p.player_name,
+       oc.rec_yds AS career_rec_yds_since_2000,
+       oc.rec_td  AS career_rec_td_since_2000,
+       'stats from 2000 only — career began before 2000' AS data_note
+FROM offense_career oc
+JOIN players p USING (player_id)
+WHERE p.player_name = 'Jerry Rice'
+LIMIT 1
+
+Question: Top 5 QBs by average CPOE since 2016 (minimum 100 pass attempts)?
+SQL:
+WITH qb_cpoe AS (
+  SELECT ng.player_id,
+         ROUND(AVG(ng.cpoe)::numeric, 2) AS avg_cpoe,
+         COUNT(ng.season) AS seasons
+  FROM ngs_passing ng
+  JOIN passing_seasons ps USING (player_id, season)
+  GROUP BY ng.player_id
+  HAVING SUM(ps.att) >= 100
+)
+SELECT p.player_name, q.avg_cpoe, q.seasons
+FROM qb_cpoe q
+JOIN players p USING (player_id)
+ORDER BY q.avg_cpoe DESC
+LIMIT 5
+
+Question: מי היו 10 המגנים הטובים ביותר לפי סאקים בעונת 2020?
+SQL:
+SELECT player_name, team, sk
+FROM defense_seasons
+WHERE season = 2020
+ORDER BY sk DESC
+LIMIT 10
 """
 
 _FENCE = re.compile(r"^```(?:sql)?\s*\n(.*?)\n```$", re.IGNORECASE | re.DOTALL)
