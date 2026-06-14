@@ -233,6 +233,10 @@ const CONTENT = {
             title: 'Saved searches',
             body: 'Smart Search results can be saved. Each saved search shows the original question, the SQL, and the result table. Expand any entry to review.',
           },
+          {
+            title: 'Notes tab',
+            body: 'The Notes tab is a free-form scratchpad. Type anything and press Enter (or click Save) to add a note. Click any existing note to edit it — it opens as a text area; Enter saves, Shift+Enter adds a new line, Escape cancels. Delete a note with the × button.',
+          },
         ],
       },
       {
@@ -559,6 +563,10 @@ const CONTENT = {
           {
             title: 'Smart Search שמורות',
             body: 'תוצאות Smart Search ניתנות לשמירה. כל רשומה מציגה את השאלה המקורית, ה-SQL, וטבלת התוצאות. פתח כל רשומה לסקירה.',
+          },
+          {
+            title: 'טאב Notes',
+            body: 'טאב Notes הוא לוח כתיבה חופשי. הקלד כל דבר ולחץ Enter (או כפתור Save) להוספת הערה. לחץ על הערה קיימת כדי לערוך אותה — היא נפתחת כ-Textarea; Enter שומר, Shift+Enter מוסיף שורה, Escape מבטל. מחק הערה עם כפתור ×.',
           },
         ],
       },
