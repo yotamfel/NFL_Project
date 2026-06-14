@@ -100,6 +100,10 @@ const CONTENT = {
             title: 'Snap Counts (2013+)',
             body: 'Shows what percentage of the team\'s offensive, defensive, or special-teams snaps the player was on the field for. Use the season dropdown to see a week-by-week breakdown for any season, or scroll down to see the career trend. A sudden drop in snap% is often an early sign of injury, role change, or decline.',
           },
+          {
+            title: 'AI Career Insights',
+            body: 'At the bottom of every player profile, click "Generate Insights" to get a Claude-written 3–5 sentence analytical paragraph about the player\'s career. The narrative covers key stats, career trajectory, and interesting observations. Results are cached for 24 hours so repeat visits load instantly. Rate the insight with 👍 or 👎 to help improve future responses.',
+          },
         ],
       },
       {
@@ -126,6 +130,10 @@ const CONTENT = {
           {
             title: 'Advanced filters (Add player panel)',
             body: 'Expand "Filters" inside the Add Player panel to filter search results by position, season active, or stat threshold. The stat filter (category + stat + minimum value) ranks results by that stat so you can quickly find, say, all WRs with 1,000+ receiving yards in a single season.',
+          },
+          {
+            title: 'AI Comparison Narrative',
+            body: 'Once you have comparison data loaded, click "Generate Narrative" below the stats table. Claude writes a 4–6 sentence analytical paragraph comparing the players across key metrics, noting who leads in each stat and giving an overall verdict. Rate it with 👍 or 👎.',
           },
         ],
       },
@@ -209,6 +217,41 @@ const CONTENT = {
           {
             title: 'Limitations',
             body: 'The AI only has access to data in this database (2000–2025, standard season stats + combine + draft). It cannot answer questions about play-by-play events, individual game logs, or real-time data. If it cannot find the data, it will say so.',
+          },
+          {
+            title: 'Feedback',
+            body: 'After each search result appears, use the 👍 / 👎 buttons (left of "Save result") to rate the answer. Your vote is stored and helps improve the AI\'s accuracy over time.',
+          },
+        ],
+      },
+      {
+        id: 'anomalies',
+        icon: '📡',
+        title: 'Season Highlights',
+        subsections: [
+          {
+            title: 'What are anomaly alerts?',
+            body: 'The "Statistical Anomalies" section on the homepage shows players who had statistically unusual seasons. After each weekly ETL data refresh during the season, the system automatically compares every player\'s most recent season against their career history and flags outliers.',
+          },
+          {
+            title: 'Alert types',
+            body: [
+              'Career High — the player\'s best-ever value in this metric (e.g., most passing yards in a single season).',
+              'Above Avg — performance is 1.5+ standard deviations above their career mean. Significantly better than usual.',
+              'Below Avg — performance is 1.5+ standard deviations below their career mean. Significant drop-off.',
+            ],
+          },
+          {
+            title: 'Severity stars',
+            body: [
+              '★ — Notable: a career high by a small margin, or a moderate deviation.',
+              '★★ — Impressive: a career high by 10%+ or 25%+ above career average.',
+              '★★★ — Remarkable: a career high by 30%+ or 50%+ above career average.',
+            ],
+          },
+          {
+            title: 'Tracked metrics',
+            body: 'Passing yards, passing TDs, rushing yards, rushing TDs, receiving yards, receiving TDs, sacks, and interceptions. Minimum volume thresholds apply (e.g., 200+ pass attempts for QBs) to filter out small-sample noise.',
           },
         ],
       },
@@ -431,6 +474,10 @@ const CONTENT = {
             title: 'Snap Counts (2013+)',
             body: 'מציג איזה אחוז מה-Snaps של הקבוצה השחקן היה על המגרש. השתמש ב-Dropdown של העונה לפירוט שבועי, או גלול למטה לראות את מגמת הקריירה. ירידה פתאומית ב-Snap% היא לעיתים קרובות אינדיקציה מוקדמת לפציעה, שינוי תפקיד או ירידה.',
           },
+          {
+            title: 'AI Career Insights — תובנות קריירה',
+            body: 'בתחתית כל פרופיל שחקן, לחץ "Generate Insights" לקבלת פסקת ניתוח של 3–5 משפטים שנכתבה על ידי Claude. הניתוח מכסה נתוני מפתח, מסלול הקריירה, ותצפיות מעניינות. התוצאות שמורות במטמון ל-24 שעות. דרג את הניתוח עם 👍 או 👎.',
+          },
         ],
       },
       {
@@ -457,6 +504,10 @@ const CONTENT = {
           {
             title: 'Advanced Filters (פאנל הוספת שחקן)',
             body: 'פתח "Filters" בפאנל הוספת שחקן לסינון לפי Position, עונה, או ספי Stat. פילטר הסטטיסטיקה (Category + Stat + ערך מינימלי) מדרג תוצאות לפי הסטטיסטיקה הנבחרת — למשל: כל WRs עם 1,000+ ReceivingYards בעונה אחת.',
+          },
+          {
+            title: 'AI Comparison Narrative — נרטיב השוואה',
+            body: 'לאחר טעינת נתוני ההשוואה, לחץ "Generate Narrative" מתחת לטבלת הסטטיסטיקה. Claude כותב פסקת ניתוח של 4–6 משפטים המשווה בין השחקנים על פני מדדי מפתח, מציין מי מוביל בכל סטטיסטיקה ונותן פסיקה כוללת. דרג עם 👍 או 👎.',
           },
         ],
       },
@@ -540,6 +591,41 @@ const CONTENT = {
           {
             title: 'מגבלות',
             body: 'ה-AI ניגש רק לנתונים שבבסיס הנתונים (2000–2025, סטטיסטיקות עונה רגילה + Combine + Draft). הוא לא יכול לענות על שאלות Play-by-Play, Game Logs פרטניים, או נתונים בזמן אמת. אם הנתון לא קיים, הוא יאמר זאת ישירות.',
+          },
+          {
+            title: 'Feedback — משוב',
+            body: 'לאחר שהתוצאה מופיעה, השתמש בכפתורי 👍 / 👎 (משמאל לכפתור "Save result") לדירוג התשובה. ההצבעה נשמרת ועוזרת לשפר את דיוק ה-AI לאורך זמן.',
+          },
+        ],
+      },
+      {
+        id: 'anomalies',
+        icon: '📡',
+        title: 'Season Highlights — חריגות סטטיסטיות',
+        subsections: [
+          {
+            title: 'מה זה Anomaly Alerts?',
+            body: 'החלק "Statistical Anomalies" בדף הבית מציג שחקנים שהייתה להם עונה סטטיסטית חריגה. לאחר כל רענון נתונים שבועי במהלך העונה, המערכת משווה אוטומטית את העונה האחרונה של כל שחקן להיסטוריית הקריירה שלו ומסמנת חריגים.',
+          },
+          {
+            title: 'סוגי התראות',
+            body: [
+              'Career High — שיא קריירה של השחקן במדד הזה (למשל, הכי הרבה Passing Yards בעונה אחת).',
+              'Above Avg — ביצועים 1.5+ סטיות תקן מעל ממוצע הקריירה שלו. משמעותית טוב מהרגיל.',
+              'Below Avg — ביצועים 1.5+ סטיות תקן מתחת לממוצע. ירידה משמעותית.',
+            ],
+          },
+          {
+            title: 'דירוג חומרה (כוכביות)',
+            body: [
+              '★ — בולט: שיא קריירה בהפרש קטן, או סטייה מתונה.',
+              '★★ — מרשים: שיא קריירה ב-10%+ או 25%+ מעל ממוצע הקריירה.',
+              '★★★ — יוצא דופן: שיא קריירה ב-30%+ או 50%+ מעל ממוצע הקריירה.',
+            ],
+          },
+          {
+            title: 'מדדים שנבדקים',
+            body: 'Passing Yards, Passing TDs, Rushing Yards, Rushing TDs, Receiving Yards, Receiving TDs, Sacks, Interceptions. ספי נפח מינימלי חלים (למשל 200+ ניסיונות מסירה ל-QBs) כדי לסנן רעש של מדגמים קטנים.',
           },
         ],
       },
