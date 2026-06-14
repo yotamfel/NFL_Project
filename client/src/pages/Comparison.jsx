@@ -5,6 +5,7 @@ import StatTable from '../components/StatTable'
 import { MetricBarChart } from '../components/StatChart'
 import { useUser } from '../context/UserContext'
 import { STAT_DEFS } from '../utils/statDefinitions'
+import AiFeedback from '../components/AiFeedback'
 
 const CATEGORIES = ['passing', 'offense', 'defense', 'kicking', 'punting', 'returns']
 const BAR_COLORS = ['#60a5fa', '#fbbf24', '#4ade80', '#f87171']
@@ -305,6 +306,9 @@ export default function Comparison() {
   const [compSeason,    setCompSeason]    = useState('')
   const [lbStat,        setLbStat]        = useState('')
   const [lbData,        setLbData]        = useState(null)
+  const [narState,      setNarState]      = useState('idle')  // idle | loading | done | error
+  const [narrative,     setNarrative]     = useState(null)
+  const [narLogId,      setNarLogId]      = useState(null)
 
   // Filters
   const [filterPos,    setFilterPos]    = useState('')
@@ -385,6 +389,8 @@ export default function Comparison() {
     return () => clearTimeout(debounceRef.current)
   }, [searchQuery, filterPos, filterSeason, filterCat, filterStat, filterMin])
 
+  const resetNarrative = () => { setNarState('idle'); setNarrative(null); setNarLogId(null) }
+
   const addPlayer = (id, pos) => {
     if (!playerIds.includes(id) && playerIds.length < 4) {
       setPlayerIds(p => [...p, id])
@@ -396,9 +402,22 @@ export default function Comparison() {
     }
     setSearchQuery(''); setSearchResults([])
     setSaved(false)
+    resetNarrative()
     setAddPanelOpen(false)
   }
-  const removePlayer = id => { setPlayerIds(p => p.filter(x => x !== id)); setSaved(false) }
+  const removePlayer = id => { setPlayerIds(p => p.filter(x => x !== id)); setSaved(false); resetNarrative() }
+
+  const loadNarrative = async () => {
+    setNarState('loading')
+    try {
+      const res = await api.getComparisonNarrative(playerIds, category, compSeason ? parseInt(compSeason) : null)
+      setNarrative(res.narrative)
+      setNarLogId(res.log_id ?? null)
+      setNarState('done')
+    } catch {
+      setNarState('error')
+    }
+  }
 
   const handleSave = () => {
     if (!data) return
@@ -666,6 +685,44 @@ export default function Comparison() {
             </div>
             <StatTable columns={tableCols} rows={data.career} keyField="player_id" />
           </div>
+
+          {/* AI Narrative */}
+          {narState === 'idle' && (
+            <div className="bg-slate-800/70 border border-slate-700/60 rounded-2xl p-5 flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <p className="text-white font-bold">AI Comparison Narrative</p>
+                <p className="text-slate-500 text-xs mt-0.5">Claude-written analysis of this matchup</p>
+              </div>
+              <button onClick={loadNarrative}
+                className="text-sm font-semibold px-4 py-2 rounded-xl transition-colors bg-blue-500/10 text-blue-400 border border-blue-500/30 hover:bg-blue-500/20">
+                Generate Narrative
+              </button>
+            </div>
+          )}
+          {narState === 'loading' && (
+            <div className="bg-slate-800/70 border border-slate-700/60 rounded-2xl p-5 flex items-center gap-3">
+              <svg className="animate-spin w-4 h-4 shrink-0 text-blue-400" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+              </svg>
+              <span className="text-slate-400 text-sm">Generating narrative…</span>
+            </div>
+          )}
+          {narState === 'error' && (
+            <div className="bg-slate-800/70 border border-slate-700/60 rounded-2xl p-5">
+              <p className="text-rose-400 text-sm">Could not generate narrative. Try again later.</p>
+            </div>
+          )}
+          {narState === 'done' && narrative && (
+            <div className="bg-slate-800/70 border border-slate-700/60 rounded-2xl p-5 space-y-4">
+              <h2 className="text-white font-bold">AI Comparison Narrative</h2>
+              <p className="text-slate-300 text-sm leading-relaxed">{narrative}</p>
+              <div className="flex items-center justify-between pt-1 border-t border-slate-700/60">
+                <AiFeedback logId={narLogId} />
+                <p className="text-xs text-slate-600">Powered by Claude Sonnet 4.6</p>
+              </div>
+            </div>
+          )}
         </>
       )}
 

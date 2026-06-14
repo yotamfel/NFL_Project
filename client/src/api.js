@@ -110,4 +110,7 @@ export const api = {
   submitFeedback: (log_id, thumbs) => post('/feedback', { log_id, thumbs }),
 
   getPlayerInsights: id => get(`/players/${id}/insights`),
+
+  getComparisonNarrative: (player_ids, category, season) =>
+    post('/compare/narrative', { player_ids, category, season: season || null }),
 }
