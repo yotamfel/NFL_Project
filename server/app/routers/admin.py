@@ -48,9 +48,12 @@ def ai_dashboard():
         # Anomaly alert counts
         anomaly_stats = conn.execute(text("""
             SELECT season, COUNT(*) AS total,
-                   COUNT(*) FILTER (WHERE alert_type = 'career_high') AS career_highs,
-                   COUNT(*) FILTER (WHERE alert_type = 'above_avg')   AS above_avg,
-                   COUNT(*) FILTER (WHERE alert_type = 'below_avg')   AS below_avg
+                   COUNT(*) FILTER (WHERE alert_type = 'career_high')     AS career_highs,
+                   COUNT(*) FILTER (WHERE alert_type = 'yoy_surge')       AS yoy_surge,
+                   COUNT(*) FILTER (WHERE alert_type = 'efficiency_peak') AS efficiency_peak,
+                   COUNT(*) FILTER (WHERE alert_type = 'versatile')       AS versatile,
+                   COUNT(*) FILTER (WHERE alert_type = 'above_avg')       AS above_avg,
+                   COUNT(*) FILTER (WHERE alert_type = 'below_avg')       AS below_avg
             FROM anomaly_alerts
             GROUP BY season
             ORDER BY season DESC

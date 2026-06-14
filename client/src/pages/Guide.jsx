@@ -231,27 +231,33 @@ const CONTENT = {
         subsections: [
           {
             title: 'What are anomaly alerts?',
-            body: 'The "Statistical Anomalies" section on the homepage shows players who had statistically unusual seasons. After each weekly ETL data refresh during the season, the system automatically compares every player\'s most recent season against their career history and flags outliers.',
+            body: 'The "Statistical Anomalies" section on the homepage surfaces players who are having statistically unusual seasons. The ETL runs every Wednesday during the regular season and pulls cumulative season-to-date stats from PFR — the anomaly engine re-runs immediately after, so alerts always reflect the most recently played week. Outside the season (March–August) they show the previous full season.',
           },
           {
             title: 'Alert types',
             body: [
-              'Career High — the player\'s best-ever value in this metric (e.g., most passing yards in a single season).',
-              'Above Avg — performance is 1.5+ standard deviations above their career mean. Significantly better than usual.',
-              'Below Avg — performance is 1.5+ standard deviations below their career mean. Significant drop-off.',
+              'Career High — cumulative season stats have already surpassed the player\'s previous career best in that metric. During the season this can trigger mid-year if a player is on a record pace.',
+              'YoY Surge — stats are 40%+ higher than the same player\'s stats in the prior season. Catches breakout years and comeback stories.',
+              'Efficiency — a rate stat (Passer Rating, Y/A, Y/Rec, Y/Carry) is 1.5+ standard deviations above the player\'s career average. Highlights players who are more efficient, not just more productive.',
+              'Versatile — player contributed meaningfully in two categories: 300+ rushing yards AND 300+ receiving yards (dual-threat backs), or 200+ pass attempts AND 50+ rush attempts (dual-threat QBs).',
+              'Above Avg — counting stat is 1.5+ standard deviations above career mean.',
+              'Decline — counting stat is 1.5+ standard deviations below career mean. Flags significant drop-offs.',
             ],
+          },
+          {
+            title: 'Filters',
+            body: 'Use the filter chips (All / Career Highs / YoY Surge / Efficiency / Versatile / Above Avg / Decline) to focus on a specific alert type. The feed re-loads instantly on each selection.',
           },
           {
             title: 'Severity stars',
             body: [
-              '★ — Notable: a career high by a small margin, or a moderate deviation.',
-              '★★ — Impressive: a career high by 10%+ or 25%+ above career average.',
-              '★★★ — Remarkable: a career high by 30%+ or 50%+ above career average.',
+              '★★ — Impressive: career high by 10%+, surge of 60%+, or efficiency 2σ above average.',
+              '★★★ — Remarkable: career high by 30%+, surge of 100%+, efficiency 3σ above average, or dual-threat with 700+ yards in both categories.',
             ],
           },
           {
             title: 'Tracked metrics',
-            body: 'Passing yards, passing TDs, rushing yards, rushing TDs, receiving yards, receiving TDs, sacks, and interceptions. Minimum volume thresholds apply (e.g., 200+ pass attempts for QBs) to filter out small-sample noise.',
+            body: 'Counting stats: passing yards/TDs, rushing yards/TDs, receiving yards/TDs, sacks, interceptions, passes defended, combined tackles. Rate stats: passer rating, yards per attempt, yards per reception, yards per carry. Volume thresholds apply (e.g. 200+ pass attempts for QBs) to filter out small-sample noise.',
           },
         ],
       },
@@ -605,27 +611,33 @@ const CONTENT = {
         subsections: [
           {
             title: 'מה זה Anomaly Alerts?',
-            body: 'החלק "Statistical Anomalies" בדף הבית מציג שחקנים שהייתה להם עונה סטטיסטית חריגה. לאחר כל רענון נתונים שבועי במהלך העונה, המערכת משווה אוטומטית את העונה האחרונה של כל שחקן להיסטוריית הקריירה שלו ומסמנת חריגים.',
+            body: 'החלק "Statistical Anomalies" בדף הבית מציג שחקנים עם עונות סטטיסטיות חריגות. ה-ETL רץ כל רביעי במהלך עונת הסדרה ומושך נתוני עונה-מצטברים מ-PFR. מיד לאחר מכן מחשב מחדש את כל החריגות — כך שהן תמיד משקפות את הנתונים המצטברים עד השבוע האחרון ששוחק. מחוץ לעונה (מרץ–אוגוסט) מוצגת העונה הקודמת בשלמותה.',
           },
           {
             title: 'סוגי התראות',
             body: [
-              'Career High — שיא קריירה של השחקן במדד הזה (למשל, הכי הרבה Passing Yards בעונה אחת).',
-              'Above Avg — ביצועים 1.5+ סטיות תקן מעל ממוצע הקריירה שלו. משמעותית טוב מהרגיל.',
-              'Below Avg — ביצועים 1.5+ סטיות תקן מתחת לממוצע. ירידה משמעותית.',
+              'Career High — הנתון המצטבר של השחקן בעונה הנוכחית כבר עבר את שיא הקריירה הקודם שלו. במהלך העונה זה יכול להדליק אזהרה גם באמצע השנה אם השחקן בקצב שיא.',
+              'YoY Surge — שיפור של 40%+ לעומת אותו שחקן בעונה הקודמת. תופס עונות פריצה וחזרות לפסגה.',
+              'Efficiency — מדד יעילות (Passer Rating, Y/A, Y/Rec, Y/Carry) גבוה ב-1.5+ סטיות תקן מעל ממוצע הקריירה. מדגיש שחקנים שיעילים יותר, לא רק פרודוקטיביים יותר.',
+              'Versatile — תרומה משמעותית בשתי קטגוריות: 300+ יארד ריצה + 300+ יארד קליטה (RB דואלי), או 200+ ניסיונות מסירה + 50+ ניסיונות ריצה (QB דואלי).',
+              'Above Avg — מדד ספירה 1.5+ סטיות תקן מעל ממוצע הקריירה.',
+              'Decline — מדד ספירה 1.5+ סטיות תקן מתחת לממוצע. מסמן ירידה משמעותית.',
             ],
+          },
+          {
+            title: 'פילטרים',
+            body: 'השתמש בכפתורי הפילטר (All / Career Highs / YoY Surge / Efficiency / Versatile / Above Avg / Decline) כדי להתמקד בסוג התראה ספציפי. הפיד נטען מחדש מיידית בכל בחירה.',
           },
           {
             title: 'דירוג חומרה (כוכביות)',
             body: [
-              '★ — בולט: שיא קריירה בהפרש קטן, או סטייה מתונה.',
-              '★★ — מרשים: שיא קריירה ב-10%+ או 25%+ מעל ממוצע הקריירה.',
-              '★★★ — יוצא דופן: שיא קריירה ב-30%+ או 50%+ מעל ממוצע הקריירה.',
+              '★★ — מרשים: שיא קריירה ב-10%+, Surge של 60%+, או יעילות 2σ מעל הממוצע.',
+              '★★★ — יוצא דופן: שיא קריירה ב-30%+, Surge של 100%+, יעילות 3σ, או שחקן דואלי עם 700+ יארד בשתי הקטגוריות.',
             ],
           },
           {
             title: 'מדדים שנבדקים',
-            body: 'Passing Yards, Passing TDs, Rushing Yards, Rushing TDs, Receiving Yards, Receiving TDs, Sacks, Interceptions. ספי נפח מינימלי חלים (למשל 200+ ניסיונות מסירה ל-QBs) כדי לסנן רעש של מדגמים קטנים.',
+            body: 'מדדי ספירה: Passing Yards/TDs, Rush Yards/TDs, Rec Yards/TDs, Sacks, Interceptions, Passes Defended, Combined Tackles. מדדי יעילות: Passer Rating, Y/A, Y/Rec, Y/Carry. ספי נפח מינימלי חלים (למשל 200+ ניסיונות מסירה ל-QBs) כדי לסנן רעש של מדגמים קטנים.',
           },
         ],
       },

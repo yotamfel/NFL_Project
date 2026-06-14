@@ -108,7 +108,7 @@ export default function AdminAi() {
             <table className="min-w-full text-sm">
               <thead>
                 <tr className="text-slate-500 text-xs border-b border-slate-800">
-                  {['Season','Total','Career Highs','Above Avg','Below Avg'].map(h => (
+                  {['Season','Total','Career Highs','YoY Surge','Efficiency','Versatile','Above Avg','Below Avg'].map(h => (
                     <th key={h} className="py-2 pr-4 text-left font-medium">{h}</th>
                   ))}
                 </tr>
@@ -119,6 +119,9 @@ export default function AdminAi() {
                     <td className="py-2 pr-4 font-semibold text-slate-200">{r.season}</td>
                     <td className="py-2 pr-4 text-slate-300">{fmt(r.total)}</td>
                     <td className="py-2 pr-4 text-violet-400">{fmt(r.career_highs)}</td>
+                    <td className="py-2 pr-4 text-blue-400">{fmt(r.yoy_surge)}</td>
+                    <td className="py-2 pr-4 text-amber-400">{fmt(r.efficiency_peak)}</td>
+                    <td className="py-2 pr-4 text-cyan-400">{fmt(r.versatile)}</td>
                     <td className="py-2 pr-4 text-emerald-400">{fmt(r.above_avg)}</td>
                     <td className="py-2 pr-4 text-rose-400">{fmt(r.below_avg)}</td>
                   </tr>
