@@ -34,10 +34,14 @@ export function UserProvider({ children }) {
     ...d,
     players: d.players.some(x => x.player_id === p.player_id)
       ? d.players
-      : [{ player_id: p.player_id, player_name: p.player_name, pos: p.pos, saved_at: new Date().toISOString() }, ...d.players],
+      : [{ player_id: p.player_id, player_name: p.player_name, pos: p.pos, note: '', saved_at: new Date().toISOString() }, ...d.players],
   }))
-  const removePlayer   = id  => upd(d => ({ ...d, players:     d.players.filter(p => p.player_id !== id) }))
-  const isPlayerSaved  = id  => saved.players.some(p => p.player_id === id)
+  const removePlayer      = id   => upd(d => ({ ...d, players: d.players.filter(p => p.player_id !== id) }))
+  const isPlayerSaved     = id   => saved.players.some(p => p.player_id === id)
+  const updatePlayerNote  = (id, note) => upd(d => ({
+    ...d,
+    players: d.players.map(p => p.player_id === id ? { ...p, note } : p),
+  }))
 
   // ── Comparisons ───────────────────────────────────────────────────────
   const saveComparison   = (playerIds, playerNames, category) => upd(d => ({
@@ -63,7 +67,7 @@ export function UserProvider({ children }) {
   return (
     <Ctx.Provider value={{
       username, setUser, saved,
-      savePlayer, removePlayer, isPlayerSaved,
+      savePlayer, removePlayer, isPlayerSaved, updatePlayerNote,
       saveComparison, removeComparison,
       saveSearch, removeSearch,
       addNote, removeNote,

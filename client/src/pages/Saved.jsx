@@ -15,10 +15,15 @@ function fmt(iso) {
 }
 
 export default function Saved() {
-  const { username, saved, removePlayer, removeComparison, removeSearch, removeNote, addNote } = useUser()
-  const [tab, setTab]     = useState('players')
-  const [note, setNote]   = useState('')
-  const navigate          = useNavigate()
+  const { username, saved, removePlayer, removeComparison, removeSearch, removeNote, addNote, updatePlayerNote } = useUser()
+  const [tab, setTab]         = useState('players')
+  const [note, setNote]       = useState('')
+  const [editingNote, setEditingNote] = useState(null)  // player_id being edited
+  const [noteText, setNoteText]       = useState('')
+  const navigate              = useNavigate()
+
+  const startEditNote = (player_id, current) => { setEditingNote(player_id); setNoteText(current ?? '') }
+  const commitNote = (player_id) => { updatePlayerNote(player_id, noteText.trim()); setEditingNote(null) }
 
   const total = saved.players.length + saved.comparisons.length + saved.searches.length + saved.notes.length
 
@@ -58,19 +63,51 @@ export default function Saved() {
           {saved.players.length === 0 && <Empty text="No saved players yet." sub="Open a player profile and click the ⭐ button." />}
           {saved.players.map(p => {
             const c = posColor(p.pos)
+            const isEditing = editingNote === p.player_id
             return (
-              <div key={p.player_id} className="flex items-center justify-between gap-3 rounded-xl px-4 py-3 border border-slate-700/60 bg-slate-800/50">
-                <Link to={`/player/${p.player_id}`} className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity">
-                  <span className="text-xs font-bold px-2 py-0.5 rounded-md shrink-0"
-                    style={{ background: c.dark, color: c.hex, border: `1px solid ${c.mid}` }}>
-                    {p.pos}
-                  </span>
-                  <span className="text-white font-semibold truncate">{p.player_name}</span>
-                </Link>
-                <div className="flex items-center gap-3 shrink-0">
-                  <span className="text-slate-600 text-xs hidden sm:block">{fmt(p.saved_at)}</span>
-                  <button onClick={() => removePlayer(p.player_id)} className="text-slate-600 hover:text-red-400 transition-colors text-lg leading-none">×</button>
+              <div key={p.player_id} className="rounded-xl px-4 py-3 border border-slate-700/60 bg-slate-800/50 space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <Link to={`/player/${p.player_id}`} className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity">
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-md shrink-0"
+                      style={{ background: c.dark, color: c.hex, border: `1px solid ${c.mid}` }}>
+                      {p.pos}
+                    </span>
+                    <span className="text-white font-semibold truncate">{p.player_name}</span>
+                  </Link>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <span className="text-slate-600 text-xs hidden sm:block">{fmt(p.saved_at)}</span>
+                    <button onClick={() => removePlayer(p.player_id)} className="text-slate-600 hover:text-red-400 transition-colors text-lg leading-none">×</button>
+                  </div>
                 </div>
+
+                {isEditing ? (
+                  <div className="flex gap-2">
+                    <input
+                      autoFocus
+                      type="text"
+                      value={noteText}
+                      onChange={e => setNoteText(e.target.value)}
+                      onBlur={() => commitNote(p.player_id)}
+                      onKeyDown={e => { if (e.key === 'Enter') commitNote(p.player_id); if (e.key === 'Escape') setEditingNote(null) }}
+                      placeholder="Add a note…"
+                      className="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-3 py-1.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-amber-500/50 transition-colors"
+                    />
+                    <button
+                      onMouseDown={e => { e.preventDefault(); commitNote(p.player_id) }}
+                      className="text-xs text-amber-400 hover:text-amber-300 px-2 font-medium"
+                    >Save</button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => startEditNote(p.player_id, p.note)}
+                    className="text-left w-full group"
+                  >
+                    {p.note
+                      ? <span className="text-slate-400 text-sm leading-relaxed group-hover:text-slate-200 transition-colors">{p.note}</span>
+                      : <span className="text-slate-700 text-xs italic group-hover:text-slate-500 transition-colors">+ Add a note…</span>
+                    }
+                  </button>
+                )}
               </div>
             )
           })}
