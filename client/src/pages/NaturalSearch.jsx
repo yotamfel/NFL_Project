@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { api } from '../api'
 import { useUser } from '../context/UserContext'
+import AiFeedback from '../components/AiFeedback'
 
 const EXAMPLES = [
   'Who had the most passing touchdowns between 2015 and 2020?',
@@ -92,8 +93,9 @@ export default function NaturalSearch() {
       {/* Results */}
       {result && (
         <div className="space-y-3">
-          {/* Save button */}
-          <div className="flex justify-end">
+          {/* Save + Feedback row */}
+          <div className="flex items-center justify-between">
+            <AiFeedback logId={result.log_id} />
             <button
               onClick={() => { saveSearch(question, result.sql, result.rows); setSaved(true) }}
               disabled={saved}

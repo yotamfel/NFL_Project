@@ -11,11 +11,13 @@ pooler does not support BEGIN READ ONLY transactions, so
 safety gate, which is sufficient for this schema.
 """
 import re
-from typing import Any
+import time
+from typing import Any, Optional
 
 from anthropic import Anthropic
 from sqlalchemy import text
 
+from app.ai_log import log_query
 from app.config import ANTHROPIC_API_KEY
 from app.db import engine
 
@@ -215,14 +217,23 @@ def _strip_fences(reply: str) -> str:
     return m.group(1).strip() if m else reply.strip()
 
 
-def _ask_claude(question: str) -> str:
+def _ask_claude(question: str) -> tuple[str, int]:
     response = _client().messages.create(
         model=MODEL,
         max_tokens=1024,
         system=SYSTEM_PROMPT,
         messages=[{"role": "user", "content": question}],
     )
-    return _strip_fences("".join(block.text for block in response.content if block.type == "text"))
+    reply = _strip_fences("".join(block.text for block in response.content if block.type == "text"))
+    tokens = response.usage.input_tokens + response.usage.output_tokens
+    return reply, tokens
+
+
+def _safe_log(**kwargs) -> Optional[int]:
+    try:
+        return log_query(**kwargs)
+    except Exception:
+        return None
 
 
 def _validate_sql(sql: str) -> str:
@@ -254,22 +265,39 @@ def _run_readonly(sql: str) -> list[dict[str, Any]]:
 def answer_question(question: str) -> dict[str, Any]:
     """
     Translates `question` to SQL, validates and runs it, and returns
-    {"sql": ..., "rows": [...]}. Raises TranslationError - covering "Claude
-    declined", "unsafe query", and "query failed to run" alike - on any
-    failure to produce a result.
+    {"sql": ..., "rows": [...], "log_id": ...}. Raises TranslationError
+    covering "Claude declined", "unsafe query", and "query failed to run"
+    alike — on any failure to produce a result.
     """
+    t0 = time.monotonic()
+
     try:
-        reply = _ask_claude(question)
+        reply, tokens = _ask_claude(question)
     except Exception as exc:
+        ms = int((time.monotonic() - t0) * 1000)
+        _safe_log(feature="nl_search", input_text=question, model_used=MODEL,
+                  response_ms=ms, success=False, error_msg=str(exc))
         raise TranslationError(f"could not reach the AI service: {exc}") from exc
 
     if reply.upper().startswith("CANNOT_ANSWER"):
-        raise TranslationError(reply.split(":", 1)[1].strip() if ":" in reply else reply)
+        ms = int((time.monotonic() - t0) * 1000)
+        msg = reply.split(":", 1)[1].strip() if ":" in reply else reply
+        _safe_log(feature="nl_search", input_text=question, model_used=MODEL,
+                  tokens_used=tokens, response_ms=ms, success=False, error_msg=msg)
+        raise TranslationError(msg)
 
     sql = _validate_sql(reply)
     try:
         rows = _run_readonly(sql)
     except Exception as exc:
+        ms = int((time.monotonic() - t0) * 1000)
+        err = str(getattr(exc, "orig", exc))
+        _safe_log(feature="nl_search", input_text=question, sql_generated=sql,
+                  model_used=MODEL, tokens_used=tokens, response_ms=ms,
+                  success=False, error_msg=err)
         raise TranslationError(f"the generated query failed to run: {getattr(exc, 'orig', exc)}") from exc
 
-    return {"sql": sql, "rows": rows}
+    ms = int((time.monotonic() - t0) * 1000)
+    log_id = _safe_log(feature="nl_search", input_text=question, sql_generated=sql,
+                       model_used=MODEL, tokens_used=tokens, response_ms=ms, success=True)
+    return {"sql": sql, "rows": rows, "log_id": log_id}

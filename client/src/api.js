@@ -107,4 +107,5 @@ export const api = {
   },
 
   askQuestion: question => post('/search/natural', { question }),
+  submitFeedback: (log_id, thumbs) => post('/feedback', { log_id, thumbs }),
 }

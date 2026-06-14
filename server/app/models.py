@@ -47,3 +47,4 @@ class NaturalLanguageResult(BaseModel):
     draft/combine above, just one level more dynamic."""
     sql: str
     rows: list[dict[str, Any]]
+    log_id: Optional[int] = None
