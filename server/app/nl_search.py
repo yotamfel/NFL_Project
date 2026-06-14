@@ -19,11 +19,7 @@ from sqlalchemy import text
 from app.config import ANTHROPIC_API_KEY
 from app.db import engine
 
-# Haiku is deliberately the choice here, not a budget compromise: this is a
-# narrow, structured translation task (free text -> one SQL statement against
-# a schema described in full in the system prompt) — exactly the kind of job
-# a fast, cheap model handles as well as a larger one would.
-MODEL = "claude-haiku-4-5-20251001"
+MODEL = "claude-sonnet-4-6"
 ROW_LIMIT = 200
 
 SYSTEM_PROMPT = """\
@@ -32,63 +28,130 @@ or English — into a single read-only PostgreSQL query.
 
 ## Schema (PostgreSQL, all in `public`)
 
+### Core identity
 players(player_id PK, player_name, pos, first_season, last_season, n_seasons)
   Canonical player identity, 2000-2025. Everything else links to it via player_id.
 
-Six box-score categories, each a `*_seasons` (one row per player-season-team)
-/ `*_career` (one row per player, lifetime totals) view pair:
-  passing_seasons / passing_career   - cmp, att, yds, td, int, rate, sk, "_1d", ...
-  offense_seasons / offense_career   - rushing+receiving: att, rush_yds, rush_td,
-                                        tgt, rec, rec_yds, rec_td, touch, yscm, ...
-  defense_seasons / defense_career   - comb, solo, ast, sk, int, pd, ff, fr, ...
-  kicking_seasons / kicking_career   - fgm_total (total FG made), fga_total (total FG attempted),
-                                        fgm_0_19, fgm_20_29, fgm_30_39, fgm_40_49, fgm_50_plus,
-                                        fga_0_19, fga_20_29, fga_30_39, fga_40_49, fga_50_plus,
-                                        xpm (extra points made), xpa (extra points attempted), g, ...
-  punting_seasons / punting_career   - pnt, yds, netyds, tb, ...
-  returns_seasons / returns_career   - punt_ret_yds/td, kick_ret_yds/td, apyd, ...
+### Box-score stats
+Six categories, each with a `*_seasons` table (one row per player-season)
+and a `*_career` view (lifetime totals per player):
+
+  passing_seasons / passing_career
+    cmp, att, yds, td, int, sk, sack_yds_lost, rate (passer rating),
+    cmp_pct, y_per_a, ay_per_a, ny_per_a, any_per_a, y_per_c,
+    "_1d" (first downs), "_4qc" (4th-quarter comebacks), gwd (game-winning drives)
+
+  offense_seasons / offense_career   (rushing + receiving combined)
+    att (rush attempts), rush_yds, rush_td, rush_first_downs,
+    tgt, rec, rec_yds, rec_td, rec_first_downs,
+    y_per_a (rush), y_per_r (rec), ctch_pct, y_per_tgt,
+    touch, yscm (yards from scrimmage), rrtd (rush+rec TDs), fmb
+
+  defense_seasons / defense_career
+    comb (combined tackles), solo, ast, sk (sacks), int,
+    int_ret_yds, int_td, pd (passes defended), ff (forced fumbles),
+    fr (fumble recoveries), fum_ret_yds, fr_td, tfl, qb_hits, sfty, lng
+
+  kicking_seasons / kicking_career
+    fgm_total, fga_total, fg_pct,
+    fgm_0_19/20_29/30_39/40_49/50_plus (makes by distance),
+    fga_0_19/20_29/30_39/40_49/50_plus (attempts by distance),
+    lng (longest FG), xpm, xpa, xp_pct,
+    ko (kickoffs), koyds, tb (touchbacks), tb_pct, koavg
+
+  punting_seasons / punting_career
+    pnt, yds, y_per_p, netyds, ny_per_p, retyds,
+    tb, tb_pct, pnt20 (inside 20), in20_pct, blck, lng
+
+  returns_seasons / returns_career
+    punt_ret, punt_ret_yds, punt_ret_td, punt_ret_lng, y_per_punt_ret,
+    kick_ret, kick_ret_yds, kick_ret_td, kick_ret_lng, y_per_kick_ret, apyd
+
   Common *_seasons columns: season, player_id, player_name, age, team, pos, g, gs, awards.
 
+### Draft & combine
 draft(draft_year, round, pick, team, player_name, pos, age, college,
-      career_av, g, player_id, ...)
-  One row per draft pick, 2000-2025. career_av = Approximate Value, PFR's
-  single cross-position career-quality score - the standard "how good was
-  this pick" number. player_id is null for ~8% of picks (see rule 3).
+      career_av, g, pass_yds, pass_td, rush_yds, rush_td, rec_yds, rec_td,
+      solo_tkl, def_int, sk, player_id)
+  One row per pick, 2000-2025. career_av = PFR Approximate Value (best
+  cross-position career-quality metric). player_id null for ~8% of picks.
 
 combine_seasons(season, player_id, player_name, pos, school, ht, wt,
-                "_40yd", vertical, bench, broad_jump, "_3cone", shuttle, ...)
-  Pre-draft workout measurements. ht is text "feet_inches", e.g. '6_2'.
+                "_40yd", vertical, bench, broad_jump, "_3cone", shuttle,
+                drafted_tm_per_rnd_per_yr)
+  Pre-draft workout measurements. ht is text "feet_inches" e.g. '6_2'.
 
-## Rules - breaking these produces a wrong answer, not just an ugly one
+### Supplementary tables (newer data)
+snap_counts(player_id, season, week, game_type, team, opponent,
+            offense_snaps, offense_pct, defense_snaps, defense_pct,
+            st_snaps, st_pct)
+  Weekly snap count data. game_type: 'REG' or 'POST'.
+  offense_pct/defense_pct/st_pct = share of team snaps (0-1 scale).
+  Coverage: 2012-2025.
 
-1. NEVER sum or average a `*_career` rate/percentage column - there are
-   none; *_career views deliberately exclude them (cmp_pct, y_per_a, fg_pct,
-   qbr, ...). To get a career rate, recompute it from summed counts, e.g.
-   100.0 * sum(cmp) / NULLIF(sum(att), 0).
-2. For career totals, prefer draft.player_id -> players -> *_career (a live
-   aggregation) over draft's own pass_*/rush_*/g columns, which are a
-   scrape-time snapshot that drifts out of date - career_av is the one
-   exception, since it exists only on draft.
-3. A null player_id does NOT mean "never had a real career" - many real
-   players (especially offensive linemen) have no tracked box-score stats.
-   Never treat a null player_id as evidence of a "bust".
-4. Quote columns whose names start with a digit, e.g. "_40yd", "_3cone",
-   "_1d", "_4qc" (the leading underscore is a Postgres-identifier
-   workaround for PFR source names that started with digits).
-5. *_career views carry ONLY player_id plus aggregated numeric stats - no
-   player_name, pos, or team. To show who a career-stat row belongs to,
-   JOIN it back to players on player_id.
+adv_receiving(player_id, season, team,
+              adot (avg depth of target), ybc_r (yards before catch/reception),
+              yac_r (yards after catch/reception), brk_tkl (broken tackles),
+              drop, drop_pct, tgt_rating (passer rating when targeted),
+              avg_sep (avg separation in yards), avg_cushion,
+              ngs_adot, yac_oe (YAC over expected))
+  Advanced receiving metrics from NGS. Coverage: 2016-2025.
+
+ngs_passing(player_id, season, team,
+            avg_ttt (avg time to throw, seconds),
+            avg_cay (completed air yards), avg_iay (intended air yards),
+            aggressiveness (% of throws into tight windows),
+            cpoe (completion % over expected),
+            avg_adot_sticks, max_air_dist)
+  Next Gen Stats for QBs. Coverage: 2016-2025.
+
+ngs_rushing(player_id, season, team,
+            efficiency (NGS rushing efficiency score),
+            avg_tlos (avg time to line of scrimmage, seconds),
+            ryoe_per_att (rushing yards over expected per attempt),
+            rush_pct_oe (rush % over expected),
+            pct_8box (% of runs vs 8+ defenders in box))
+  Next Gen Stats for RBs/rushers. Coverage: 2016-2025.
+
+injuries(player_id, season, week, game_type, team,
+         primary_injury (body part/type as text),
+         report_status ('Out', 'Doubtful', 'Questionable', 'Full'))
+  Weekly injury report entries. One row per player per week they appeared
+  on a report. Coverage: 2009-2025.
+
+## Rules — breaking these produces wrong answers
+
+1. NEVER sum or average a `*_career` rate/percentage column — there are none;
+   *_career views deliberately exclude them (cmp_pct, y_per_a, fg_pct, ...).
+   To compute a career rate, derive it from summed counts:
+   e.g. 100.0 * sum(cmp) / NULLIF(sum(att), 0).
+2. For career totals use players -> *_career (live aggregation), not draft's
+   own pass_*/rush_*/g columns (snapshot that drifts). career_av is the
+   one exception — it only exists on draft.
+3. A null player_id does NOT mean "no career" — many real players (OL, etc.)
+   have no tracked box-score stats. Never treat null player_id as a bust.
+4. Always quote underscore-prefixed columns: "_40yd", "_3cone", "_1d", "_4qc".
+5. *_career views have ONLY player_id + numeric stats — no player_name/pos/team.
+   JOIN to players for identity info.
+6. snap_counts offense_pct/defense_pct/st_pct are fractions (0.0-1.0), not
+   percentages. Multiply by 100 if displaying as "% of snaps".
+7. adv_receiving, ngs_passing, ngs_rushing, snap_counts only cover 2016-2025
+   (snap_counts from 2012). Do not query these for seasons before their
+   coverage start.
+8. injuries.report_status 'Out' = missed the game; 'Questionable'/'Doubtful'
+   = may have played. To count games missed, filter on report_status = 'Out'
+   AND game_type = 'REG'.
 
 ## How to respond
 
-Respond with ONLY the SQL - no prose, no markdown fences. PostgreSQL
-dialect, a single SELECT or WITH...SELECT statement, always ending with a
-LIMIT clause (50 unless the question clearly implies a different count).
+Respond with ONLY the SQL — no prose, no markdown fences. PostgreSQL dialect,
+a single SELECT or WITH...SELECT, always ending with a LIMIT clause (50 unless
+the question clearly implies a different count).
 
-If the question cannot be answered from this database - it isn't about the
-data described above, it's too vague to turn into a query, or it needs data
-this database doesn't have - respond with EXACTLY one line:
-CANNOT_ANSWER: <a short reason, written in the same language as the question>
+If the question cannot be answered from this database — it isn't about the data
+above, it's too vague, or it needs data this database doesn't have — respond
+with EXACTLY one line:
+CANNOT_ANSWER: <a short reason, in the same language as the question>
 """
 
 _FENCE = re.compile(r"^```(?:sql)?\s*\n(.*?)\n```$", re.IGNORECASE | re.DOTALL)
