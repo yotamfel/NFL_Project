@@ -20,10 +20,10 @@ function AppInner() {
   const location = useLocation()
   const isBuilder = /^\/dashboard\/.+/.test(location.pathname)
   return (
-    <div className="min-h-screen flex flex-col bg-slate-950">
+    <div className={`flex flex-col bg-slate-950 ${isBuilder ? 'h-screen overflow-hidden' : 'min-h-screen'}`}>
       {!username && <UsernameSetup />}
       <Nav />
-      <main className={`flex-1 w-full mx-auto ${isBuilder ? '' : 'max-w-6xl px-4 py-6'}`}>
+      <main className={`flex-1 w-full mx-auto ${isBuilder ? 'min-h-0 overflow-hidden' : 'max-w-6xl px-4 py-6'}`}>
         <Routes>
           <Route path="/" element={<PlayerSearch />} />
           <Route path="/players" element={<PlayerLanding />} />

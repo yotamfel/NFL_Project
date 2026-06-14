@@ -20,6 +20,7 @@ const DEFAULT_SIZE = {
 }
 
 // ─── Chart renderer ───────────────────────────────────────────────────────────
+// fill=true: the chart fills 100% of its parent height (for dashboard widgets)
 function ChartWidgetContent({ savedChart, colorOverrides, showInjuries }) {
   if (!savedChart) return <div className="text-slate-600 text-sm p-4">Chart not found</div>
   const { chartType, config, data } = savedChart
@@ -35,16 +36,15 @@ function ChartWidgetContent({ savedChart, colorOverrides, showInjuries }) {
         xKey={config.xKey || 'season'}
         lines={lines}
         injuryMap={injuryMap}
-        height={200}
+        fill
         hideActions
       />
     )
   }
 
-  // Generic line/bar fallback (for ExportableChart-saved charts)
   if (chartType === 'GenericLine' && config.lines) {
     return (
-      <ResponsiveContainer width="100%" height={200}>
+      <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
           <XAxis dataKey={config.xKey || 'x'} stroke="#475569" tick={{ fill: '#94a3b8', fontSize: 11 }} />
@@ -62,7 +62,7 @@ function ChartWidgetContent({ savedChart, colorOverrides, showInjuries }) {
 
   if (chartType === 'GenericBar' && config.bars) {
     return (
-      <ResponsiveContainer width="100%" height={200}>
+      <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
           <XAxis dataKey={config.xKey || 'x'} stroke="#475569" tick={{ fill: '#94a3b8', fontSize: 11 }} />
@@ -143,7 +143,7 @@ function WidgetWrapper({ widget, savedChart, savedTable, onDelete, onUpdateConfi
       } bg-slate-900`}
       onClick={onSelect}
     >
-      {/* Title bar */}
+      {/* Title bar / drag handle */}
       <div className="drag-handle flex items-center gap-2 px-3 py-2 bg-slate-800/70 cursor-grab active:cursor-grabbing select-none border-b border-slate-700/60 shrink-0">
         <span className="text-slate-600 text-xs">⠿</span>
         <span className="text-slate-300 text-xs font-medium truncate flex-1">{titleText}</span>
@@ -153,8 +153,8 @@ function WidgetWrapper({ widget, savedChart, savedTable, onDelete, onUpdateConfi
         >×</button>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 overflow-hidden p-1">
+      {/* Content — flex-1 so it fills remaining widget height */}
+      <div className="flex-1 overflow-hidden" style={{ minHeight: 0, padding: widget.type === 'chart' ? 0 : 4 }}>
         {widget.type === 'chart' && (
           <ChartWidgetContent
             savedChart={savedChart}
@@ -171,14 +171,14 @@ function WidgetWrapper({ widget, savedChart, savedTable, onDelete, onUpdateConfi
               onChange={e => setLocalContent(e.target.value)}
               onBlur={commitText}
               onKeyDown={e => { if (e.key === 'Enter' || e.key === 'Escape') commitText() }}
-              className="w-full bg-transparent text-white text-xl font-bold px-2 py-1 outline-none border-b border-amber-500/50"
+              className="w-full h-full bg-transparent text-white text-xl font-bold px-2 py-1 outline-none border-b border-amber-500/50"
             />
           ) : (
             <h2
               onClick={e => { e.stopPropagation(); setEditingText(true) }}
-              className="text-white text-xl font-bold px-2 py-1 cursor-text hover:bg-slate-800/40 rounded transition-colors"
+              className="text-white text-xl font-bold px-2 py-2 cursor-text hover:bg-slate-800/40 rounded transition-colors h-full flex items-center"
             >
-              {config.content || <span className="text-slate-600 italic">Click to edit heading…</span>}
+              {config.content || <span className="text-slate-600 italic font-normal text-sm">Click to edit heading…</span>}
             </h2>
           )
         )}
@@ -195,7 +195,7 @@ function WidgetWrapper({ widget, savedChart, savedTable, onDelete, onUpdateConfi
           ) : (
             <p
               onClick={e => { e.stopPropagation(); setEditingText(true) }}
-              className="text-slate-300 text-sm px-2 py-1 cursor-text leading-relaxed hover:bg-slate-800/40 rounded transition-colors h-full whitespace-pre-wrap"
+              className="text-slate-300 text-sm px-2 py-1 cursor-text leading-relaxed hover:bg-slate-800/40 rounded transition-colors h-full whitespace-pre-wrap overflow-auto"
             >
               {config.content || <span className="text-slate-600 italic">Click to edit text…</span>}
             </p>
@@ -209,7 +209,6 @@ function WidgetWrapper({ widget, savedChart, savedTable, onDelete, onUpdateConfi
 // ─── Widget settings panel ────────────────────────────────────────────────────
 function WidgetSettings({ widget, savedChart, onUpdateConfig, onClose }) {
   const { config } = widget
-  if (!widget) return null
 
   return (
     <div className="border-t border-slate-700/60 p-4 bg-slate-900/80 shrink-0">
@@ -219,34 +218,34 @@ function WidgetSettings({ widget, savedChart, onUpdateConfig, onClose }) {
       </div>
 
       {widget.type === 'chart' && savedChart && (
-        <div className="space-y-3">
+        <div className="flex flex-wrap items-center gap-4">
           {/* Injury overlay toggle */}
-          <label className="flex items-center gap-3 cursor-pointer">
+          <label className="flex items-center gap-2 cursor-pointer">
             <div
               onClick={() => onUpdateConfig({ showInjuries: !(config.showInjuries ?? true) })}
-              className={`relative w-9 h-5 rounded-full transition-colors ${
+              className={`relative w-8 h-4 rounded-full transition-colors ${
                 (config.showInjuries ?? true) ? 'bg-amber-500' : 'bg-slate-600'
               }`}
             >
-              <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${
+              <div className={`absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform ${
                 (config.showInjuries ?? true) ? 'translate-x-4' : 'translate-x-0'
               }`} />
             </div>
-            <span className="text-slate-400 text-sm">Show injury overlay</span>
+            <span className="text-slate-400 text-xs">Injury overlay</span>
           </label>
 
           {/* Color overrides for each line */}
           {(savedChart.config?.lines || []).map(line => (
-            <div key={line.dataKey} className="flex items-center gap-3">
+            <div key={line.dataKey} className="flex items-center gap-1.5">
               <input
                 type="color"
                 value={config.colorOverrides?.[line.dataKey] || line.color || '#3b82f6'}
                 onChange={e => onUpdateConfig({
                   colorOverrides: { ...(config.colorOverrides || {}), [line.dataKey]: e.target.value }
                 })}
-                className="w-8 h-8 rounded cursor-pointer border border-slate-600 bg-transparent"
+                className="w-7 h-7 rounded cursor-pointer border border-slate-600 bg-transparent"
               />
-              <span className="text-slate-400 text-sm">{line.label}</span>
+              <span className="text-slate-400 text-xs">{line.label}</span>
             </div>
           ))}
         </div>
@@ -264,18 +263,19 @@ function WidgetSettings({ widget, savedChart, onUpdateConfig, onClose }) {
 }
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
-function Sidebar({ saved, onAddWidget }) {
+function Sidebar({ saved, widgets, onAddWidget }) {
   const [sideTab, setSideTab] = useState('charts')
+  const usedSourceIds = new Set(widgets.map(w => w.sourceId).filter(Boolean))
 
   return (
-    <div className="w-72 shrink-0 flex flex-col border-r border-slate-700/60 bg-slate-900">
+    <div className="w-64 shrink-0 flex flex-col border-r border-slate-700/60 bg-slate-900">
       {/* Tabs */}
       <div className="flex border-b border-slate-700/60">
-        {[['charts', 'Charts'], ['tables', 'Tables'], ['widgets', 'Widgets']].map(([id, label]) => (
+        {[['charts', 'Charts'], ['tables', 'Tables'], ['widgets', 'Text']].map(([id, label]) => (
           <button
             key={id}
             onClick={() => setSideTab(id)}
-            className={`flex-1 py-2.5 text-xs font-medium transition-colors ${
+            className={`flex-1 py-2 text-xs font-medium transition-colors ${
               sideTab === id
                 ? 'text-white border-b-2 border-amber-400'
                 : 'text-slate-500 hover:text-slate-300'
@@ -289,7 +289,7 @@ function Sidebar({ saved, onAddWidget }) {
         ))}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-3 space-y-2">
+      <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
         {sideTab === 'charts' && (
           <>
             {(saved.charts || []).length === 0 ? (
@@ -298,17 +298,27 @@ function Sidebar({ saved, onAddWidget }) {
                 Hover over a chart and click the bookmark icon.
               </p>
             ) : (
-              (saved.charts || []).map(chart => (
-                <button
-                  key={chart.id}
-                  onClick={() => onAddWidget('chart', chart.id)}
-                  className="w-full text-left rounded-lg border border-slate-700/60 px-3 py-2.5 hover:bg-slate-800 hover:border-slate-600 transition-colors group"
-                >
-                  <p className="text-slate-200 text-xs font-medium leading-tight truncate">{chart.title}</p>
-                  <p className="text-slate-600 text-xs mt-0.5">{chart.chartType}</p>
-                  <p className="text-amber-500 text-xs mt-1 opacity-0 group-hover:opacity-100 transition-opacity">+ Add to dashboard</p>
-                </button>
-              ))
+              (saved.charts || []).map(chart => {
+                const inDash = usedSourceIds.has(chart.id)
+                return (
+                  <button
+                    key={chart.id}
+                    onClick={() => onAddWidget('chart', chart.id)}
+                    className="w-full text-left rounded-lg border border-slate-700/60 px-2.5 py-2 hover:bg-slate-800 hover:border-slate-600 transition-colors group"
+                  >
+                    <div className="flex items-start justify-between gap-1">
+                      <p className="text-slate-200 text-xs font-medium leading-tight">{chart.title}</p>
+                      {inDash && (
+                        <span className="text-green-400 text-xs shrink-0 mt-0.5">✓</span>
+                      )}
+                    </div>
+                    <p className="text-slate-600 text-xs mt-0.5">{chart.chartType}</p>
+                    <p className="text-amber-500 text-xs mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {inDash ? '+ Add again' : '+ Add to dashboard'}
+                    </p>
+                  </button>
+                )
+              })
             )}
           </>
         )}
@@ -321,24 +331,33 @@ function Sidebar({ saved, onAddWidget }) {
                 Hover over a table and click the bookmark icon.
               </p>
             ) : (
-              (saved.tables || []).map(table => (
-                <button
-                  key={table.id}
-                  onClick={() => onAddWidget('table', table.id)}
-                  className="w-full text-left rounded-lg border border-slate-700/60 px-3 py-2.5 hover:bg-slate-800 hover:border-slate-600 transition-colors group"
-                >
-                  <p className="text-slate-200 text-xs font-medium leading-tight truncate">{table.title}</p>
-                  <p className="text-slate-600 text-xs mt-0.5">{table.columns?.length} cols · {table.rows?.length} rows</p>
-                  <p className="text-amber-500 text-xs mt-1 opacity-0 group-hover:opacity-100 transition-opacity">+ Add to dashboard</p>
-                </button>
-              ))
+              (saved.tables || []).map(table => {
+                const inDash = usedSourceIds.has(table.id)
+                return (
+                  <button
+                    key={table.id}
+                    onClick={() => onAddWidget('table', table.id)}
+                    className="w-full text-left rounded-lg border border-slate-700/60 px-2.5 py-2 hover:bg-slate-800 hover:border-slate-600 transition-colors group"
+                  >
+                    <div className="flex items-start justify-between gap-1">
+                      <p className="text-slate-200 text-xs font-medium leading-tight">{table.title}</p>
+                      {inDash && (
+                        <span className="text-green-400 text-xs shrink-0 mt-0.5">✓</span>
+                      )}
+                    </div>
+                    <p className="text-slate-600 text-xs mt-0.5">{table.columns?.length} cols · {table.rows?.length} rows</p>
+                    <p className="text-amber-500 text-xs mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {inDash ? '+ Add again' : '+ Add to dashboard'}
+                    </p>
+                  </button>
+                )
+              })
             )}
           </>
         )}
 
         {sideTab === 'widgets' && (
-          <div className="space-y-2">
-            <p className="text-slate-600 text-xs px-1 pb-1">Text elements</p>
+          <div className="space-y-1.5">
             {[
               { type: 'heading', label: 'Heading', desc: 'Large bold title' },
               { type: 'text', label: 'Text block', desc: 'Paragraph or notes' },
@@ -346,7 +365,7 @@ function Sidebar({ saved, onAddWidget }) {
               <button
                 key={w.type}
                 onClick={() => onAddWidget(w.type)}
-                className="w-full text-left rounded-lg border border-slate-700/60 px-3 py-2.5 hover:bg-slate-800 hover:border-slate-600 transition-colors group"
+                className="w-full text-left rounded-lg border border-slate-700/60 px-2.5 py-2 hover:bg-slate-800 hover:border-slate-600 transition-colors group"
               >
                 <p className="text-slate-200 text-xs font-medium">{w.label}</p>
                 <p className="text-slate-600 text-xs mt-0.5">{w.desc}</p>
@@ -365,6 +384,10 @@ export default function DashboardBuilder() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { saved, getDashboard, updateDashboard } = useUser()
+
+  // Compute dashboard early (not a hook) so useState can use it for initial value
+  const dashboard = getDashboard(id)
+
   const exportRef = useRef(null)
   const [gridWidth, setGridWidth] = useState(900)
   const [selectedId, setSelectedId] = useState(null)
@@ -372,33 +395,44 @@ export default function DashboardBuilder() {
   const [nameVal, setNameVal] = useState('')
   const [exporting, setExporting] = useState(false)
 
+  // Local layout state — updated on every drag/resize move (no localStorage write)
+  // Persisted to dashboard only on drag/resize STOP
+  const [localLayout, setLocalLayout] = useState(() =>
+    (dashboard?.widgets ?? []).map(w => ({
+      i: w.id, x: w.layout.x, y: w.layout.y, w: w.layout.w, h: w.layout.h, minW: 2, minH: 1,
+    }))
+  )
+
   useEffect(() => {
-    if (!exportRef.current) return
+    const node = exportRef.current
+    if (!node) return
     const obs = new ResizeObserver(entries => {
       setGridWidth(entries[0]?.contentRect.width ?? 900)
     })
-    obs.observe(exportRef.current)
+    obs.observe(node)
     return () => obs.disconnect()
   }, [])
 
-  const dashboard = getDashboard(id)
   const widgets = dashboard?.widgets ?? []
 
+  // Add widget — also updates local layout immediately so grid shows it right away
   const addWidget = useCallback((type, sourceId) => {
     const widgetId = Date.now().toString()
     const size = DEFAULT_SIZE[type]
-    const maxY = widgets.reduce((max, w) => Math.max(max, w.layout.y + w.layout.h), 0)
-    const newWidget = {
-      id: widgetId,
-      type,
-      sourceId: sourceId || null,
-      layout: { x: 0, y: maxY, w: size.w, h: size.h },
-      config: { showInjuries: true, colorOverrides: {}, content: '' },
-    }
-    updateDashboard(id, { widgets: [...widgets, newWidget] })
-  }, [id, widgets, updateDashboard])
+    const maxY = localLayout.reduce((max, l) => Math.max(max, l.y + l.h), 0)
+    setLocalLayout(prev => [...prev, { i: widgetId, x: 0, y: maxY, ...size, minW: 2, minH: 1 }])
+    updateDashboard(id, {
+      widgets: [...widgets, {
+        id: widgetId, type, sourceId: sourceId || null,
+        layout: { x: 0, y: maxY, w: size.w, h: size.h },
+        config: { showInjuries: true, colorOverrides: {}, content: '' },
+      }],
+    })
+  }, [id, widgets, localLayout, updateDashboard])
 
+  // Remove widget — also removes from local layout
   const removeWidget = useCallback(widgetId => {
+    setLocalLayout(prev => prev.filter(l => l.i !== widgetId))
     updateDashboard(id, { widgets: widgets.filter(w => w.id !== widgetId) })
     if (selectedId === widgetId) setSelectedId(null)
   }, [id, widgets, updateDashboard, selectedId])
@@ -411,7 +445,13 @@ export default function DashboardBuilder() {
     })
   }, [id, widgets, updateDashboard])
 
+  // Called during drag/resize — only update local state, NO localStorage write
   const handleLayoutChange = useCallback(newLayout => {
+    setLocalLayout(newLayout)
+  }, [])
+
+  // Called when drag/resize ENDS — persist positions to dashboard
+  const persistLayout = useCallback(newLayout => {
     const updated = widgets.map(w => {
       const l = newLayout.find(li => li.i === w.id)
       if (!l) return w
@@ -422,7 +462,7 @@ export default function DashboardBuilder() {
 
   if (!dashboard) {
     return (
-      <div className="flex items-center justify-center h-96 text-slate-500">
+      <div className="flex items-center justify-center h-full text-slate-500">
         Dashboard not found.{' '}
         <button onClick={() => navigate('/dashboard')} className="ml-2 text-amber-400 hover:underline">
           Back to Dashboards
@@ -435,16 +475,6 @@ export default function DashboardBuilder() {
   const selectedChart = selectedWidget?.type === 'chart'
     ? saved.charts?.find(c => c.id === selectedWidget.sourceId)
     : null
-
-  const gridLayout = widgets.map(w => ({
-    i: w.id,
-    x: w.layout.x,
-    y: w.layout.y,
-    w: w.layout.w,
-    h: w.layout.h,
-    minW: 2,
-    minH: 1,
-  }))
 
   const commitName = () => {
     if (nameVal.trim()) updateDashboard(id, { name: nameVal.trim() })
@@ -469,9 +499,10 @@ export default function DashboardBuilder() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-56px)] -mx-4 -my-6">
+    // h-full works because App sets the main to overflow-hidden flex-1 min-h-0 for the builder
+    <div className="flex h-full">
       {/* Sidebar */}
-      <Sidebar saved={saved} onAddWidget={addWidget} />
+      <Sidebar saved={saved} widgets={widgets} onAddWidget={addWidget} />
 
       {/* Right panel */}
       <div className="flex-1 flex flex-col min-w-0">
@@ -513,9 +544,9 @@ export default function DashboardBuilder() {
         </div>
 
         {/* Canvas + settings */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Canvas */}
-          <div className="flex-1 overflow-auto bg-slate-950 p-4" ref={exportRef}>
+        <div className="flex-1 flex flex-col" style={{ minHeight: 0 }}>
+          {/* Canvas — overflow-auto so large dashboards can scroll */}
+          <div className="flex-1 overflow-auto bg-slate-950 p-4" ref={exportRef} style={{ minHeight: 0 }}>
             {widgets.length === 0 ? (
               <div className="flex items-center justify-center h-full text-center">
                 <div>
@@ -526,12 +557,14 @@ export default function DashboardBuilder() {
             ) : (
               <GridLayout
                 className="layout"
-                layout={gridLayout}
+                layout={localLayout}
                 cols={12}
                 rowHeight={60}
                 width={Math.max(600, gridWidth - 32)}
                 margin={[8, 8]}
                 onLayoutChange={handleLayoutChange}
+                onDragStop={persistLayout}
+                onResizeStop={persistLayout}
                 draggableHandle=".drag-handle"
                 resizeHandles={['se']}
               >

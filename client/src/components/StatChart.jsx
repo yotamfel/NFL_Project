@@ -65,7 +65,7 @@ function BookmarkIcon({ filled }) {
 // injuryMap = { season: games_missed } — seasons with 4+ missed games get a red marker
 // exportPrefix = prepended to line labels in the exported PNG title (e.g. "Patrick Mahomes — passing")
 // hideActions = true in dashboard context (no save/download buttons shown)
-export function CareerLineChart({ data, xKey, lines, injuryMap = {}, height = 260, exportPrefix, hideActions }) {
+export function CareerLineChart({ data, xKey, lines, injuryMap = {}, height = 260, exportPrefix, hideActions, fill }) {
   const wrapperRef = useRef(null)
   const { saveChart, removeChart, isChartSaved } = useUser() || {}
 
@@ -94,7 +94,7 @@ export function CareerLineChart({ data, xKey, lines, injuryMap = {}, height = 26
   }
 
   return (
-    <div ref={wrapperRef} className="relative group">
+    <div ref={wrapperRef} className={`relative group${fill ? ' h-full' : ''}`}>
       {!hideActions && (
         <>
           <button
@@ -115,7 +115,7 @@ export function CareerLineChart({ data, xKey, lines, injuryMap = {}, height = 26
           </button>
         </>
       )}
-      <ResponsiveContainer width="100%" height={height}>
+      <ResponsiveContainer width="100%" height={fill ? '100%' : height}>
       <LineChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
         <XAxis dataKey={xKey} stroke="#475569" tick={{ fill: '#94a3b8', fontSize: 12 }} />
