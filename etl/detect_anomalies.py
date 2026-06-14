@@ -1,10 +1,13 @@
 """
 Anomaly detection job — runs after the ETL to flag season-level outliers.
 
-For each tracked metric, finds players whose most-recent-season value is:
-  - a career high (alert_type = 'career_high'), or
-  - 1.5+ std deviations above their historical avg (alert_type = 'above_avg'), or
-  - 1.5+ std deviations below their historical avg (alert_type = 'below_avg').
+Alert types:
+  career_high     — player's best-ever value in a counting stat
+  above_avg       — counting stat 1.5+ std devs above career mean
+  below_avg       — counting stat 1.5+ std devs below career mean
+  yoy_surge       — 40%+ improvement vs the immediately previous season
+  efficiency_peak — rate/efficiency stat significantly above career mean
+  versatile       — meaningful dual-category contribution in one season
 
 Deletes and re-inserts for the target season so reruns are idempotent.
 """
@@ -23,20 +26,26 @@ sys.path.insert(0, str(Path(__file__).parent))
 from db import get_engine
 from sqlalchemy import text
 
-# Metrics to monitor: (table, metric, min_volume_col, min_volume, label)
-METRICS = [
-    # Passing
-    ("passing_seasons", "yds",  "att",     200, "passing yards"),
-    ("passing_seasons", "td",   "att",     200, "passing TDs"),
-    # Rushing (offense table)
-    ("offense_seasons", "rush_yds", "att", 50,  "rushing yards"),
-    ("offense_seasons", "rush_td",  "att", 50,  "rushing TDs"),
-    # Receiving
-    ("offense_seasons", "rec_yds", "rec",  30,  "receiving yards"),
-    ("offense_seasons", "rec_td",  "rec",  30,  "receiving TDs"),
-    # Defense
-    ("defense_seasons", "sk",    "g",      8,   "sacks"),
-    ("defense_seasons", "int",   "g",      8,   "interceptions"),
+# ── Counting-stat metrics (career_high / above_avg / below_avg / yoy_surge) ──
+COUNTING_METRICS = [
+    ("passing_seasons", "yds",      "att",  200, "passing yards"),
+    ("passing_seasons", "td",       "att",  200, "passing TDs"),
+    ("offense_seasons", "rush_yds", "att",   50, "rushing yards"),
+    ("offense_seasons", "rush_td",  "att",   50, "rushing TDs"),
+    ("offense_seasons", "rec_yds",  "rec",   30, "receiving yards"),
+    ("offense_seasons", "rec_td",   "rec",   30, "receiving TDs"),
+    ("defense_seasons", "sk",       "g",      8, "sacks"),
+    ("defense_seasons", "int",      "g",      8, "interceptions"),
+    ("defense_seasons", "pd",       "g",      8, "passes defended"),
+    ("defense_seasons", "comb",     "g",      8, "combined tackles"),
+]
+
+# ── Rate/efficiency metrics (efficiency_peak) ─────────────────────────────────
+EFFICIENCY_METRICS = [
+    ("passing_seasons", "rate",    "att",  200, "passer rating"),
+    ("passing_seasons", "y_per_a", "att",  200, "yards per attempt"),
+    ("offense_seasons", "y_per_r", "rec",   40, "yards per reception"),
+    ("offense_seasons", "y_per_a", "att",   60, "yards per carry"),
 ]
 
 CREATE_TABLE = """
@@ -61,45 +70,47 @@ CREATE INDEX IF NOT EXISTS anomaly_alerts_detected ON anomaly_alerts (detected_a
 """
 
 
-def _severity(value, career_avg, career_high, alert_type):
-    if career_avg is None or career_avg == 0:
-        return 1
-    pct_above = (value - career_avg) / career_avg if career_avg else 0
+# ── helpers ───────────────────────────────────────────────────────────────────
+
+def _v(value, decimals=0):
+    """Format a numeric value for display."""
+    if value is None:
+        return "n/a"
+    return f"{value:,.{decimals}f}" if decimals else f"{value:,.0f}" if value >= 10 else f"{value:.1f}"
+
+
+def _row(season, player_id, player_name, pos, category, metric,
+         value, career_avg, career_high, alert_type, description, severity):
+    return {
+        "season": season, "player_id": player_id, "player_name": player_name,
+        "pos": pos, "category": category, "metric": metric,
+        "value": value, "career_avg": career_avg, "career_high": career_high,
+        "alert_type": alert_type, "description": description, "severity": severity,
+    }
+
+
+# ── 1. Career-high / above-avg / below-avg ───────────────────────────────────
+
+def _counting_severity(value, career_avg, career_high, alert_type):
     if alert_type == "career_high":
-        pct_above_prev = (value - career_high) / career_high if career_high else 0
-        if pct_above_prev >= 0.30:
-            return 3
-        if pct_above_prev >= 0.10:
-            return 2
-        return 1
-    if pct_above >= 0.50:
-        return 3
-    if pct_above >= 0.25:
-        return 2
+        pct = (value - career_high) / career_high if career_high else 0
+        return 3 if pct >= 0.30 else 2 if pct >= 0.10 else 1
+    if career_avg and career_avg > 0:
+        pct = abs(value - career_avg) / career_avg
+        return 3 if pct >= 0.50 else 2 if pct >= 0.25 else 1
     return 1
 
 
-def _description(player_name, metric_label, value, career_avg, career_high, alert_type):
-    val_str = f"{value:,.0f}" if value >= 10 else f"{value:.1f}"
-    avg_str = f"{career_avg:,.0f}" if career_avg and career_avg >= 10 else (f"{career_avg:.1f}" if career_avg else "n/a")
-    if alert_type == "career_high":
-        return f"{player_name} set a career high with {val_str} {metric_label} (prev. best: {f'{career_high:,.0f}' if career_high >= 10 else f'{career_high:.1f}'})"
-    if alert_type == "above_avg":
-        return f"{player_name} posted {val_str} {metric_label}, well above their career avg of {avg_str}"
-    return f"{player_name} posted only {val_str} {metric_label}, well below their career avg of {avg_str}"
-
-
-def detect(target_season: int, conn) -> list[dict]:
+def detect_counting(target: int, conn) -> list[dict]:
     rows = []
-    for table, metric, vol_col, min_vol, metric_label in METRICS:
+    for table, metric, vol_col, min_vol, label in COUNTING_METRICS:
         category = table.replace("_seasons", "")
         results = conn.execute(text(f"""
             WITH history AS (
                 SELECT player_id,
                        AVG({metric})    AS avg_val,
                        STDDEV({metric}) AS std_val,
-                       MAX({metric})    AS prev_high,
-                       COUNT(*)         AS n_seasons
+                       MAX({metric})    AS prev_high
                 FROM {table}
                 WHERE season < :tgt AND {vol_col} >= :minvol
                 GROUP BY player_id
@@ -112,76 +123,231 @@ def detect(target_season: int, conn) -> list[dict]:
                 WHERE s.season = :tgt AND s.{vol_col} >= :minvol
                   AND s.{metric} IS NOT NULL AND s.{metric} > 0
             )
-            SELECT
-                c.player_id, c.player_name, c.pos,
-                c.value,
-                h.avg_val  AS career_avg,
-                h.std_val  AS career_std,
-                h.prev_high AS career_high,
-                CASE
-                  WHEN c.value > h.prev_high THEN 'career_high'
-                  WHEN h.std_val > 0 AND c.value > h.avg_val + 1.5 * h.std_val THEN 'above_avg'
-                  WHEN h.std_val > 0 AND c.value < h.avg_val - 1.5 * h.std_val THEN 'below_avg'
-                END AS alert_type
+            SELECT c.player_id, c.player_name, c.pos, c.value,
+                   h.avg_val AS career_avg, h.prev_high AS career_high,
+                   CASE
+                     WHEN c.value > h.prev_high                                 THEN 'career_high'
+                     WHEN h.std_val > 0 AND c.value > h.avg_val + 1.5*h.std_val THEN 'above_avg'
+                     WHEN h.std_val > 0 AND c.value < h.avg_val - 1.5*h.std_val THEN 'below_avg'
+                   END AS alert_type
             FROM current c
             JOIN history h USING (player_id)
-            WHERE
-                c.value > h.prev_high
-                OR (h.std_val > 0 AND ABS(c.value - h.avg_val) > 1.5 * h.std_val)
+            WHERE c.value > h.prev_high
+               OR (h.std_val > 0 AND ABS(c.value - h.avg_val) > 1.5 * h.std_val)
             ORDER BY c.value DESC
             LIMIT 20
-        """), {"tgt": target_season, "minvol": min_vol}).fetchall()
+        """), {"tgt": target, "minvol": min_vol}).fetchall()
 
         for r in results:
             if not r.alert_type:
                 continue
-            sev = _severity(float(r.value), float(r.career_avg) if r.career_avg else None,
-                            float(r.career_high) if r.career_high else None, r.alert_type)
-            desc = _description(r.player_name, metric_label, float(r.value),
-                                float(r.career_avg) if r.career_avg else None,
-                                float(r.career_high) if r.career_high else None, r.alert_type)
-            rows.append({
-                "season": target_season,
-                "player_id": r.player_id,
-                "player_name": r.player_name,
-                "pos": r.pos,
-                "category": category,
-                "metric": metric,
-                "value": float(r.value),
-                "career_avg": float(r.career_avg) if r.career_avg else None,
-                "career_high": float(r.career_high) if r.career_high else None,
-                "alert_type": r.alert_type,
-                "description": desc,
-                "severity": sev,
-            })
+            v  = float(r.value)
+            ca = float(r.career_avg) if r.career_avg else None
+            ch = float(r.career_high) if r.career_high else None
+            sev = _counting_severity(v, ca, ch, r.alert_type)
+            if r.alert_type == "career_high":
+                desc = f"{r.player_name} set a career high with {_v(v)} {label} (prev. best: {_v(ch)})"
+            elif r.alert_type == "above_avg":
+                desc = f"{r.player_name} posted {_v(v)} {label}, well above their career avg of {_v(ca)}"
+            else:
+                desc = f"{r.player_name} posted only {_v(v)} {label}, well below their career avg of {_v(ca)}"
+            rows.append(_row(target, r.player_id, r.player_name, r.pos,
+                             category, metric, v, ca, ch, r.alert_type, desc, sev))
     return rows
 
+
+# ── 2. Year-over-year surge ───────────────────────────────────────────────────
+
+YOY_METRICS = [
+    ("passing_seasons", "yds",      "att",  200, "passing yards"),
+    ("passing_seasons", "td",       "att",  200, "passing TDs"),
+    ("offense_seasons", "rush_yds", "att",   50, "rushing yards"),
+    ("offense_seasons", "rec_yds",  "rec",   30, "receiving yards"),
+    ("defense_seasons", "sk",       "g",      8, "sacks"),
+]
+
+
+def detect_yoy_surge(target: int, conn) -> list[dict]:
+    rows = []
+    for table, metric, vol_col, min_vol, label in YOY_METRICS:
+        category = table.replace("_seasons", "")
+        results = conn.execute(text(f"""
+            WITH prev AS (
+                SELECT player_id, {metric} AS prev_val
+                FROM {table}
+                WHERE season = :prev AND {vol_col} >= :minvol AND {metric} > 0
+            ),
+            current AS (
+                SELECT s.player_id, s.player_name, p.pos, s.{metric} AS value
+                FROM {table} s
+                JOIN players p USING (player_id)
+                WHERE s.season = :tgt AND s.{vol_col} >= :minvol
+                  AND s.{metric} IS NOT NULL AND s.{metric} > 0
+            )
+            SELECT c.player_id, c.player_name, c.pos,
+                   c.value, pr.prev_val,
+                   (c.value - pr.prev_val)::float / pr.prev_val AS pct_change
+            FROM current c
+            JOIN prev pr USING (player_id)
+            WHERE pr.prev_val > 0
+              AND (c.value - pr.prev_val)::float / pr.prev_val >= 0.40
+            ORDER BY pct_change DESC
+            LIMIT 10
+        """), {"tgt": target, "prev": target - 1, "minvol": min_vol}).fetchall()
+
+        for r in results:
+            pct = float(r.pct_change) * 100
+            v   = float(r.value)
+            pv  = float(r.prev_val)
+            sev = 3 if pct >= 100 else 2 if pct >= 60 else 1
+            desc = (f"{r.player_name} surged from {_v(pv)} to {_v(v)} {label} "
+                    f"(+{pct:.0f}% vs prior season)")
+            rows.append(_row(target, r.player_id, r.player_name, r.pos,
+                             category, metric, v, pv, None, "yoy_surge", desc, sev))
+    return rows
+
+
+# ── 3. Efficiency peak ────────────────────────────────────────────────────────
+
+def detect_efficiency(target: int, conn) -> list[dict]:
+    rows = []
+    for table, metric, vol_col, min_vol, label in EFFICIENCY_METRICS:
+        category = table.replace("_seasons", "")
+        results = conn.execute(text(f"""
+            WITH history AS (
+                SELECT player_id,
+                       AVG({metric})    AS avg_val,
+                       STDDEV({metric}) AS std_val,
+                       MAX({metric})    AS prev_high
+                FROM {table}
+                WHERE season < :tgt AND {vol_col} >= :minvol
+                GROUP BY player_id
+                HAVING COUNT(*) >= 2
+            ),
+            current AS (
+                SELECT s.player_id, s.player_name, p.pos, s.{metric} AS value
+                FROM {table} s
+                JOIN players p USING (player_id)
+                WHERE s.season = :tgt AND s.{vol_col} >= :minvol
+                  AND s.{metric} IS NOT NULL AND s.{metric} > 0
+            )
+            SELECT c.player_id, c.player_name, c.pos, c.value,
+                   h.avg_val AS career_avg, h.prev_high AS career_high,
+                   (c.value - h.avg_val) / NULLIF(h.std_val, 0) AS z_score
+            FROM current c
+            JOIN history h USING (player_id)
+            WHERE h.std_val > 0 AND c.value > h.avg_val + 1.5 * h.std_val
+            ORDER BY z_score DESC
+            LIMIT 10
+        """), {"tgt": target, "minvol": min_vol}).fetchall()
+
+        for r in results:
+            v   = float(r.value)
+            ca  = float(r.career_avg) if r.career_avg else None
+            ch  = float(r.career_high) if r.career_high else None
+            z   = float(r.z_score) if r.z_score else 0
+            sev = 3 if z >= 3.0 else 2 if z >= 2.0 else 1
+            dec = 2 if metric in ("rate", "y_per_a", "y_per_r") else 1
+            desc = (f"{r.player_name} posted {_v(v, dec)} {label}, "
+                    f"a career-best efficiency (career avg: {_v(ca, dec)})")
+            rows.append(_row(target, r.player_id, r.player_name, r.pos,
+                             category, metric, v, ca, ch, "efficiency_peak", desc, sev))
+    return rows
+
+
+# ── 4. Versatility ────────────────────────────────────────────────────────────
+
+def detect_versatile(target: int, conn) -> list[dict]:
+    rows = []
+
+    # Dual-threat RBs / offensive weapons: 300+ rush AND 300+ rec yards
+    results = conn.execute(text("""
+        SELECT s.player_id, s.player_name, p.pos,
+               s.rush_yds, s.rec_yds,
+               s.rush_yds + s.rec_yds AS total_yscm,
+               s.rush_td + s.rec_td   AS total_td
+        FROM offense_seasons s
+        JOIN players p USING (player_id)
+        WHERE s.season = :tgt
+          AND s.rush_yds >= 300 AND s.rec_yds >= 300
+        ORDER BY total_yscm DESC
+        LIMIT 10
+    """), {"tgt": target}).fetchall()
+
+    for r in results:
+        ry, recy = float(r.rush_yds), float(r.rec_yds)
+        total = float(r.total_yscm)
+        sev = 3 if ry >= 700 and recy >= 700 else 2 if ry >= 500 and recy >= 500 else 1
+        desc = (f"{r.player_name}: {_v(ry)} rush yards + {_v(recy)} rec yards "
+                f"({_v(total)} from scrimmage) — elite dual-threat")
+        rows.append(_row(target, r.player_id, r.player_name, r.pos,
+                         "offense", "yscm", total, None, None, "versatile", desc, sev))
+
+    # Dual-threat QBs: 200+ pass attempts AND 50+ rush attempts
+    results = conn.execute(text("""
+        SELECT ps.player_id, ps.player_name, p.pos,
+               ps.yds AS pass_yds, ps.td AS pass_td,
+               os.rush_yds, os.rush_td
+        FROM passing_seasons ps
+        JOIN offense_seasons os USING (player_id, season)
+        JOIN players p ON p.player_id = ps.player_id
+        WHERE ps.season = :tgt
+          AND ps.att >= 200 AND os.att >= 50
+        ORDER BY os.rush_yds DESC
+        LIMIT 5
+    """), {"tgt": target}).fetchall()
+
+    for r in results:
+        py, ry = float(r.pass_yds), float(r.rush_yds)
+        sev = 3 if ry >= 700 else 2 if ry >= 400 else 1
+        desc = (f"{r.player_name}: {_v(py)} passing yards + {_v(ry)} rushing yards "
+                f"— dual-threat QB")
+        rows.append(_row(target, r.player_id, r.player_name, r.pos,
+                         "passing", "rush_yds", ry, None, None, "versatile", desc, sev))
+
+    return rows
+
+
+# ── main ──────────────────────────────────────────────────────────────────────
+
+INSERT_SQL = """
+    INSERT INTO anomaly_alerts
+        (season, player_id, player_name, pos, category, metric,
+         value, career_avg, career_high, alert_type, description, severity)
+    VALUES
+        (:season, :player_id, :player_name, :pos, :category, :metric,
+         :value, :career_avg, :career_high, :alert_type, :description, :severity)
+"""
 
 if __name__ == "__main__":
     engine = get_engine()
     with engine.begin() as conn:
         conn.execute(text(CREATE_TABLE))
 
-        # Find the most recent season with meaningful data
         row = conn.execute(text(
             "SELECT MAX(season) AS s FROM passing_seasons WHERE att >= 100"
         )).fetchone()
         target = int(row.s) if row and row.s else None
         if not target:
-            print("No season data found — skipping anomaly detection.")
+            print("No season data found — skipping.")
             sys.exit(0)
 
         print(f"Detecting anomalies for season {target}…")
         conn.execute(text("DELETE FROM anomaly_alerts WHERE season = :s"), {"s": target})
 
-        alerts = detect(target, conn)
-        if alerts:
-            conn.execute(text("""
-                INSERT INTO anomaly_alerts
-                    (season, player_id, player_name, pos, category, metric,
-                     value, career_avg, career_high, alert_type, description, severity)
-                VALUES
-                    (:season, :player_id, :player_name, :pos, :category, :metric,
-                     :value, :career_avg, :career_high, :alert_type, :description, :severity)
-            """), alerts)
-        print(f"Inserted {len(alerts)} anomaly alerts for season {target}.")
+        all_alerts: list[dict] = []
+        all_alerts += detect_counting(target, conn)
+        all_alerts += detect_yoy_surge(target, conn)
+        all_alerts += detect_efficiency(target, conn)
+        all_alerts += detect_versatile(target, conn)
+
+        if all_alerts:
+            conn.execute(text(INSERT_SQL), all_alerts)
+
+        by_type: dict[str, int] = {}
+        for a in all_alerts:
+            by_type[a["alert_type"]] = by_type.get(a["alert_type"], 0) + 1
+
+        print(f"Inserted {len(all_alerts)} anomaly alerts for season {target}:")
+        for t, n in sorted(by_type.items()):
+            print(f"  {t}: {n}")

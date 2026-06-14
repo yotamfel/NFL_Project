@@ -1,17 +1,41 @@
+import { useState } from 'react'
 import { api } from '../api'
 import { useApi } from '../hooks/useApi'
 import { Link } from 'react-router-dom'
 
+const FILTERS = [
+  { key: null,              label: 'All' },
+  { key: 'career_high',    label: 'Career Highs' },
+  { key: 'yoy_surge',      label: 'YoY Surge' },
+  { key: 'efficiency_peak',label: 'Efficiency' },
+  { key: 'versatile',      label: 'Versatile' },
+  { key: 'above_avg',      label: 'Above Avg' },
+  { key: 'below_avg',      label: 'Decline' },
+]
+
 const TYPE_STYLE = {
-  career_high: { label: 'Career High',  bg: '#7c3aed22', border: '#7c3aed44', dot: '#a78bfa' },
-  above_avg:   { label: 'Above Avg',   bg: '#15803d22', border: '#15803d44', dot: '#4ade80' },
-  below_avg:   { label: 'Below Avg',   bg: '#b91c1c22', border: '#b91c1c44', dot: '#f87171' },
+  career_high:     { bg: '#4c1d9522', border: '#4c1d9544', dot: '#a78bfa' },
+  above_avg:       { bg: '#14532d22', border: '#14532d44', dot: '#4ade80' },
+  below_avg:       { bg: '#7f1d1d22', border: '#7f1d1d44', dot: '#f87171' },
+  yoy_surge:       { bg: '#1e3a5f22', border: '#1e3a5f44', dot: '#60a5fa' },
+  efficiency_peak: { bg: '#78350f22', border: '#78350f44', dot: '#fbbf24' },
+  versatile:       { bg: '#164e6322', border: '#164e6344', dot: '#22d3ee' },
 }
 
-const SEV_STARS = { 1: '★', 2: '★★', 3: '★★★' }
+const TYPE_LABEL = {
+  career_high:     'Career High',
+  above_avg:       'Above Avg',
+  below_avg:       'Decline',
+  yoy_surge:       'YoY Surge',
+  efficiency_peak: 'Efficiency',
+  versatile:       'Versatile',
+}
+
+const SEV_STARS = { 2: '★★', 3: '★★★' }
 
 function AlertCard({ alert }) {
   const style = TYPE_STYLE[alert.alert_type] ?? TYPE_STYLE.career_high
+  const label = TYPE_LABEL[alert.alert_type] ?? alert.alert_type
   return (
     <div className="rounded-xl p-4 space-y-1.5"
       style={{ background: style.bg, border: `1px solid ${style.border}` }}>
@@ -19,14 +43,12 @@ function AlertCard({ alert }) {
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full shrink-0" style={{ background: style.dot }} />
           <span className="text-xs font-semibold uppercase tracking-wider"
-            style={{ color: style.dot }}>{style.label}</span>
-          {alert.severity > 1 && (
-            <span className="text-xs" style={{ color: style.dot }}>
-              {SEV_STARS[alert.severity]}
-            </span>
+            style={{ color: style.dot }}>{label}</span>
+          {SEV_STARS[alert.severity] && (
+            <span className="text-xs" style={{ color: style.dot }}>{SEV_STARS[alert.severity]}</span>
           )}
         </div>
-        <span className="text-xs text-slate-600">{alert.season} season</span>
+        <span className="text-xs text-slate-600">{alert.season}</span>
       </div>
       <p className="text-sm text-slate-200 leading-snug">
         {alert.player_id
@@ -37,30 +59,72 @@ function AlertCard({ alert }) {
           : <span className="font-semibold" style={{ color: style.dot }}>{alert.player_name}</span>
         }
         {' '}
-        <span className="text-slate-400">{alert.description?.replace(alert.player_name, '').trim()}</span>
+        <span className="text-slate-400">
+          {alert.description?.replace(alert.player_name, '').replace(/^[:\s–-]+/, '').trim()}
+        </span>
       </p>
     </div>
   )
 }
 
 export default function AnomalyFeed({ limit = 12 }) {
-  const { data, loading } = useApi(() => api.getAnomalies({ limit }), [limit])
+  const [activeFilter, setActiveFilter] = useState(null)
 
-  if (loading) return null
-  if (!data || data.length === 0) return null
+  const { data, loading } = useApi(
+    () => api.getAnomalies({ limit, alert_type: activeFilter ?? undefined }),
+    [activeFilter, limit]
+  )
+
+  const season = data?.[0]?.season
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4">
+      <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
           <p className="text-xs font-bold uppercase tracking-widest text-violet-500 mb-0.5">Season Highlights</p>
-          <h2 className="text-xl font-black text-white tracking-tight">Statistical Anomalies</h2>
+          <h2 className="text-xl font-black text-white tracking-tight">
+            Statistical Anomalies
+            {season && <span className="text-slate-600 font-normal text-sm ml-2">{season}</span>}
+          </h2>
         </div>
-        <span className="text-xs text-slate-600">{data[0]?.season} season</span>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {data.map(a => <AlertCard key={a.id} alert={a} />)}
+
+      {/* Filter chips */}
+      <div className="flex flex-wrap gap-2">
+        {FILTERS.map(f => {
+          const style = f.key ? TYPE_STYLE[f.key] : null
+          const active = activeFilter === f.key
+          return (
+            <button
+              key={f.key ?? 'all'}
+              onClick={() => setActiveFilter(f.key)}
+              className="text-xs font-semibold px-3 py-1.5 rounded-full transition-all"
+              style={active && style
+                ? { background: style.bg, border: `1px solid ${style.border}`, color: style.dot }
+                : active
+                ? { background: '#1e293b', border: '1px solid #475569', color: '#e2e8f0' }
+                : { background: 'transparent', border: '1px solid #334155', color: '#64748b' }
+              }
+            >
+              {f.label}
+            </button>
+          )
+        })}
       </div>
+
+      {loading && (
+        <div className="text-slate-600 text-sm py-4 text-center animate-pulse">Loading…</div>
+      )}
+
+      {!loading && (!data || data.length === 0) && (
+        <p className="text-slate-600 text-sm text-center py-4">No alerts for this filter.</p>
+      )}
+
+      {!loading && data && data.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {data.map(a => <AlertCard key={a.id} alert={a} />)}
+        </div>
+      )}
     </div>
   )
 }
