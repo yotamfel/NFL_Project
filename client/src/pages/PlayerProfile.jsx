@@ -418,7 +418,7 @@ function AdvReceivingSection({ playerId, pos, accentColor }) {
 
       {/* Table */}
       <div className="relative group scroll-x">
-        <CsvDownloadButton columns={cols.map(({ key, label }) => ({ key, label }))} rows={data} title="Advanced Receiving" />
+        <CsvDownloadButton columns={cols} rows={data} title="Advanced Receiving" />
         <table className="min-w-full text-sm">
           <thead>
             <tr className="text-slate-500 text-xs border-b border-slate-800">
@@ -671,7 +671,7 @@ function NgsSection({ playerId, pos, accentColor }) {
       )}
 
       <div className="relative group scroll-x">
-        <CsvDownloadButton columns={cols.map(({ key, label }) => ({ key, label }))} rows={rows} title={title} />
+        <CsvDownloadButton columns={cols} rows={rows} title={title} />
         <table className="min-w-full text-sm">
           <thead>
             <tr className="text-slate-500 text-xs border-b border-slate-800">
