@@ -12,6 +12,7 @@ import { CareerLineChart } from '../components/StatChart'
 import { posColor, posGradient, CARD_STRIPES } from '../utils/posColors'
 import { useUser } from '../context/UserContext'
 import { STAT_DEFS } from '../utils/statDefinitions'
+import AiFeedback from '../components/AiFeedback'
 
 const pct1  = v => v != null ? `${Number(v).toFixed(1)}%`   : '—'
 const dec1  = v => v != null ? Number(v).toFixed(1)          : '—'
@@ -688,6 +689,76 @@ function NgsSection({ playerId, pos, accentColor }) {
   )
 }
 
+// ── AI Insights section ───────────────────────────────────────────────────────
+function InsightsSection({ playerId, accentColor }) {
+  const [state,    setState]    = useState('idle')  // idle | loading | done | error
+  const [insight,  setInsight]  = useState(null)
+  const [logId,    setLogId]    = useState(null)
+
+  const load = async () => {
+    setState('loading')
+    try {
+      const res = await api.getPlayerInsights(playerId)
+      setInsight(res.insight)
+      setLogId(res.log_id ?? null)
+      setState('done')
+    } catch (e) {
+      setState('error')
+    }
+  }
+
+  if (state === 'idle') return (
+    <div className="bg-slate-800/70 border border-slate-700/60 rounded-2xl p-5">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h2 className="text-white font-bold flex items-center gap-2">
+            <span className="w-1 h-5 rounded-full" style={{ background: accentColor }} />
+            AI Career Insights
+          </h2>
+          <p className="text-slate-500 text-xs mt-1">Claude-generated analysis of this player's career</p>
+        </div>
+        <button
+          onClick={load}
+          className="text-sm font-semibold px-4 py-2 rounded-xl transition-colors"
+          style={{ background: `${accentColor}22`, color: accentColor, border: `1px solid ${accentColor}44` }}
+        >
+          Generate Insights
+        </button>
+      </div>
+    </div>
+  )
+
+  if (state === 'loading') return (
+    <div className="bg-slate-800/70 border border-slate-700/60 rounded-2xl p-5 flex items-center gap-3">
+      <svg className="animate-spin w-4 h-4 shrink-0" style={{ color: accentColor }} viewBox="0 0 24 24" fill="none">
+        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+      </svg>
+      <span className="text-slate-400 text-sm">Generating insights…</span>
+    </div>
+  )
+
+  if (state === 'error') return (
+    <div className="bg-slate-800/70 border border-slate-700/60 rounded-2xl p-5">
+      <p className="text-rose-400 text-sm">Could not generate insights. Try again later.</p>
+    </div>
+  )
+
+  return (
+    <div className="bg-slate-800/70 border border-slate-700/60 rounded-2xl p-5 space-y-4">
+      <h2 className="text-white font-bold flex items-center gap-2">
+        <span className="w-1 h-5 rounded-full" style={{ background: accentColor }} />
+        AI Career Insights
+      </h2>
+      <p className="text-slate-300 text-sm leading-relaxed">{insight}</p>
+      <div className="flex items-center justify-between pt-1 border-t border-slate-700/60">
+        <AiFeedback logId={logId} />
+        <p className="text-xs text-slate-600">Powered by Claude Sonnet 4.6</p>
+      </div>
+    </div>
+  )
+}
+
 export default function PlayerProfile() {
   const { id } = useParams()
   const { data: profile, loading, error } = useApi(() => api.getPlayer(id), [id])
@@ -867,6 +938,7 @@ export default function PlayerProfile() {
       <AdvReceivingSection playerId={player.player_id} pos={player.pos} accentColor={c.hex} />
       <NgsSection playerId={player.player_id} pos={player.pos} accentColor={c.hex} />
       <SnapCountsSection playerId={player.player_id} pos={player.pos} accentColor={c.hex} />
+      <InsightsSection playerId={player.player_id} accentColor={c.hex} />
 
       <div className="text-center pb-4">
         <Link to="/comparison" className="text-sm transition-colors hover:opacity-80"
