@@ -6,6 +6,7 @@ from app.data.snap_counts import get_snap_weeks, get_snap_seasons, get_snap_avai
 from app.data.adv_receiving import get_adv_receiving
 from app.data.injuries import get_injury_seasons, get_injury_weeks
 from app.data.ngs import get_ngs_passing, get_ngs_rushing
+from app.insights import get_insight
 from app.models import Player, PlayerProfile
 
 router = APIRouter(prefix="/players", tags=["players"])
@@ -73,6 +74,16 @@ def snaps(
     seasons = get_snap_seasons(player_id)
     available = get_snap_available_seasons(player_id)
     return {"seasons": seasons, "available": available}
+
+
+@router.get("/{player_id}/insights")
+def insights(player_id: str):
+    try:
+        return get_insight(player_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
 
 
 @router.get("/{player_id}", response_model=PlayerProfile)
