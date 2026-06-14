@@ -78,17 +78,19 @@ def supplement_combine():
 
     engine = get_engine()
     with engine.begin() as conn:
+        ids = df["player_id"].dropna().unique().tolist()
         known_ids = {
             row[0] for row in conn.exec_driver_sql(
                 "select player_id from players where player_id = any(%(ids)s)",
-                {"ids": df["player_id"].dropna().unique().tolist()},
+                {"ids": ids},
             ).fetchall()
-        }
+        } if ids else set()
         unresolved = (~df["player_id"].isin(known_ids)) & df["player_id"].notna()
         print(f"prospects: {len(df)}, with a players-table match: {(~unresolved & df['player_id'].notna()).sum()}, "
               f"left unlinked (no tracked box-score appearance): {unresolved.sum()}")
         df.loc[unresolved, "player_id"] = None
 
+        conn.exec_driver_sql("delete from combine_seasons where season = any(%(years)s)", {"years": YEARS})
         df.to_sql("combine_seasons", conn, schema="public", if_exists="append", index=False)
         total, linked = conn.exec_driver_sql(
             "select count(*), count(player_id) from combine_seasons").fetchone()
