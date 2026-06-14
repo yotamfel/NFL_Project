@@ -789,6 +789,23 @@ export default function PlayerProfile() {
   const { savePlayer, removePlayer, isPlayerSaved } = useUser()
   const saved = isPlayerSaved(player.player_id)
 
+  // Priority order per position group — first matching category floats to top
+  const CAT_PRIORITY = {
+    QB: ['passing', 'offense', 'defense', 'returns', 'kicking', 'punting'],
+    RB: ['offense', 'returns', 'defense', 'passing', 'kicking', 'punting'],
+    WR: ['offense', 'returns', 'defense', 'passing', 'kicking', 'punting'],
+    TE: ['offense', 'defense', 'returns', 'passing', 'kicking', 'punting'],
+    K:  ['kicking', 'returns', 'offense', 'defense', 'passing', 'punting'],
+    P:  ['punting', 'returns', 'kicking', 'offense', 'defense', 'passing'],
+  }
+  const DEFENSE_POSITIONS = new Set(['DE','DT','DL','LB','ILB','OLB','MLB','CB','DB','S','SS','FS','NT'])
+  const priorityOrder = DEFENSE_POSITIONS.has(player.pos)
+    ? ['defense', 'returns', 'offense', 'passing', 'kicking', 'punting']
+    : (CAT_PRIORITY[player.pos] ?? ['passing', 'offense', 'defense', 'returns', 'kicking', 'punting'])
+  const sortedCategories = [...categories].sort(
+    (a, b) => priorityOrder.indexOf(a.category) - priorityOrder.indexOf(b.category)
+  )
+
   return (
     <div className="space-y-5">
 
@@ -877,7 +894,7 @@ export default function PlayerProfile() {
       <InsightsSection playerId={player.player_id} accentColor={c.hex} />
 
       {/* Stat sections */}
-      {categories.map(cat => {
+      {sortedCategories.map(cat => {
         const colSet = COLS[cat.category]
         if (!colSet) return null
         const isAdv      = advancedSections.has(cat.category)
