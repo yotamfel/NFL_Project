@@ -15,15 +15,24 @@ function fmt(iso) {
 }
 
 export default function Saved() {
-  const { username, saved, removePlayer, removeComparison, removeSearch, removeNote, addNote, updatePlayerNote } = useUser()
+  const { username, saved, removePlayer, removeComparison, removeSearch, removeNote, addNote,
+          updatePlayerNote, updateComparisonNote, updateSearchNote } = useUser()
   const [tab, setTab]         = useState('players')
   const [note, setNote]       = useState('')
-  const [editingNote, setEditingNote] = useState(null)  // player_id being edited
+  const [editingNote, setEditingNote] = useState(null)  // { type: 'player'|'comparison'|'search', id }
   const [noteText, setNoteText]       = useState('')
   const navigate              = useNavigate()
 
-  const startEditNote = (player_id, current) => { setEditingNote(player_id); setNoteText(current ?? '') }
-  const commitNote = (player_id) => { updatePlayerNote(player_id, noteText.trim()); setEditingNote(null) }
+  const startEditNote = (type, id, current) => { setEditingNote({ type, id }); setNoteText(current ?? '') }
+  const isEditingNote = (type, id) => editingNote?.type === type && editingNote?.id === id
+  const commitNote = () => {
+    if (!editingNote) return
+    const text = noteText.trim()
+    if (editingNote.type === 'player')      updatePlayerNote(editingNote.id, text)
+    if (editingNote.type === 'comparison')  updateComparisonNote(editingNote.id, text)
+    if (editingNote.type === 'search')      updateSearchNote(editingNote.id, text)
+    setEditingNote(null)
+  }
 
   const total = saved.players.length + saved.comparisons.length + saved.searches.length + saved.notes.length
 
@@ -63,7 +72,6 @@ export default function Saved() {
           {saved.players.length === 0 && <Empty text="No saved players yet." sub="Open a player profile and click the ⭐ button." />}
           {saved.players.map(p => {
             const c = posColor(p.pos)
-            const isEditing = editingNote === p.player_id
             return (
               <div key={p.player_id} className="rounded-xl px-4 py-3 border border-slate-700/60 bg-slate-800/50 space-y-2">
                 <div className="flex items-center justify-between gap-3">
@@ -79,35 +87,12 @@ export default function Saved() {
                     <button onClick={() => removePlayer(p.player_id)} className="text-slate-600 hover:text-red-400 transition-colors text-lg leading-none">×</button>
                   </div>
                 </div>
-
-                {isEditing ? (
-                  <div className="flex gap-2">
-                    <input
-                      autoFocus
-                      type="text"
-                      value={noteText}
-                      onChange={e => setNoteText(e.target.value)}
-                      onBlur={() => commitNote(p.player_id)}
-                      onKeyDown={e => { if (e.key === 'Enter') commitNote(p.player_id); if (e.key === 'Escape') setEditingNote(null) }}
-                      placeholder="Add a note…"
-                      className="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-3 py-1.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-amber-500/50 transition-colors"
-                    />
-                    <button
-                      onMouseDown={e => { e.preventDefault(); commitNote(p.player_id) }}
-                      className="text-xs text-amber-400 hover:text-amber-300 px-2 font-medium"
-                    >Save</button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => startEditNote(p.player_id, p.note)}
-                    className="text-left w-full group"
-                  >
-                    {p.note
-                      ? <span className="text-slate-400 text-sm leading-relaxed group-hover:text-slate-200 transition-colors">{p.note}</span>
-                      : <span className="text-slate-700 text-xs italic group-hover:text-slate-500 transition-colors">+ Add a note…</span>
-                    }
-                  </button>
-                )}
+                <NoteField
+                  value={p.note} editing={isEditingNote('player', p.player_id)}
+                  noteText={noteText} setNoteText={setNoteText}
+                  onStart={() => startEditNote('player', p.player_id, p.note)}
+                  onCommit={commitNote} onCancel={() => setEditingNote(null)}
+                />
               </div>
             )
           })}
@@ -119,14 +104,22 @@ export default function Saved() {
         <div className="space-y-2">
           {saved.comparisons.length === 0 && <Empty text="No saved comparisons yet." sub='Go to Compare and click "Save comparison".' />}
           {saved.comparisons.map((c, i) => (
-            <div key={i} className="flex items-center justify-between gap-3 rounded-xl px-4 py-3 border border-slate-700/60 bg-slate-800/50">
-              <button
-                onClick={() => navigate(`/comparison?players=${c.playerIds.join(',')}&category=${c.category}`)}
-                className="flex-1 text-left min-w-0 hover:opacity-80 transition-opacity">
-                <p className="text-white font-semibold truncate">{c.playerNames.join(' vs ')}</p>
-                <p className="text-slate-500 text-xs capitalize">{c.category} · {fmt(c.saved_at)}</p>
-              </button>
-              <button onClick={() => removeComparison(i)} className="text-slate-600 hover:text-red-400 transition-colors text-lg leading-none shrink-0">×</button>
+            <div key={i} className="rounded-xl px-4 py-3 border border-slate-700/60 bg-slate-800/50 space-y-2">
+              <div className="flex items-center justify-between gap-3">
+                <button
+                  onClick={() => navigate(`/comparison?players=${c.playerIds.join(',')}&category=${c.category}`)}
+                  className="flex-1 text-left min-w-0 hover:opacity-80 transition-opacity">
+                  <p className="text-white font-semibold truncate">{c.playerNames.join(' vs ')}</p>
+                  <p className="text-slate-500 text-xs capitalize">{c.category} · {fmt(c.saved_at)}</p>
+                </button>
+                <button onClick={() => removeComparison(i)} className="text-slate-600 hover:text-red-400 transition-colors text-lg leading-none shrink-0">×</button>
+              </div>
+              <NoteField
+                value={c.note} editing={isEditingNote('comparison', i)}
+                noteText={noteText} setNoteText={setNoteText}
+                onStart={() => startEditNote('comparison', i, c.note)}
+                onCommit={commitNote} onCancel={() => setEditingNote(null)}
+              />
             </div>
           ))}
         </div>
@@ -142,6 +135,14 @@ export default function Saved() {
                 <div className="flex-1 min-w-0">
                   <p className="text-white font-medium text-sm truncate">{s.question}</p>
                   <p className="text-slate-500 text-xs">{s.rows.length} rows preview · {fmt(s.saved_at)}</p>
+                  <div onClick={e => e.preventDefault()}>
+                    <NoteField
+                      value={s.note} editing={isEditingNote('search', i)}
+                      noteText={noteText} setNoteText={setNoteText}
+                      onStart={() => startEditNote('search', i, s.note)}
+                      onCommit={commitNote} onCancel={() => setEditingNote(null)}
+                    />
+                  </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <span className="text-slate-600 text-xs group-open:rotate-180 transition-transform inline-block">▼</span>
@@ -212,6 +213,37 @@ export default function Saved() {
         </div>
       )}
     </div>
+  )
+}
+
+function NoteField({ value, editing, noteText, setNoteText, onStart, onCommit, onCancel }) {
+  if (editing) {
+    return (
+      <div className="flex gap-2 mt-1">
+        <input
+          autoFocus
+          type="text"
+          value={noteText}
+          onChange={e => setNoteText(e.target.value)}
+          onBlur={onCommit}
+          onKeyDown={e => { if (e.key === 'Enter') onCommit(); if (e.key === 'Escape') onCancel() }}
+          placeholder="Add a note…"
+          className="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-3 py-1.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-amber-500/50 transition-colors"
+        />
+        <button
+          onMouseDown={e => { e.preventDefault(); onCommit() }}
+          className="text-xs text-amber-400 hover:text-amber-300 px-2 font-medium"
+        >Save</button>
+      </div>
+    )
+  }
+  return (
+    <button onClick={onStart} className="text-left w-full group mt-1">
+      {value
+        ? <span className="text-slate-400 text-sm leading-relaxed group-hover:text-slate-200 transition-colors">{value}</span>
+        : <span className="text-slate-700 text-xs italic group-hover:text-slate-500 transition-colors">+ Add a note…</span>
+      }
+    </button>
   )
 }
 

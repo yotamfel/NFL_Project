@@ -44,18 +44,26 @@ export function UserProvider({ children }) {
   }))
 
   // ── Comparisons ───────────────────────────────────────────────────────
-  const saveComparison   = (playerIds, playerNames, category) => upd(d => ({
+  const saveComparison      = (playerIds, playerNames, category) => upd(d => ({
     ...d,
-    comparisons: [{ playerIds, playerNames, category, saved_at: new Date().toISOString() }, ...d.comparisons].slice(0, 20),
+    comparisons: [{ playerIds, playerNames, category, note: '', saved_at: new Date().toISOString() }, ...d.comparisons].slice(0, 20),
   }))
-  const removeComparison = idx => upd(d => ({ ...d, comparisons: d.comparisons.filter((_, i) => i !== idx) }))
+  const removeComparison    = idx => upd(d => ({ ...d, comparisons: d.comparisons.filter((_, i) => i !== idx) }))
+  const updateComparisonNote = (idx, note) => upd(d => ({
+    ...d,
+    comparisons: d.comparisons.map((c, i) => i === idx ? { ...c, note } : c),
+  }))
 
   // ── Searches ──────────────────────────────────────────────────────────
-  const saveSearch   = (question, sql, rows) => upd(d => ({
+  const saveSearch      = (question, sql, rows) => upd(d => ({
     ...d,
-    searches: [{ question, sql, rows: rows.slice(0, 5), saved_at: new Date().toISOString() }, ...d.searches].slice(0, 20),
+    searches: [{ question, sql, rows: rows.slice(0, 5), note: '', saved_at: new Date().toISOString() }, ...d.searches].slice(0, 20),
   }))
-  const removeSearch = idx => upd(d => ({ ...d, searches: d.searches.filter((_, i) => i !== idx) }))
+  const removeSearch    = idx => upd(d => ({ ...d, searches: d.searches.filter((_, i) => i !== idx) }))
+  const updateSearchNote = (idx, note) => upd(d => ({
+    ...d,
+    searches: d.searches.map((s, i) => i === idx ? { ...s, note } : s),
+  }))
 
   // ── Notes ─────────────────────────────────────────────────────────────
   const addNote    = text => upd(d => ({
@@ -68,8 +76,8 @@ export function UserProvider({ children }) {
     <Ctx.Provider value={{
       username, setUser, saved,
       savePlayer, removePlayer, isPlayerSaved, updatePlayerNote,
-      saveComparison, removeComparison,
-      saveSearch, removeSearch,
+      saveComparison, removeComparison, updateComparisonNote,
+      saveSearch, removeSearch, updateSearchNote,
       addNote, removeNote,
     }}>
       {children}
