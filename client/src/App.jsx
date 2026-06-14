@@ -10,6 +10,7 @@ import NaturalSearch from './pages/NaturalSearch'
 import Saved from './pages/Saved'
 import LeagueTrends from './pages/LeagueTrends'
 import Guide from './pages/Guide'
+import AdminAi from './pages/AdminAi'
 
 function AppInner() {
   const { username } = useUser()
@@ -27,6 +28,7 @@ function AppInner() {
           <Route path="/saved" element={<Saved />} />
           <Route path="/trends" element={<LeagueTrends />} />
           <Route path="/guide" element={<Guide />} />
+          <Route path="/admin/ai" element={<AdminAi />} />
         </Routes>
       </main>
     </div>

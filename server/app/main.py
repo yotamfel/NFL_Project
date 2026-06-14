@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.routers import anomalies, comparison, draft, feedback, players, search, trends
+from app.routers import admin, anomalies, comparison, draft, feedback, players, search, trends
 
 app = FastAPI(title="NFL Data Platform API")
 
@@ -28,6 +28,7 @@ app.include_router(search.router,  prefix="/api")
 app.include_router(trends.router,   prefix="/api")
 app.include_router(feedback.router, prefix="/api")
 app.include_router(anomalies.router, prefix="/api")
+app.include_router(admin.router,    prefix="/api")
 
 
 @app.get("/api/health")

@@ -120,4 +120,6 @@ export const api = {
     if (alert_type) p.set('alert_type', alert_type)
     return get(`/anomalies?${p}`)
   },
+
+  getAdminAi: () => get('/admin/ai'),
 }
