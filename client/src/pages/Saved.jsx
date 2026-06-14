@@ -15,7 +15,7 @@ function fmt(iso) {
 }
 
 export default function Saved() {
-  const { username, saved, removePlayer, removeComparison, removeSearch, removeNote, addNote,
+  const { username, saved, removePlayer, removeComparison, removeSearch, removeNote, addNote, updateNote,
           updatePlayerNote, updateComparisonNote, updateSearchNote } = useUser()
   const [tab, setTab]         = useState('players')
   const [note, setNote]       = useState('')
@@ -31,6 +31,7 @@ export default function Saved() {
     if (editingNote.type === 'player')      updatePlayerNote(editingNote.id, text)
     if (editingNote.type === 'comparison')  updateComparisonNote(editingNote.id, text)
     if (editingNote.type === 'search')      updateSearchNote(editingNote.id, text)
+    if (editingNote.type === 'note')        updateNote(editingNote.id, text)
     setEditingNote(null)
   }
 
@@ -202,12 +203,35 @@ export default function Saved() {
           {saved.notes.length === 0 && <Empty text="No notes yet." sub="Type something interesting you discovered and press Enter." />}
 
           {saved.notes.map(n => (
-            <div key={n.id} className="flex items-start gap-3 rounded-xl px-4 py-3 border border-slate-700/60 bg-slate-800/50">
-              <p className="flex-1 text-slate-200 text-sm leading-relaxed">{n.text}</p>
-              <div className="flex items-center gap-2 shrink-0 mt-0.5">
-                <span className="text-slate-600 text-xs hidden sm:block">{fmt(n.saved_at)}</span>
-                <button onClick={() => removeNote(n.id)} className="text-slate-600 hover:text-red-400 transition-colors text-lg leading-none">×</button>
-              </div>
+            <div key={n.id} className="rounded-xl px-4 py-3 border border-slate-700/60 bg-slate-800/50">
+              {isEditingNote('note', n.id) ? (
+                <div className="flex gap-2">
+                  <textarea
+                    autoFocus
+                    value={noteText}
+                    onChange={e => setNoteText(e.target.value)}
+                    onBlur={commitNote}
+                    onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); commitNote() } if (e.key === 'Escape') setEditingNote(null) }}
+                    rows={Math.max(2, noteText.split('\n').length)}
+                    className="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-3 py-1.5 text-sm text-white resize-none focus:outline-none focus:border-amber-500/50 transition-colors"
+                  />
+                  <button
+                    onMouseDown={e => { e.preventDefault(); commitNote() }}
+                    className="text-xs text-amber-400 hover:text-amber-300 px-2 font-medium self-start mt-1"
+                  >Save</button>
+                </div>
+              ) : (
+                <div className="flex items-start gap-3">
+                  <p
+                    onClick={() => startEditNote('note', n.id, n.text)}
+                    className="flex-1 text-slate-200 text-sm leading-relaxed cursor-text hover:text-white transition-colors"
+                  >{n.text}</p>
+                  <div className="flex items-center gap-2 shrink-0 mt-0.5">
+                    <span className="text-slate-600 text-xs hidden sm:block">{fmt(n.saved_at)}</span>
+                    <button onClick={() => removeNote(n.id)} className="text-slate-600 hover:text-red-400 transition-colors text-lg leading-none">×</button>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>

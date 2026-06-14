@@ -71,6 +71,10 @@ export function UserProvider({ children }) {
     notes: [{ id: Date.now().toString(), text, saved_at: new Date().toISOString() }, ...d.notes],
   }))
   const removeNote = id   => upd(d => ({ ...d, notes: d.notes.filter(n => n.id !== id) }))
+  const updateNote = (id, text) => upd(d => ({
+    ...d,
+    notes: d.notes.map(n => n.id === id ? { ...n, text } : n),
+  }))
 
   return (
     <Ctx.Provider value={{
@@ -78,7 +82,7 @@ export function UserProvider({ children }) {
       savePlayer, removePlayer, isPlayerSaved, updatePlayerNote,
       saveComparison, removeComparison, updateComparisonNote,
       saveSearch, removeSearch, updateSearchNote,
-      addNote, removeNote,
+      addNote, removeNote, updateNote,
     }}>
       {children}
     </Ctx.Provider>
