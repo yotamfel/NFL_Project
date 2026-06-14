@@ -82,6 +82,24 @@ _ALLOWED_STATS: dict[str, frozenset[str]] = {
 }
 
 
+def popular_players(pos: str | None = None, limit: int = 10) -> list[dict]:
+    """Top players by career Approximate Value — used for landing-page suggestions."""
+    sql = text("""
+        SELECT p.player_id, p.player_name, p.pos, p.first_season, p.last_season,
+               MAX(d.career_av) AS career_av
+        FROM players p
+        JOIN draft d ON d.player_id = p.player_id
+        WHERE (:pos IS NULL OR UPPER(p.pos) = UPPER(:pos))
+          AND d.career_av IS NOT NULL
+        GROUP BY p.player_id, p.player_name, p.pos, p.first_season, p.last_season
+        ORDER BY career_av DESC
+        LIMIT :limit
+    """)
+    with engine.connect() as conn:
+        rows = conn.execute(sql, {"pos": pos, "limit": limit}).fetchall()
+    return [dict(r._mapping) for r in rows]
+
+
 def top_players_by_stat(
     category: str,
     stat: str,

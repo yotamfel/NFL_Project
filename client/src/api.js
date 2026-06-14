@@ -34,7 +34,12 @@ export const api = {
     if (team)   p.set('team', team)
     return get(`/players/search?${p}`)
   },
-  getPlayer:     id => get(`/players/${id}`),
+  getPlayer:         id => get(`/players/${id}`),
+  getPopularPlayers: (pos, limit = 10) => {
+    const p = new URLSearchParams({ limit })
+    if (pos) p.set('pos', pos)
+    return get(`/players/popular?${p}`)
+  },
 
   compareCareer: (ids, category) =>
     get(`/compare?${ids.map(id => `player_ids=${encodeURIComponent(id)}`).join('&')}&category=${category}`),

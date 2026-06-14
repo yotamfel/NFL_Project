@@ -3,6 +3,7 @@ import { useUser, UserProvider } from './context/UserContext'
 import Nav from './components/Nav'
 import UsernameSetup from './components/UsernameSetup'
 import PlayerSearch from './pages/PlayerSearch'
+import PlayerLanding from './pages/PlayerLanding'
 import PlayerProfile from './pages/PlayerProfile'
 import Comparison from './pages/Comparison'
 import DraftAnalysis from './pages/DraftAnalysis'
@@ -21,6 +22,7 @@ function AppInner() {
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-6">
         <Routes>
           <Route path="/" element={<PlayerSearch />} />
+          <Route path="/players" element={<PlayerLanding />} />
           <Route path="/player/:id" element={<PlayerProfile />} />
           <Route path="/comparison" element={<Comparison />} />
           <Route path="/draft" element={<DraftAnalysis />} />

@@ -1,7 +1,7 @@
 """Module 1 endpoints: player search and full profile."""
 from fastapi import APIRouter, HTTPException, Query
 
-from app.data.players import get_player_profile, search_players, top_players_by_stat
+from app.data.players import get_player_profile, popular_players, search_players, top_players_by_stat
 from app.data.snap_counts import get_snap_weeks, get_snap_seasons, get_snap_available_seasons
 from app.data.adv_receiving import get_adv_receiving
 from app.data.injuries import get_injury_seasons, get_injury_weeks
@@ -23,6 +23,14 @@ def search(
     if not q and not pos and not season and not team:
         return []
     return search_players(q, limit=limit, pos=pos, season=season, team=team)
+
+
+@router.get("/popular")
+def popular(
+    pos:   str | None = Query(None, description="Filter by position, e.g. QB"),
+    limit: int        = Query(10, ge=1, le=50),
+):
+    return popular_players(pos=pos, limit=limit)
 
 
 @router.get("/top_by_stat")
