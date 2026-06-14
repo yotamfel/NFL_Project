@@ -4,7 +4,7 @@ import { useUser } from '../context/UserContext'
 import { api } from '../api'
 
 const LINKS = [
-  { to: '/', label: 'Players', end: true },
+  { to: '/player/MahoPa00', label: 'Players' },
   { to: '/comparison', label: 'Compare' },
   { to: '/draft', label: 'Draft' },
   { to: '/search', label: 'Smart Search' },
