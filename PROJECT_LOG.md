@@ -966,4 +966,282 @@ After restart with the new routing:
 - `GET /comparison` → 200 (SPA catch-all)
 - `GET /assets/index-CNpR8Dvb.css` → 200 (static asset)
 
-Project complete.
+Project complete — first version.
+
+---
+
+## Phase Three: post-launch features and AI integration
+
+### Containerisation and cloud deployment
+
+The local `start.ps1` launcher worked fine on this machine, but deploying to
+Render required a different execution model. A multi-stage `Dockerfile` solved
+this cleanly: a Node 20 stage builds the React frontend, then a Python 3.11-slim
+stage takes only the compiled `client/dist/` assets and runs uvicorn — the final
+image carries no Node runtime at all, which keeps it small and avoids any
+npm-in-production footgun.
+
+Two Neon-specific issues surfaced immediately on the cloud database. Neon's
+PgBouncer pooler routes connections through a session-less pool, which means the
+`search_path` set in psql's startup does not carry over; every query that
+references a schema-qualified object failed with `relation "X" does not exist`
+until the connection string was updated to embed `?options=-csearch_path%3Dpublic`.
+A second issue: Render's default runtime (native) was allocating less memory than
+the Node build step needed; adding `render.yaml` with `runtime: docker` forced
+the correct execution environment and the deploys stabilised.
+
+Smart Search's first live 500 errors were also PgBouncer-related: the session-
+level `SET LOCAL` statement the read-only transaction wrapper used is not
+permitted in transaction-pooling mode. Switching to the connection-level
+`execution_options(postgresql_readonly=True)` instead of a `BEGIN READ ONLY`
+transaction fixed it without weakening the safety guarantee.
+
+### UI/UX evolution: visual redesign and search ergonomics
+
+The initial UI had a consistent dark-navy colour scheme but a flat visual
+hierarchy — every page looked like every other page. A visual redesign replaced
+this with a per-page personality driven by a `posColors.js` position→colour
+utility: `PlayerProfile`'s header gradient is derived from the player's position
+(QB=blue, RB=green, WR=amber, TE=orange), `DraftAnalysis`'s Steals tab uses a
+deep-green banner and Busts a deep-red one, and `NaturalSearch` uses violet
+throughout. `PlayerSearch`'s landing page gained a "NFL DATA" gold-gradient hero
+and position-coloured feature cards.
+
+The player search filters — year, team, position — were originally plain text
+inputs, which required knowing the exact abbreviation to match. Replacing them
+with a scrollable year dropdown (2025→2000), a 32-team dropdown with full team
+names, and a compact position-group dropdown removed the guesswork. A team-
+abbreviation alias table (`FA031d4`) resolved historical franchise codes (e.g.
+`OAK`/`LV` both matching the Raiders) that had been silently producing no
+results.
+
+A persistent quick-search bar in the navigation lets users jump to any player
+from any page — the same debounced `/api/players/search` call used on the
+PlayerSearch page, surfacing a floating result list that navigates on click.
+
+### Saved items: bookmarking, snapshots, and notes
+
+A username-based save system was added so users can carry their work across
+sessions. On first visit, `UsernameSetup.jsx` prompts for a username, stored in
+`localStorage`; a `UserContext` makes it available throughout the app. Per-user
+data is keyed under `nfl_saved_{username}` and supports four save types: player
+bookmarks (star button on any profile page), comparison snapshots (save button
+on the Comparison page), Natural Search results (save button next to each answer),
+and freeform notes typed directly in the Saved page.
+
+A follow-up added per-item notes: each saved player, comparison snapshot, and
+search result gained a Notes tab where free text can be typed and edited. The
+note editor supports in-place editing (clicking the note opens a textarea;
+saving replaces the display inline), and the Guide was updated in both languages
+to document it.
+
+### Comparison page enhancements
+
+The comparison page accumulated several improvements in quick succession. The
+category selector gained auto-detection: when two players are added, the page
+picks the category they most plausibly share (passing for two QBs, offense for
+running backs, etc.) rather than defaulting to the first option regardless of
+position. A Career/Season toggle was added so comparisons can be run on a
+specific season's numbers rather than career totals. A stat-filter panel lets
+users narrow the bar chart to specific metrics, and a per-metric chart grid
+replaces the single four-metric chart when more granular breakdowns are needed.
+An "All stats" toggle expands the page to show the complete career stat table
+for every player, without pre-filtering to the chart metrics. A top-20 leaderboard
+for the active category/stat appears below the comparison table and highlights
+the compared players within it.
+
+### Draft Analysis enhancements
+
+The Steals/Busts tabs originally used fixed thresholds (round 4+, AV ≥ 50 for
+steals; rounds 1–2, AV ≤ 15 for busts). A `DefinitionBuilder` UI replaced this
+with a fully configurable threshold builder — any stat in `STAT_OPTIONS`, any
+round range, any minimum games played — so the user can define a steal or bust
+however makes sense to them. A "System Recommendation" card shows, for each
+configuration, the per-game percentiles of the resulting list and filters out
+players with fewer than 16 career games. Draft pick definitions chosen in the
+builder can be saved to `localStorage` and restored on mount. A scatter plot
+(round vs. the selected stat, coloured by position, clickable to navigate to
+the player's profile) gives a visual overview of how value distributes across
+the draft board.
+
+### League Trends page
+
+A new `/trends` page makes the database's 25-year span explorable at the league
+level. Category, stat, and aggregation (sum / average) selectors drive a
+`/api/trends` query; position, team, and season-range filters narrow it. The
+result is a Recharts line chart with year-over-year tooltips and two permanent
+reference lines: the COVID-shortened 2020 season (16 games, no fans) and the
+2021 schedule expansion to 17 games — both markers that visibly distort raw
+counting totals if you don't account for them. A "By Team" tab adds a horizontal
+bar chart and top-3 tiles for team-level breakdowns, driven by a separate
+`/api/trends/by_team` endpoint. The team bars use official NFL team colours
+(hex values in a lookup table rather than generic palette slots), and historical
+franchise codes are normalised so `OAK` and `LV` do not appear as separate
+entries.
+
+### Player profile: chart improvements
+
+The passing category's single line chart (yards) was split into two axes:
+yards on the left, TD/INT stacked on the right — otherwise a 5,000-yard season
+and a 40-TD season were plotted on incompatible scales and the TD/INT trace was
+invisible. The offense chart received the same treatment (scrimmage yards vs.
+TDs). All six category charts gained a stat dropdown so the user can switch
+which metric the line traces (e.g. yards, touchdowns, attempts, passer rating)
+without leaving the page.
+
+### Data enrichment: advanced stats, injury history, Next Gen Stats, snap counts
+
+Four new data streams were added to player profiles, each with its own ETL
+script, API endpoint, and frontend section:
+
+**Advanced receiving stats** (`etl/load_adv_receiving.py`) merges two sources:
+PFR's advanced receiving page (ADOT, YAC/rec, YBC/rec, broken tackles, drops,
+drop rate, passer rating when targeted — available from 2018) and Next Gen Stats
+(separation at catch, cushion, YAC above expectation — 2016 onwards). The join
+key is `(player_id, season)`. The resulting 4,329 player-season rows are exposed
+at `/api/players/{id}/adv_receiving` and rendered on WR/TE/RB profiles as a
+career trend (ADOT and YAC+) plus the full season table with column-header
+tooltip definitions.
+
+**Injury history** (`etl/load_injuries.py`) links nflverse's weekly injury
+report data (gsis IDs) back to PFR player IDs via a name+position fallback when
+the direct ID match fails, and stores 50,671 weekly-report rows (2009–2025)
+with status (Out/Doubtful/Questionable) and body part. The profile section
+shows season summaries colour-coded by severity. The career charts gain red
+highlights on seasons where a player missed four or more games, with a tooltip
+showing the count — making performance dips legible without leaving the chart.
+A follow-up supplemented the weekly-report data with games-played counts to
+catch IR stints not captured in the report (a player can miss half a season on
+IR without appearing in any weekly report if they were placed there before
+the season opened).
+
+**Next Gen Stats** (2016–2025) for QBs and RBs were added at `/api/players/{id}/ngs`,
+rendered with the same `StatTable`/`StatChart` components and column tooltips
+already used for advanced receiving.
+
+**Snap counts** (2013–2025) from nflverse were added at `/api/players/{id}/snaps`,
+showing offensive, defensive, and special-teams snap percentages season by season.
+
+Wide tables (the advanced receiving table can exceed 20 columns) needed
+horizontal scroll support: a persistent custom scrollbar was added to all
+`StatTable` instances, and column tooltips were repositioned to open upward and
+leftward when near the table's right or bottom edge.
+
+### Guide page
+
+The bilingual help modal added earlier in the project was replaced by a full
+`/guide` page (`client/src/pages/Guide.jsx`) with an English/Hebrew toggle and
+sections covering every feature: player search, profile reading, advanced stats,
+injury annotations, comparison, draft analysis, league trends, natural-language
+search, and the saved-items system. A `/update-guide` slash command was added to
+`.claude/commands/` to automate keeping the page in sync whenever a new feature
+is shipped.
+
+### ETL automation: GitHub Actions weekly refresh
+
+The supplement pipeline (`supplement_seasons.py`, `supplement_draft.py`,
+`supplement_combine.py`) was originally run manually. A GitHub Actions workflow
+(`.github/workflows/etl_refresh.yml`) automates it: a cron schedule triggers
+weekly during the season (September–January) and monthly in the off-season,
+and skips the summer months (June–August) when no new data is published.
+The workflow runs in an Ubuntu runner, installs the ETL dependencies, and
+connects to the Neon database via a `DATABASE_URL` secret. Three idempotency
+bugs that were harmless in manual runs surfaced when the job began running
+unattended: `create table ... as select` failed when the view already existed
+(fixed by adding `drop view if exists` before recreation), re-inserting draft
+and combine rows failed with unique-constraint violations on re-runs (fixed by
+deleting the target season's rows first), and `nflreadpy` began requiring
+`pyarrow` as an unspecified transitive dependency (pinned explicitly in
+`requirements.txt`).
+
+### Smart Search improvements
+
+The Smart Search system prompt was expanded to include five tables that had been
+missing from the original schema reference: `adv_receiving_seasons`,
+`ngs_seasons`, `injuries`, `snap_counts_seasons`, and `anomaly_alerts`. Without
+them, questions referencing those tables produced `table does not exist` errors
+rather than answers. The model was also upgraded from `claude-haiku-4-5` to
+`claude-sonnet-4-6` — the added reasoning capacity handles more complex
+multi-table joins and edge cases that the translation task had been silently
+failing on.
+
+Two pre-2000 data boundary issues were documented and handled. The database
+covers 2000–2025; asking "who had the most career touchdowns" returned a mix
+of current players and pre-2000 players whose career extended into the tracked
+range but whose earlier seasons are missing. Detecting pre-2000 players via
+`first_season < 2000` turned out to be unreliable — some players have
+`first_season` set to their first *tracked* season, not their actual debut.
+The fix adds an explicit injection into the system prompt naming the pre-2000
+boundary and a short list of well-known players whose career totals in this
+database are partial.
+
+### AI features: six phases
+
+After the core platform stabilised, a structured AI enhancement track was
+built in six phases.
+
+**Phase 1 — AI query logging and feedback.** An `ai_query_log` table (added
+via `etl/migrate_ai_log.py`) records every Smart Search call: question text,
+generated SQL, result row count, response time, token usage, and a thumbs
+score. `ai_log.py` provides `log_query()` and `set_thumbs()` helpers; a
+`Timer` context manager wraps the Claude call to capture latency automatically.
+A `POST /api/feedback` endpoint (validated to `thumbs ∈ {1, -1}`) accepts
+user votes, and `AiFeedback.jsx` renders thumbs-up/thumbs-down buttons beside
+each answer — silently ignoring network failures so a feedback hiccup never
+breaks the answer display.
+
+**Phase 2 — Few-shot examples in the Smart Search system prompt.** Three
+worked examples (question → SQL → result) were added to the system prompt
+to anchor Claude's output format. Before this, the model occasionally
+returned prose commentary alongside the SQL, or picked the wrong table for
+an ambiguous question; the examples eliminated both patterns without changing
+the safety constraints.
+
+**Phase 3 — AI career insights.** `GET /api/players/{id}/insights` calls
+Claude Sonnet 4.6 with a prompt built from the player's career stats, draft
+slot, and combine numbers, and asks for a two-to-three paragraph career
+narrative. Results are cached in memory for 24 hours (the data doesn't change
+between ETL runs, so regenerating on every page load would be wasteful and
+expensive). Pre-2000 players get a data-boundary note injected into the prompt
+so the model doesn't overstate its confidence. The endpoint is registered before
+the `/{player_id}` catch-all in `players.py` to avoid a path-collision.
+`PlayerProfile.jsx` renders the insight in a collapsible card below the
+combine section.
+
+**Phase 4 — AI comparison narrative.** `POST /api/compare/narrative` takes
+two player IDs and a category, fetches both players' career stats, and asks
+Claude to write a comparative analysis paragraph. The frontend renders it as
+a highlighted card at the top of the Comparison page, replacing the static
+"vs" divider with something that actually explains what the numbers mean.
+Like insights, narratives are cached in memory keyed by the frozenset of
+player IDs plus category.
+
+**Phase 5 — Anomaly detection.** `detect_anomalies.py` is a deterministic
+(no model) ETL job that runs after each weekly refresh and writes to an
+`anomaly_alerts` table. It checks eight metrics (passing yards/TDs, rushing
+yards/TDs, receiving yards/TDs, sacks, interceptions) for two alert types:
+career-high values, and values that sit more than 1.5σ above or below the
+player's own career average. Severity is assigned 1–3. `GET /api/anomalies`
+returns the alerts with season and type filters; `AnomalyFeed.jsx` renders
+them as a card grid on the home page with colour-coded badges (career-high
+in gold, above-average in green, below-average in red). The job is
+idempotent: it deletes and re-inserts the target season's alerts on each run.
+
+A follow-up added three more alert types: `yoy_surge` (a 40%+ jump vs. the
+prior season in counting stats — meaningful when it happens but easy to
+confuse with a partial-season comparison, so it's restricted to players with
+at least 8 games played in both seasons), `efficiency_peak` (rate stats —
+Y/A, passer rating, Y/rec, Y/carry — more than 1.5σ above career average),
+and `versatile` (dual-threat markers: 300+ rushing and 300+ receiving yards
+in the same season, or a quarterback with meaningful rushing production
+alongside passing). A filter-chip row in `AnomalyFeed.jsx` lets users narrow
+the feed by type, re-fetching from the API on each selection.
+
+**Phase 6 — AI admin dashboard.** `GET /api/admin/ai` aggregates the
+`ai_query_log` and `anomaly_alerts` tables into a summary: total queries,
+success/error rates, and token usage per feature (Smart Search, Insights,
+Narrative); a daily volume series for the past 30 days; and anomaly alert
+counts by season and type. `AdminAi.jsx` at `/admin/ai` renders top-line
+metric tiles, a feature-breakdown table, a bar chart of daily volume, and a
+scrollable recent-queries log with thumbs status. No authentication gate is
+on the route yet — it's an internal diagnostic page, not a public feature.

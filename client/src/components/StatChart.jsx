@@ -11,6 +11,33 @@ const CHART_STYLE = {
   itemStyle: { color: '#cbd5e1' },
 }
 
+function InjuryTooltip({ active, payload, label, injuryMap, xKey }) {
+  if (!active || !payload?.length) return null
+  const season = label
+  const missed = injuryMap[season]
+  return (
+    <div style={{
+      backgroundColor: '#1e293b', border: '1px solid #334155',
+      borderRadius: '8px', padding: '10px 14px', fontSize: 13,
+    }}>
+      <p style={{ color: '#94a3b8', marginBottom: missed ? 6 : 4, fontWeight: 600 }}>{season}</p>
+      {payload.map(entry => (
+        <p key={entry.dataKey} style={{ color: entry.color, margin: '2px 0' }}>
+          {entry.name}: <span style={{ color: '#e2e8f0', fontWeight: 600 }}>{entry.value}</span>
+        </p>
+      ))}
+      {missed && (
+        <p style={{
+          color: '#f87171', marginTop: 8, paddingTop: 8,
+          borderTop: '1px solid #334155', fontWeight: 600,
+        }}>
+          ⚕ {missed} game{missed !== 1 ? 's' : ''} missed
+        </p>
+      )}
+    </div>
+  )
+}
+
 // lines = [{dataKey, label, color}]
 // injuryMap = { season: games_missed } — seasons with 4+ missed games get a red marker
 export function CareerLineChart({ data, xKey, lines, injuryMap = {}, height = 260 }) {
@@ -24,14 +51,7 @@ export function CareerLineChart({ data, xKey, lines, injuryMap = {}, height = 26
         <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
         <XAxis dataKey={xKey} stroke="#475569" tick={{ fill: '#94a3b8', fontSize: 12 }} />
         <YAxis stroke="#475569" tick={{ fill: '#94a3b8', fontSize: 12 }} />
-        <Tooltip {...CHART_STYLE}
-          formatter={(value, name, props) => {
-            const season = props?.payload?.[xKey]
-            const missed = injuryMap[season]
-            const suffix = missed ? ` ⚕ ${missed} games missed` : ''
-            return [value, name + suffix]
-          }}
-        />
+        <Tooltip content={(props) => <InjuryTooltip {...props} injuryMap={injuryMap} xKey={xKey} />} />
         <Legend wrapperStyle={{ fontSize: 12, color: '#94a3b8' }} />
         {injurySeasons.map(s => (
           <ReferenceLine key={s} x={s} stroke="#ef4444" strokeOpacity={0.35}

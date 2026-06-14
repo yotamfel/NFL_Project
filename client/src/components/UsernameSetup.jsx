@@ -26,8 +26,7 @@ export default function UsernameSetup() {
           <h2 className="text-2xl font-black text-white mb-1">
             <span className="bg-gradient-to-r from-amber-400 to-yellow-200 bg-clip-text text-transparent">NFL DATA</span>
           </h2>
-          <p className="text-slate-400 text-sm mb-1">Choose a username to save your discoveries.</p>
-          <p className="text-slate-600 text-xs mb-6" dir="rtl">בחר שם משתמש כדי לשמור את הממצאים שלך.</p>
+          <p className="text-slate-400 text-sm mb-6">Choose a username to save your discoveries.</p>
 
           <input
             autoFocus
