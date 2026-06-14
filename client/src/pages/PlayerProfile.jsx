@@ -874,6 +874,8 @@ export default function PlayerProfile() {
         </div>
       </div>
 
+      <InsightsSection playerId={player.player_id} accentColor={c.hex} />
+
       {/* Stat sections */}
       {categories.map(cat => {
         const colSet = COLS[cat.category]
@@ -944,7 +946,6 @@ export default function PlayerProfile() {
       <AdvReceivingSection playerId={player.player_id} pos={player.pos} accentColor={c.hex} />
       <NgsSection playerId={player.player_id} pos={player.pos} accentColor={c.hex} />
       <SnapCountsSection playerId={player.player_id} pos={player.pos} accentColor={c.hex} />
-      <InsightsSection playerId={player.player_id} accentColor={c.hex} />
 
       <div className="text-center pb-4">
         <Link to="/comparison" className="text-sm transition-colors hover:opacity-80"
