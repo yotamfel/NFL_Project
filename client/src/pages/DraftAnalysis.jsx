@@ -589,7 +589,7 @@ export default function DraftAnalysis() {
           {pe && <ErrorMsg message={pe} />}
           {picks && (
             <div className="bg-slate-800/70 border border-slate-700/60 rounded-2xl p-5">
-              <StatTable columns={DRAFT_COLS} rows={picks} keyField="pick" />
+              <StatTable columns={DRAFT_COLS} rows={picks} keyField="pick" title="Draft Picks" />
             </div>
           )}
         </div>
@@ -632,7 +632,7 @@ export default function DraftAnalysis() {
               <DraftScatter results={steals} statLabel={statLabel(stealDef)} />
               <div className="bg-slate-800/70 border border-emerald-900/40 rounded-2xl p-5">
                 <p className="text-xs text-slate-600 mb-3">{steals.length} players found</p>
-                <StatTable columns={stealCols} rows={steals} keyField="player_name" />
+                <StatTable columns={stealCols} rows={steals} keyField="player_name" title="Draft Steals" />
               </div>
             </>
           )}
@@ -676,7 +676,7 @@ export default function DraftAnalysis() {
               <DraftScatter results={busts} statLabel={statLabel(bustDef)} />
               <div className="bg-slate-800/70 border border-rose-900/40 rounded-2xl p-5">
                 <p className="text-xs text-slate-600 mb-3">{busts.length} players found</p>
-                <StatTable columns={bustCols} rows={busts} keyField="player_name" />
+                <StatTable columns={bustCols} rows={busts} keyField="player_name" title="Draft Busts" />
               </div>
             </>
           )}

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { api } from '../api'
 import { useUser } from '../context/UserContext'
 import AiFeedback from '../components/AiFeedback'
+import { CsvDownloadButton } from '../components/StatTable'
 
 const EXAMPLES = [
   'Who had the most passing touchdowns between 2015 and 2020?',
@@ -135,7 +136,12 @@ export default function NaturalSearch() {
               <span className="text-xs text-slate-500 uppercase tracking-wider">Results</span>
               <span className="text-xs text-violet-400 font-semibold">{result.rows.length} rows</span>
             </div>
-            <div className="scroll-x">
+            <div className="relative group scroll-x">
+              <CsvDownloadButton
+                columns={Object.keys(result.rows[0] ?? {}).map(k => ({ key: k, label: k }))}
+                rows={result.rows}
+                title="Smart Search results"
+              />
               <table className="min-w-full text-sm">
                 <thead>
                   <tr style={{ background: 'rgba(139,92,246,0.08)' }}>

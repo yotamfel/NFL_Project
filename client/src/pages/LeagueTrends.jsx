@@ -7,6 +7,7 @@ import {
 import { api } from '../api'
 import { Loading, ErrorMsg } from '../components/Status'
 import { ExportableChart } from '../components/StatChart'
+import { CsvDownloadButton } from '../components/StatTable'
 
 // ── Stat catalogue ────────────────────────────────────────────────────────────
 const STAT_OPTIONS = {
@@ -488,7 +489,17 @@ export default function LeagueTrends() {
           {/* Team table */}
           <div className="rounded-2xl border border-slate-700/60 bg-slate-900/60 p-5">
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">All teams</p>
-            <div className="scroll-x">
+            <div className="relative group scroll-x">
+              <CsvDownloadButton
+                columns={[
+                  { key: '_rank', label: '#' },
+                  { key: 'team', label: 'Team' },
+                  { key: 'value', label: statInfo?.label ?? stat },
+                  { key: 'player_count', label: 'Players' },
+                ]}
+                rows={teamData.map((r, i) => ({ ...r, _rank: i + 1 }))}
+                title={`${statInfo?.label ?? stat} by team`}
+              />
               <table className="min-w-full text-sm">
                 <thead>
                   <tr className="text-slate-500 text-xs border-b border-slate-800">
@@ -621,7 +632,17 @@ export default function LeagueTrends() {
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">
               Season breakdown
             </p>
-            <div className="scroll-x">
+            <div className="relative group scroll-x">
+              <CsvDownloadButton
+                columns={[
+                  { key: 'season', label: 'Season' },
+                  { key: 't1', label: team1Label },
+                  ...(comparing ? [{ key: 't2', label: team2Label }] : []),
+                  { key: 'pc1', label: 'Players' },
+                ]}
+                rows={[...chartData].reverse()}
+                title={`${statInfo?.label ?? stat} season breakdown`}
+              />
               <table className="min-w-full text-sm">
                 <thead>
                   <tr className="text-slate-500 text-xs border-b border-slate-800">

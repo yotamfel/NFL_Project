@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useUser } from '../context/UserContext'
 import { posColor } from '../utils/posColors'
+import { CsvDownloadButton } from '../components/StatTable'
 
 const TABS = [
   { id: 'players',     label: 'Players',     icon: '⭐' },
@@ -151,7 +152,12 @@ export default function Saved() {
                 </div>
               </summary>
               {s.rows.length > 0 && (
-                <div className="border-t border-slate-700/60 scroll-x">
+                <div className="border-t border-slate-700/60 relative group scroll-x">
+                  <CsvDownloadButton
+                    columns={Object.keys(s.rows[0]).map(k => ({ key: k, label: k }))}
+                    rows={s.rows}
+                    title={s.question || 'search results'}
+                  />
                   <table className="min-w-full text-xs">
                     <thead>
                       <tr className="bg-slate-900/60">

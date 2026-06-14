@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { api } from '../api'
 import { Loading, ErrorMsg } from '../components/Status'
-import StatTable from '../components/StatTable'
+import StatTable, { CsvDownloadButton } from '../components/StatTable'
 import { MetricBarChart } from '../components/StatChart'
+import { exportTableAsCsv, csvFilename } from '../utils/exportCsv'
 import { useUser } from '../context/UserContext'
 import { STAT_DEFS } from '../utils/statDefinitions'
 import AiFeedback from '../components/AiFeedback'
@@ -721,7 +722,8 @@ export default function Comparison() {
                 </button>
               </div>
             </div>
-            <StatTable columns={tableCols} rows={data.career} keyField="player_id" />
+            <StatTable columns={tableCols} rows={data.career} keyField="player_id"
+              title={`${compSeason ? compSeason : 'Career'} stats — ${category}`} />
           </div>
         </>
       )}
@@ -745,7 +747,17 @@ export default function Comparison() {
           </select>
         </div>
         {lbData && lbData.length > 0 ? (
-          <div className="scroll-x">
+          <div className="relative group scroll-x">
+            <CsvDownloadButton
+              columns={[
+                { key: '_rank', label: '#' },
+                { key: 'player_name', label: 'Player' },
+                { key: 'pos', label: 'Pos' },
+                { key: 'best_value', label: STAT_OPTIONS[category]?.find(s => s.key === lbStat)?.label ?? lbStat },
+              ]}
+              rows={lbData.map((p, i) => ({ ...p, _rank: i + 1 }))}
+              title={`Leaderboard — ${STAT_OPTIONS[category]?.find(s => s.key === lbStat)?.label ?? lbStat}`}
+            />
           <table className="min-w-full text-sm">
             <thead>
               <tr className="text-slate-500 text-xs border-b border-slate-800">

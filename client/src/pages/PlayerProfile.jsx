@@ -7,8 +7,9 @@ import {
 import { api } from '../api'
 import { useApi } from '../hooks/useApi'
 import { Loading, ErrorMsg } from '../components/Status'
-import StatTable from '../components/StatTable'
+import StatTable, { CsvDownloadButton } from '../components/StatTable'
 import { CareerLineChart, ExportableChart } from '../components/StatChart'
+import { exportTableAsCsv, csvFilename } from '../utils/exportCsv'
 import { posColor, posGradient, CARD_STRIPES } from '../utils/posColors'
 import { useUser } from '../context/UserContext'
 import { STAT_DEFS } from '../utils/statDefinitions'
@@ -262,6 +263,20 @@ function InjurySection({ playerId, accentColor }) {
     (s.games_missed_approx ?? 0) > s.games_missed && (s.games_missed_approx ?? 0) >= 4
   )
 
+  const injuryCsvCols = [
+    { key: 'season', label: 'Season' },
+    { key: '_g', label: 'G' },
+    { key: 'games_missed', label: 'Missed' },
+    { key: 'games_doubtful', label: 'Doubtful' },
+    { key: 'games_questionable', label: 'Questionable' },
+    { key: '_injuries', label: 'Injuries' },
+  ]
+  const injuryCsvRows = significant.map(r => ({
+    ...r,
+    _g: r.games_played != null ? `${r.games_played}/${r.games_expected}` : '',
+    _injuries: (r.injuries ?? []).join(', '),
+  }))
+
   return (
     <div className="bg-slate-800/70 border border-slate-700/60 rounded-2xl p-5 space-y-4">
       <h2 className="text-white font-bold flex items-center gap-2">
@@ -270,7 +285,8 @@ function InjurySection({ playerId, accentColor }) {
         <span className="text-slate-600 text-xs font-normal ml-1">2009+</span>
       </h2>
 
-      <div className="scroll-x">
+      <div className="relative group scroll-x">
+        <CsvDownloadButton columns={injuryCsvCols} rows={injuryCsvRows} title="Injury History" />
         <table className="min-w-full text-sm">
           <thead>
             <tr className="text-slate-500 text-xs border-b border-slate-800">
@@ -401,7 +417,8 @@ function AdvReceivingSection({ playerId, pos, accentColor }) {
       })()}
 
       {/* Table */}
-      <div className="scroll-x">
+      <div className="relative group scroll-x">
+        <CsvDownloadButton columns={cols.map(({ key, label }) => ({ key, label }))} rows={data} title="Advanced Receiving" />
         <table className="min-w-full text-sm">
           <thead>
             <tr className="text-slate-500 text-xs border-b border-slate-800">
@@ -653,7 +670,8 @@ function NgsSection({ playerId, pos, accentColor }) {
           availableStats={cols.filter(c => c.key !== 'season').map(c => ({ key: c.key, label: c.label }))} />
       )}
 
-      <div className="scroll-x">
+      <div className="relative group scroll-x">
+        <CsvDownloadButton columns={cols.map(({ key, label }) => ({ key, label }))} rows={rows} title={title} />
         <table className="min-w-full text-sm">
           <thead>
             <tr className="text-slate-500 text-xs border-b border-slate-800">
@@ -948,7 +966,7 @@ export default function PlayerProfile() {
                 </div>
               )
             })()}
-            <StatTable columns={cols} rows={cat.seasons} keyField="season" />
+            <StatTable columns={cols} rows={cat.seasons} keyField="season" title={`${player.player_name} — ${cat.category}`} />
 
             {cat.career && (
               <div className="rounded-xl px-4 py-3 text-sm text-slate-400"
