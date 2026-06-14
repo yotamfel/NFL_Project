@@ -222,6 +222,10 @@ const CONTENT = {
             body: 'Players you bookmark with the ★ button on their profile appear here. Click the name to go to their profile.',
           },
           {
+            title: 'Player notes',
+            body: 'Each saved player can have a personal note. Click "+ Add a note…" below the player\'s name to write one. Click an existing note to edit it. Notes save automatically when you press Enter, click Save, or click away. Press Escape to cancel.',
+          },
+          {
             title: 'Saved comparisons',
             body: 'After building a comparison, click "Save comparison" to store it. It appears here with the player names and category. Click it to reload the comparison instantly.',
           },
@@ -543,6 +547,10 @@ const CONTENT = {
           {
             title: 'שחקנים שמורים',
             body: 'שחקנים שסימנת עם ★ בפרופיל שלהם מופיעים כאן. לחץ על השם כדי לעבור לפרופיל.',
+          },
+          {
+            title: 'הערות לשחקנים',
+            body: 'לכל שחקן שמור ניתן להוסיף הערה אישית. לחץ על "+ Add a note…" מתחת לשם השחקן כדי לכתוב אחת. לחץ על הערה קיימת כדי לערוך אותה. ההערה נשמרת אוטומטית בלחיצה על Enter, כפתור Save, או לחיצה מחוץ לשדה. לחץ Escape לביטול.',
           },
           {
             title: 'השוואות שמורות',
