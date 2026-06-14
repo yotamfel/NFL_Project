@@ -1,0 +1,66 @@
+name: Weekly ETL Refresh
+
+on:
+  schedule:
+    # Every Wednesday at 08:00 UTC (Tuesday night EST, after Monday Night Football)
+    - cron: '0 8 * * 3'
+  workflow_dispatch:
+    # Allow manual trigger from GitHub Actions UI
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: etl/requirements.txt
+
+      - name: Install ETL dependencies
+        run: pip install -r etl/requirements.txt
+
+      # ── Core box-score stats (also runs supplement_players internally) ─────
+      - name: Supplement seasons (passing / offense / defense / kicking / punting / returns)
+        working-directory: etl
+        run: python supplement_seasons.py
+
+      # ── Draft + Combine ───────────────────────────────────────────────────
+      - name: Supplement draft picks
+        working-directory: etl
+        run: python supplement_draft.py
+
+      - name: Supplement combine measurements
+        working-directory: etl
+        run: python supplement_combine.py
+
+      # ── Supplementary tables ──────────────────────────────────────────────
+      - name: Load injury reports
+        working-directory: etl
+        run: python run_injuries.py
+
+      - name: Load snap counts
+        working-directory: etl
+        run: python run_snap_counts.py
+
+      - name: Load advanced receiving stats
+        working-directory: etl
+        run: python run_adv_receiving.py
+
+      - name: Load Next Gen Stats
+        working-directory: etl
+        run: python run_ngs_stats.py
+
+      # ── Rebuild career aggregation views (always last) ────────────────────
+      - name: Rebuild career views
+        working-directory: etl
+        run: python build_career_views.py

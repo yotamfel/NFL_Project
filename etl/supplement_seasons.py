@@ -106,7 +106,11 @@ import nflreadpy as nfl
 from db import get_engine
 from supplement_players import supplement_players
 
-YEARS = [2025]
+from datetime import datetime as _dt
+_now = _dt.utcnow()
+# NFL season year = year the season started (Sep–Dec = current year, Jan–Aug = previous year)
+_cur = _now.year if _now.month >= 9 else _now.year - 1
+YEARS = sorted({_cur - 1, _cur})  # previous + current to catch late-arriving data
 
 CATEGORY_TABLES = ["passing", "offense", "defense", "kicking", "punting", "returns"]
 

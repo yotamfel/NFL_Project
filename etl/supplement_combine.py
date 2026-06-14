@@ -40,7 +40,10 @@ import pandas as pd
 
 from db import get_engine
 
-YEARS = [2025]
+from datetime import datetime as _dt
+_now = _dt.utcnow()
+_cur = _now.year if _now.month >= 9 else _now.year - 1
+YEARS = sorted({_cur - 1, _cur})
 
 _OUR_COLUMNS = [
     "season", "player_name", "pos", "school", "college", "ht", "wt",

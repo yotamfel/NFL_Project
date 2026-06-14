@@ -1,0 +1,7 @@
+nflreadpy
+pandas
+polars
+numpy
+sqlalchemy
+psycopg2-binary
+python-dotenv

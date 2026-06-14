@@ -32,7 +32,10 @@ import nflreadpy as nfl
 
 from db import get_engine
 
-YEARS = [2025]
+from datetime import datetime as _dt
+_now = _dt.utcnow()
+_cur = _now.year if _now.month >= 9 else _now.year - 1
+YEARS = sorted({_cur - 1, _cur})
 
 # nflreadpy column -> our `draft` column. wAV/DrAV are exposed as `w_av`/`dr_av`
 # (nflreadpy's own `car_av` is an unrelated, currently-empty field).
