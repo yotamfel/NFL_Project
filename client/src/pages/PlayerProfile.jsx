@@ -792,6 +792,12 @@ export default function PlayerProfile() {
   return (
     <div className="space-y-5">
 
+      {/* Back to Players */}
+      <Link to="/players"
+        className="inline-flex items-center gap-1.5 text-slate-500 hover:text-slate-300 text-sm transition-colors">
+        ← Players
+      </Link>
+
       {/* Header card */}
       <div className="rounded-2xl overflow-hidden"
         style={{ background: posGradient(player.pos), border: `1px solid ${c.mid}33` }}>
