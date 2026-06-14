@@ -828,7 +828,7 @@ export default function PlayerProfile() {
             </div>
 
             {chartGroups && cat.seasons.length > 1 && (() => {
-              const colSet = COL_SETS[cat.category]
+              const colSet = COLS[cat.category]
               const availableStats = colSet
                 ? [
                     ...(colSet.basic   ?? []),
