@@ -19,8 +19,47 @@ const DEFAULT_SIZE = {
   text:    { w: 6, h: 2 },
 }
 
+const MIN_SIZE = {
+  chart:   { minW: 3, minH: 4 },
+  table:   { minW: 3, minH: 3 },
+  heading: { minW: 2, minH: 1 },
+  text:    { minW: 2, minH: 1 },
+}
+
+// CSS injected once for resize handle styling
+const HANDLE_CSS = `
+  .react-grid-item .react-resizable-handle { opacity: 0; transition: opacity 0.15s; background-color: rgba(148,163,184,0.5); border-radius: 3px; }
+  .react-grid-item:hover .react-resizable-handle { opacity: 0.6; }
+  .react-grid-item:hover .react-resizable-handle:hover { opacity: 1; background-color: rgba(251,191,36,0.7); }
+
+  /* Edge handles – override corner arrow to a clean bar */
+  .react-resizable-handle-n, .react-resizable-handle-s {
+    left: 50% !important; width: 44px !important; height: 6px !important;
+    margin-left: -22px !important; background-image: none !important; padding: 0 !important;
+  }
+  .react-resizable-handle-n { top: 2px !important; transform: none !important; }
+  .react-resizable-handle-s { bottom: 2px !important; transform: none !important; }
+
+  .react-resizable-handle-e, .react-resizable-handle-w {
+    top: 50% !important; height: 44px !important; width: 6px !important;
+    margin-top: -22px !important; background-image: none !important; padding: 0 !important;
+  }
+  .react-resizable-handle-e { right: 2px !important; transform: none !important; }
+  .react-resizable-handle-w { left: 2px !important; transform: none !important; }
+
+  /* Corner handles – smaller, cleaner */
+  .react-resizable-handle-se, .react-resizable-handle-sw,
+  .react-resizable-handle-ne, .react-resizable-handle-nw {
+    width: 10px !important; height: 10px !important;
+    padding: 0 !important; background-size: 8px !important;
+  }
+`
+
 // ─── Chart renderer ───────────────────────────────────────────────────────────
-// fill=true: the chart fills 100% of its parent height (for dashboard widgets)
+// Charts always render at their original fixed scale (260px).
+// The widget content div clips with overflow:hidden — the chart never squishes.
+const CHART_HEIGHT = 260
+
 function ChartWidgetContent({ savedChart, colorOverrides, showInjuries }) {
   if (!savedChart) return <div className="text-slate-600 text-sm p-4">Chart not found</div>
   const { chartType, config, data } = savedChart
@@ -36,7 +75,7 @@ function ChartWidgetContent({ savedChart, colorOverrides, showInjuries }) {
         xKey={config.xKey || 'season'}
         lines={lines}
         injuryMap={injuryMap}
-        fill
+        height={CHART_HEIGHT}
         hideActions
       />
     )
@@ -44,7 +83,7 @@ function ChartWidgetContent({ savedChart, colorOverrides, showInjuries }) {
 
   if (chartType === 'GenericLine' && config.lines) {
     return (
-      <ResponsiveContainer width="100%" height="100%">
+      <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
         <LineChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
           <XAxis dataKey={config.xKey || 'x'} stroke="#475569" tick={{ fill: '#94a3b8', fontSize: 11 }} />
@@ -62,7 +101,7 @@ function ChartWidgetContent({ savedChart, colorOverrides, showInjuries }) {
 
   if (chartType === 'GenericBar' && config.bars) {
     return (
-      <ResponsiveContainer width="100%" height="100%">
+      <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
         <BarChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
           <XAxis dataKey={config.xKey || 'x'} stroke="#475569" tick={{ fill: '#94a3b8', fontSize: 11 }} />
@@ -128,12 +167,71 @@ function WidgetWrapper({ widget, savedChart, savedTable, onDelete, onUpdateConfi
     onUpdateConfig({ content: localContent })
   }
 
-  const titleText = widget.type === 'chart'
-    ? (savedChart?.title || 'Chart')
-    : widget.type === 'table'
-      ? (savedTable?.title || 'Table')
-      : config.content || (widget.type === 'heading' ? 'Heading' : 'Text')
+  // ── Overlay mode: text/heading float directly on the canvas background ──────
+  if (widget.type === 'heading' || widget.type === 'text') {
+    return (
+      <div
+        className="drag-handle relative h-full group cursor-grab active:cursor-grabbing"
+        onClick={onSelect}
+      >
+        {/* Selection ring */}
+        {isSelected && (
+          <div className="absolute inset-0 ring-2 ring-amber-500/50 rounded pointer-events-none z-10" />
+        )}
+        {/* Delete button — floats top-right, visible on hover */}
+        <button
+          onClick={e => { e.stopPropagation(); onDelete() }}
+          className="absolute top-1 right-1 z-20 w-5 h-5 flex items-center justify-center text-slate-500 hover:text-red-400 bg-slate-800/70 rounded opacity-0 group-hover:opacity-100 transition-opacity text-sm leading-none"
+        >×</button>
 
+        {widget.type === 'heading' && (
+          editingText ? (
+            <input
+              autoFocus
+              value={localContent}
+              onChange={e => setLocalContent(e.target.value)}
+              onBlur={commitText}
+              onKeyDown={e => { if (e.key === 'Enter' || e.key === 'Escape') commitText() }}
+              onClick={e => e.stopPropagation()}
+              className="w-full h-full bg-transparent text-white text-2xl font-bold px-2 py-1 outline-none cursor-text"
+              style={{ caretColor: '#f59e0b' }}
+            />
+          ) : (
+            <h2
+              onClick={e => { e.stopPropagation(); setEditingText(true) }}
+              className="h-full w-full px-2 py-1 text-white text-2xl font-bold flex items-center cursor-text"
+            >
+              {config.content || <span className="text-slate-700 italic font-normal text-base">Heading…</span>}
+            </h2>
+          )
+        )}
+
+        {widget.type === 'text' && (
+          editingText ? (
+            <textarea
+              autoFocus
+              value={localContent}
+              onChange={e => setLocalContent(e.target.value)}
+              onBlur={commitText}
+              onKeyDown={e => { if (e.key === 'Escape') commitText() }}
+              onClick={e => e.stopPropagation()}
+              className="w-full h-full bg-transparent text-slate-300 text-sm px-2 py-1 outline-none resize-none cursor-text"
+              style={{ caretColor: '#f59e0b' }}
+            />
+          ) : (
+            <p
+              onClick={e => { e.stopPropagation(); setEditingText(true) }}
+              className="h-full w-full px-2 py-1 text-slate-300 text-sm leading-relaxed cursor-text whitespace-pre-wrap overflow-hidden"
+            >
+              {config.content || <span className="text-slate-700 italic">Text…</span>}
+            </p>
+          )
+        )}
+      </div>
+    )
+  }
+
+  // ── Card mode: chart / table ─────────────────────────────────────────────────
   return (
     <div
       className={`flex flex-col h-full rounded-xl border overflow-hidden transition-colors ${
@@ -146,15 +244,17 @@ function WidgetWrapper({ widget, savedChart, savedTable, onDelete, onUpdateConfi
       {/* Title bar / drag handle */}
       <div className="drag-handle flex items-center gap-2 px-3 py-2 bg-slate-800/70 cursor-grab active:cursor-grabbing select-none border-b border-slate-700/60 shrink-0">
         <span className="text-slate-600 text-xs">⠿</span>
-        <span className="text-slate-300 text-xs font-medium truncate flex-1">{titleText}</span>
+        <span className="text-slate-300 text-xs font-medium truncate flex-1">
+          {widget.type === 'chart' ? (savedChart?.title || 'Chart') : (savedTable?.title || 'Table')}
+        </span>
         <button
           onClick={e => { e.stopPropagation(); onDelete() }}
           className="text-slate-600 hover:text-red-400 transition-colors text-sm leading-none ml-1 shrink-0"
         >×</button>
       </div>
 
-      {/* Content — flex-1 so it fills remaining widget height */}
-      <div className="flex-1 overflow-hidden" style={{ minHeight: 0, padding: widget.type === 'chart' ? 0 : 4 }}>
+      {/* Content — overflow:hidden so chart clips instead of squishing when widget is small */}
+      <div className="flex-1 overflow-hidden" style={{ minHeight: 0 }}>
         {widget.type === 'chart' && (
           <ChartWidgetContent
             savedChart={savedChart}
@@ -163,44 +263,6 @@ function WidgetWrapper({ widget, savedChart, savedTable, onDelete, onUpdateConfi
           />
         )}
         {widget.type === 'table' && <TableWidgetContent savedTable={savedTable} />}
-        {widget.type === 'heading' && (
-          editingText ? (
-            <input
-              autoFocus
-              value={localContent}
-              onChange={e => setLocalContent(e.target.value)}
-              onBlur={commitText}
-              onKeyDown={e => { if (e.key === 'Enter' || e.key === 'Escape') commitText() }}
-              className="w-full h-full bg-transparent text-white text-xl font-bold px-2 py-1 outline-none border-b border-amber-500/50"
-            />
-          ) : (
-            <h2
-              onClick={e => { e.stopPropagation(); setEditingText(true) }}
-              className="text-white text-xl font-bold px-2 py-2 cursor-text hover:bg-slate-800/40 rounded transition-colors h-full flex items-center"
-            >
-              {config.content || <span className="text-slate-600 italic font-normal text-sm">Click to edit heading…</span>}
-            </h2>
-          )
-        )}
-        {widget.type === 'text' && (
-          editingText ? (
-            <textarea
-              autoFocus
-              value={localContent}
-              onChange={e => setLocalContent(e.target.value)}
-              onBlur={commitText}
-              onKeyDown={e => { if (e.key === 'Escape') commitText() }}
-              className="w-full h-full bg-transparent text-slate-300 text-sm px-2 py-1 outline-none resize-none border border-slate-600 rounded"
-            />
-          ) : (
-            <p
-              onClick={e => { e.stopPropagation(); setEditingText(true) }}
-              className="text-slate-300 text-sm px-2 py-1 cursor-text leading-relaxed hover:bg-slate-800/40 rounded transition-colors h-full whitespace-pre-wrap overflow-auto"
-            >
-              {config.content || <span className="text-slate-600 italic">Click to edit text…</span>}
-            </p>
-          )
-        )}
       </div>
     </div>
   )
@@ -419,8 +481,9 @@ export default function DashboardBuilder() {
   const addWidget = useCallback((type, sourceId) => {
     const widgetId = Date.now().toString()
     const size = DEFAULT_SIZE[type]
+    const mins = MIN_SIZE[type]
     const maxY = localLayout.reduce((max, l) => Math.max(max, l.y + l.h), 0)
-    setLocalLayout(prev => [...prev, { i: widgetId, x: 0, y: maxY, ...size, minW: 2, minH: 1 }])
+    setLocalLayout(prev => [...prev, { i: widgetId, x: 0, y: maxY, ...size, ...mins }])
     updateDashboard(id, {
       widgets: [...widgets, {
         id: widgetId, type, sourceId: sourceId || null,
@@ -499,8 +562,9 @@ export default function DashboardBuilder() {
   }
 
   return (
-    // h-full works because App sets the main to overflow-hidden flex-1 min-h-0 for the builder
     <div className="flex h-full">
+      {/* Inject resize-handle styles once */}
+      <style>{HANDLE_CSS}</style>
       {/* Sidebar */}
       <Sidebar saved={saved} widgets={widgets} onAddWidget={addWidget} />
 
@@ -566,7 +630,8 @@ export default function DashboardBuilder() {
                 onDragStop={persistLayout}
                 onResizeStop={persistLayout}
                 draggableHandle=".drag-handle"
-                resizeHandles={['se']}
+                draggableCancel="input,textarea"
+                resizeHandles={['n', 's', 'e', 'w', 'sw', 'nw', 'se', 'ne']}
               >
                 {widgets.map(w => {
                   const savedChart = w.type === 'chart'
