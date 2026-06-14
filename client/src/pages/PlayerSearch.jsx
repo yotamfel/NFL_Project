@@ -15,13 +15,13 @@ const TEAMS = [
 const FEATURE_CARDS = [
   {
     icon: '📊', title: 'Career Stats',
-    desc: 'Season-by-season breakdowns with trend charts',
+    desc: 'Season-by-season breakdowns with trend charts, advanced metrics, NGS and snap counts',
     href: '/player/MahoPa00',
     color: '#3b82f6', dark: '#1e3a5f',
   },
   {
     icon: '⚖️', title: 'Compare Players',
-    desc: 'Side-by-side career comparison across any category',
+    desc: 'Side-by-side career comparison across any stat category',
     href: '/comparison',
     color: '#fbbf24', dark: '#451a03',
   },
@@ -42,6 +42,12 @@ const FEATURE_CARDS = [
     desc: 'Track how the whole league has evolved season by season',
     href: '/trends',
     color: '#f472b6', dark: '#500724',
+  },
+  {
+    icon: '🔖', title: 'Saved & Notes',
+    desc: 'Bookmark players, comparisons and searches — add personal notes to each',
+    href: '/saved',
+    color: '#34d399', dark: '#064e3b',
   },
 ]
 
@@ -103,6 +109,14 @@ export default function PlayerSearch() {
         </h1>
         <p className="text-slate-400 text-sm tracking-wide">
           11,000+ players &nbsp;·&nbsp; 25 seasons &nbsp;·&nbsp; 32 teams
+        </p>
+        <p className="text-slate-400 text-sm mt-4 leading-relaxed max-w-md mx-auto">
+          An NFL analytics platform built on a full historical database.
+          Search players, compare careers, explore the draft, run AI-powered queries, track league trends, and save your work.
+          <br />
+          <span className="text-slate-500 text-xs mt-1 inline-block">
+            Full details in the <a href="/guide" className="text-amber-500/70 hover:text-amber-400 transition-colors">Guide</a>.
+          </span>
         </p>
       </div>
 
