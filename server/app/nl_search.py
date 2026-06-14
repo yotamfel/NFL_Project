@@ -138,7 +138,14 @@ injuries(player_id, season, week, game_type, team,
 7. adv_receiving, ngs_passing, ngs_rushing, snap_counts only cover 2016-2025
    (snap_counts from 2012). Do not query these for seasons before their
    coverage start.
-8. injuries.report_status 'Out' = missed the game; 'Questionable'/'Doubtful'
+8. For NGS leaderboards (cpoe, ryoe_per_att, efficiency, avg_ttt, etc.) always
+   add a minimum volume filter to avoid small-sample distortion:
+   ngs_passing: HAVING SUM(att) >= 100  (join passing_seasons for att)
+   or at minimum: COUNT(ng.season) >= 2 seasons.
+   ngs_rushing: HAVING COUNT(nr.season) >= 1 AND MIN(nr.season) is enough,
+   but prefer joining offense_seasons and filtering att >= 50.
+   Without this, players with 1-2 games dominate leaderboards nonsensically.
+9. injuries.report_status 'Out' = missed the game; 'Questionable'/'Doubtful'
    = may have played. To count games missed, filter on report_status = 'Out'
    AND game_type = 'REG'.
 9. DATA STARTS AT 2000. Career totals for players whose careers began before
