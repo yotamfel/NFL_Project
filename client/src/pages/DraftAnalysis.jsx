@@ -8,6 +8,7 @@ import { api } from '../api'
 import { useApi } from '../hooks/useApi'
 import { Loading, ErrorMsg } from '../components/Status'
 import StatTable from '../components/StatTable'
+import { ExportableChart } from '../components/StatChart'
 
 const DRAFT_COLS = [
   { key: 'draft_year',  label: 'Year' },
@@ -427,37 +428,39 @@ function DraftScatter({ results, statLabel: yLabel }) {
       <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-4">
         Scatter — Round vs {yLabel}
       </p>
-      <ResponsiveContainer width="100%" height={260}>
-        <ScatterChart margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-          <XAxis dataKey="x" type="number" name="Round"
-            domain={[1, 7]} ticks={[1,2,3,4,5,6,7]}
-            stroke="#475569" tick={{ fill: '#94a3b8', fontSize: 12 }} tickLine={false}
-            label={{ value: 'Round', position: 'insideBottom', offset: -2, fill: '#475569', fontSize: 11 }} />
-          <YAxis dataKey="y" type="number" name={yLabel}
-            stroke="#475569" tick={{ fill: '#94a3b8', fontSize: 12 }} width={48} />
-          <RTooltip
-            cursor={{ strokeDasharray: '3 3' }}
-            content={({ active, payload }) => {
-              if (!active || !payload?.length) return null
-              const d = payload[0]?.payload
-              return (
-                <div className="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs shadow-xl">
-                  <p className="text-white font-semibold">{d.name}</p>
-                  <p className="text-slate-400">{d.pos} · Round {d.x}</p>
-                  <p className="text-amber-300 font-mono">{yLabel}: {Number(d.y).toLocaleString()}</p>
-                </div>
-              )
-            }}
-          />
-          <Scatter data={dots} onClick={d => d.id && navigate(`/player/${d.id}`)}
-            style={{ cursor: 'pointer' }}>
-            {dots.map((d, i) => (
-              <Cell key={i} fill={posColor(d.pos)} fillOpacity={0.8} />
-            ))}
-          </Scatter>
-        </ScatterChart>
-      </ResponsiveContainer>
+      <ExportableChart title={`Draft — Round vs ${yLabel}`}>
+        <ResponsiveContainer width="100%" height={260}>
+          <ScatterChart margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+            <XAxis dataKey="x" type="number" name="Round"
+              domain={[1, 7]} ticks={[1,2,3,4,5,6,7]}
+              stroke="#475569" tick={{ fill: '#94a3b8', fontSize: 12 }} tickLine={false}
+              label={{ value: 'Round', position: 'insideBottom', offset: -2, fill: '#475569', fontSize: 11 }} />
+            <YAxis dataKey="y" type="number" name={yLabel}
+              stroke="#475569" tick={{ fill: '#94a3b8', fontSize: 12 }} width={48} />
+            <RTooltip
+              cursor={{ strokeDasharray: '3 3' }}
+              content={({ active, payload }) => {
+                if (!active || !payload?.length) return null
+                const d = payload[0]?.payload
+                return (
+                  <div className="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs shadow-xl">
+                    <p className="text-white font-semibold">{d.name}</p>
+                    <p className="text-slate-400">{d.pos} · Round {d.x}</p>
+                    <p className="text-amber-300 font-mono">{yLabel}: {Number(d.y).toLocaleString()}</p>
+                  </div>
+                )
+              }}
+            />
+            <Scatter data={dots} onClick={d => d.id && navigate(`/player/${d.id}`)}
+              style={{ cursor: 'pointer' }}>
+              {dots.map((d, i) => (
+                <Cell key={i} fill={posColor(d.pos)} fillOpacity={0.8} />
+              ))}
+            </Scatter>
+          </ScatterChart>
+        </ResponsiveContainer>
+      </ExportableChart>
       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
         {[...new Set(dots.map(d => d.pos))].filter(Boolean).sort().map(p => (
           <span key={p} className="flex items-center gap-1.5 text-xs text-slate-400">

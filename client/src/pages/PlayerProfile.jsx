@@ -8,7 +8,7 @@ import { api } from '../api'
 import { useApi } from '../hooks/useApi'
 import { Loading, ErrorMsg } from '../components/Status'
 import StatTable from '../components/StatTable'
-import { CareerLineChart } from '../components/StatChart'
+import { CareerLineChart, ExportableChart } from '../components/StatChart'
 import { posColor, posGradient, CARD_STRIPES } from '../utils/posColors'
 import { useUser } from '../context/UserContext'
 import { STAT_DEFS } from '../utils/statDefinitions'
@@ -445,7 +445,7 @@ function AdvReceivingSection({ playerId, pos, accentColor }) {
 const SNAP_OFFENSE_POS = new Set(['QB','RB','WR','TE','OL','OT','OG','C','HB','FB'])
 const SNAP_DEFENSE_POS = new Set(['DE','DT','DL','NT','LB','ILB','OLB','MLB','CB','S','FS','SS','DB'])
 
-function SnapCountsSection({ playerId, pos, accentColor }) {
+function SnapCountsSection({ playerId, pos, accentColor, playerName }) {
   const [snapData,     setSnapData]     = useState(null)
   const [selectedSeason, setSelectedSeason] = useState(null)
   const [weekData,     setWeekData]     = useState(null)
@@ -516,29 +516,31 @@ function SnapCountsSection({ playerId, pos, accentColor }) {
           <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">
             {selectedSeason} — {snapLabel} by week
           </p>
-          <ResponsiveContainer width="100%" height={160}>
-            <BarChart data={weeks} margin={{ top: 0, right: 8, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-              <XAxis dataKey="week" stroke="#475569" tick={{ fill: '#64748b', fontSize: 10 }} tickLine={false} />
-              <YAxis domain={[0, 100]} stroke="#475569" tick={{ fill: '#64748b', fontSize: 10 }}
-                tickFormatter={v => `${v}%`} width={36} />
-              <ReferenceLine y={100} stroke="#334155" strokeDasharray="3 3" />
-              <RTooltip
-                cursor={{ fill: '#1e293b' }}
-                content={({ active, payload, label }) => {
-                  if (!active || !payload?.length) return null
-                  const d = payload[0]?.payload
-                  return (
-                    <div className="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs shadow-xl">
-                      <p className="text-white font-bold">{label} vs {d.opp}</p>
-                      <p style={{ color: accentColor }}>{snapLabel}: {d.pct}%</p>
-                    </div>
-                  )
-                }}
-              />
-              <Bar dataKey="pct" radius={[2, 2, 0, 0]} fill={accentColor} fillOpacity={0.8} />
-            </BarChart>
-          </ResponsiveContainer>
+          <ExportableChart title={`${playerName} — ${snapLabel} ${selectedSeason} by week`}>
+            <ResponsiveContainer width="100%" height={160}>
+              <BarChart data={weeks} margin={{ top: 0, right: 8, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                <XAxis dataKey="week" stroke="#475569" tick={{ fill: '#64748b', fontSize: 10 }} tickLine={false} />
+                <YAxis domain={[0, 100]} stroke="#475569" tick={{ fill: '#64748b', fontSize: 10 }}
+                  tickFormatter={v => `${v}%`} width={36} />
+                <ReferenceLine y={100} stroke="#334155" strokeDasharray="3 3" />
+                <RTooltip
+                  cursor={{ fill: '#1e293b' }}
+                  content={({ active, payload, label }) => {
+                    if (!active || !payload?.length) return null
+                    const d = payload[0]?.payload
+                    return (
+                      <div className="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs shadow-xl">
+                        <p className="text-white font-bold">{label} vs {d.opp}</p>
+                        <p style={{ color: accentColor }}>{snapLabel}: {d.pct}%</p>
+                      </div>
+                    )
+                  }}
+                />
+                <Bar dataKey="pct" radius={[2, 2, 0, 0]} fill={accentColor} fillOpacity={0.8} />
+              </BarChart>
+            </ResponsiveContainer>
+          </ExportableChart>
         </div>
       )}
 
@@ -548,27 +550,29 @@ function SnapCountsSection({ playerId, pos, accentColor }) {
           <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">
             Career — avg {snapLabel} per season
           </p>
-          <ResponsiveContainer width="100%" height={120}>
-            <BarChart data={careerBars} margin={{ top: 0, right: 8, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-              <XAxis dataKey="season" stroke="#475569" tick={{ fill: '#64748b', fontSize: 10 }} tickLine={false} />
-              <YAxis domain={[0, 100]} stroke="#475569" tick={{ fill: '#64748b', fontSize: 10 }}
-                tickFormatter={v => `${v}%`} width={36} />
-              <RTooltip
-                cursor={{ fill: '#1e293b' }}
-                content={({ active, payload, label }) => {
-                  if (!active || !payload?.length) return null
-                  return (
-                    <div className="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs shadow-xl">
-                      <p className="text-white font-bold">{label}</p>
-                      <p style={{ color: accentColor }}>{snapLabel}: {payload[0]?.value}%</p>
-                    </div>
-                  )
-                }}
-              />
-              <Bar dataKey="pct" radius={[2, 2, 0, 0]} fill={accentColor} fillOpacity={0.6} />
-            </BarChart>
-          </ResponsiveContainer>
+          <ExportableChart title={`${playerName} — ${snapLabel} career`}>
+            <ResponsiveContainer width="100%" height={120}>
+              <BarChart data={careerBars} margin={{ top: 0, right: 8, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                <XAxis dataKey="season" stroke="#475569" tick={{ fill: '#64748b', fontSize: 10 }} tickLine={false} />
+                <YAxis domain={[0, 100]} stroke="#475569" tick={{ fill: '#64748b', fontSize: 10 }}
+                  tickFormatter={v => `${v}%`} width={36} />
+                <RTooltip
+                  cursor={{ fill: '#1e293b' }}
+                  content={({ active, payload, label }) => {
+                    if (!active || !payload?.length) return null
+                    return (
+                      <div className="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs shadow-xl">
+                        <p className="text-white font-bold">{label}</p>
+                        <p style={{ color: accentColor }}>{snapLabel}: {payload[0]?.value}%</p>
+                      </div>
+                    )
+                  }}
+                />
+                <Bar dataKey="pct" radius={[2, 2, 0, 0]} fill={accentColor} fillOpacity={0.6} />
+              </BarChart>
+            </ResponsiveContainer>
+          </ExportableChart>
         </div>
       )}
     </div>
@@ -963,7 +967,7 @@ export default function PlayerProfile() {
       <InjurySection playerId={player.player_id} accentColor={c.hex} />
       <AdvReceivingSection playerId={player.player_id} pos={player.pos} accentColor={c.hex} />
       <NgsSection playerId={player.player_id} pos={player.pos} accentColor={c.hex} />
-      <SnapCountsSection playerId={player.player_id} pos={player.pos} accentColor={c.hex} />
+      <SnapCountsSection playerId={player.player_id} pos={player.pos} accentColor={c.hex} playerName={player.player_name} />
 
       <div className="text-center pb-4">
         <Link to="/comparison" className="text-sm transition-colors hover:opacity-80"

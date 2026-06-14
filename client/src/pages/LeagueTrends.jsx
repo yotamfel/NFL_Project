@@ -6,6 +6,7 @@ import {
 } from 'recharts'
 import { api } from '../api'
 import { Loading, ErrorMsg } from '../components/Status'
+import { ExportableChart } from '../components/StatChart'
 
 // ── Stat catalogue ────────────────────────────────────────────────────────────
 const STAT_OPTIONS = {
@@ -447,39 +448,41 @@ export default function LeagueTrends() {
                 </span>
               )}
             </p>
-            <ResponsiveContainer width="100%" height={Math.max(320, teamData.length * 22)}>
-              <BarChart data={teamData} layout="vertical"
-                margin={{ top: 0, right: 60, left: 40, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" horizontal={false} />
-                <XAxis type="number" stroke="#475569"
-                  tick={{ fill: '#94a3b8', fontSize: 11 }} tickLine={false}
-                  tickFormatter={yFmt} />
-                <YAxis type="category" dataKey="team" stroke="#475569"
-                  tick={{ fill: '#cbd5e1', fontSize: 12, fontWeight: 600 }} tickLine={false} width={44} />
-                <Tooltip
-                  cursor={{ fill: '#1e293b' }}
-                  content={({ active, payload, label }) => {
-                    if (!active || !payload?.length) return null
-                    return (
-                      <div className="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs shadow-xl">
-                        <p className="text-white font-bold">{label}</p>
-                        <p className="text-slate-300">{fmtVal(payload[0]?.value)}</p>
-                      </div>
-                    )
-                  }}
-                />
-                <Bar dataKey="value" radius={[0, 3, 3, 0]}>
-                  {teamData.map((row, i) => (
-                    <Cell key={i}
-                      fill={teamColor(row.team)}
-                      fillOpacity={i < 3 ? 1 : 0.75} />
-                  ))}
-                  <LabelList dataKey="value" position="right"
-                    formatter={v => fmtVal(v)}
-                    style={{ fill: '#94a3b8', fontSize: 11 }} />
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+            <ExportableChart title={`${statInfo?.label ?? stat} by team — ${aggInfo?.label}`}>
+              <ResponsiveContainer width="100%" height={Math.max(320, teamData.length * 22)}>
+                <BarChart data={teamData} layout="vertical"
+                  margin={{ top: 0, right: 60, left: 40, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" horizontal={false} />
+                  <XAxis type="number" stroke="#475569"
+                    tick={{ fill: '#94a3b8', fontSize: 11 }} tickLine={false}
+                    tickFormatter={yFmt} />
+                  <YAxis type="category" dataKey="team" stroke="#475569"
+                    tick={{ fill: '#cbd5e1', fontSize: 12, fontWeight: 600 }} tickLine={false} width={44} />
+                  <Tooltip
+                    cursor={{ fill: '#1e293b' }}
+                    content={({ active, payload, label }) => {
+                      if (!active || !payload?.length) return null
+                      return (
+                        <div className="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs shadow-xl">
+                          <p className="text-white font-bold">{label}</p>
+                          <p className="text-slate-300">{fmtVal(payload[0]?.value)}</p>
+                        </div>
+                      )
+                    }}
+                  />
+                  <Bar dataKey="value" radius={[0, 3, 3, 0]}>
+                    {teamData.map((row, i) => (
+                      <Cell key={i}
+                        fill={teamColor(row.team)}
+                        fillOpacity={i < 3 ? 1 : 0.75} />
+                    ))}
+                    <LabelList dataKey="value" position="right"
+                      formatter={v => fmtVal(v)}
+                      style={{ fill: '#94a3b8', fontSize: 11 }} />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </ExportableChart>
           </div>
 
           {/* Team table */}
@@ -553,42 +556,46 @@ export default function LeagueTrends() {
               )}
             </p>
 
-            <ResponsiveContainer width="100%" height={320}>
-              <LineChart data={chartData} margin={{ top: 5, right: 24, left: 10, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                <XAxis dataKey="season" stroke="#475569"
-                  tick={{ fill: '#94a3b8', fontSize: 12 }} tickLine={false} />
-                <YAxis stroke="#475569" tick={{ fill: '#94a3b8', fontSize: 12 }}
-                  tickFormatter={yFmt} width={52} />
-                <Tooltip content={
-                  <TrendTooltip prevByKey={prevByKey} lineLabels={lineLabels} />
-                } />
-                {comparing && (
-                  <Legend
-                    formatter={(value) => <span style={{ color: '#94a3b8', fontSize: 12 }}>{lineLabels[value]}</span>}
-                  />
-                )}
-                {NOTABLE.map(n =>
-                  chartData.some(d => d.season === n.season) && (
-                    <ReferenceLine key={n.season} x={n.season} stroke={n.color}
-                      strokeDasharray="4 3" strokeOpacity={0.6}>
-                      <Label value={n.label} position="top"
-                        style={{ fill: n.color, fontSize: 10, opacity: 0.8 }} />
-                    </ReferenceLine>
-                  )
-                )}
-                <Line type="monotone" dataKey="t1" name="t1"
-                  stroke={LINE_COLORS[0]} strokeWidth={2.5}
-                  dot={{ r: 3, fill: LINE_COLORS[0], strokeWidth: 0 }}
-                  activeDot={{ r: 6, fill: '#60a5fa' }} connectNulls />
-                {comparing && (
-                  <Line type="monotone" dataKey="t2" name="t2"
-                    stroke={LINE_COLORS[1]} strokeWidth={2.5}
-                    dot={{ r: 3, fill: LINE_COLORS[1], strokeWidth: 0 }}
-                    activeDot={{ r: 6, fill: '#fb923c' }} connectNulls />
-                )}
-              </LineChart>
-            </ResponsiveContainer>
+            <ExportableChart title={comparing
+              ? `${statInfo?.label ?? stat} — ${team1Label} vs ${team2Label}`
+              : `${statInfo?.label ?? stat} — ${aggInfo?.label}`}>
+              <ResponsiveContainer width="100%" height={320}>
+                <LineChart data={chartData} margin={{ top: 5, right: 24, left: 10, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                  <XAxis dataKey="season" stroke="#475569"
+                    tick={{ fill: '#94a3b8', fontSize: 12 }} tickLine={false} />
+                  <YAxis stroke="#475569" tick={{ fill: '#94a3b8', fontSize: 12 }}
+                    tickFormatter={yFmt} width={52} />
+                  <Tooltip content={
+                    <TrendTooltip prevByKey={prevByKey} lineLabels={lineLabels} />
+                  } />
+                  {comparing && (
+                    <Legend
+                      formatter={(value) => <span style={{ color: '#94a3b8', fontSize: 12 }}>{lineLabels[value]}</span>}
+                    />
+                  )}
+                  {NOTABLE.map(n =>
+                    chartData.some(d => d.season === n.season) && (
+                      <ReferenceLine key={n.season} x={n.season} stroke={n.color}
+                        strokeDasharray="4 3" strokeOpacity={0.6}>
+                        <Label value={n.label} position="top"
+                          style={{ fill: n.color, fontSize: 10, opacity: 0.8 }} />
+                      </ReferenceLine>
+                    )
+                  )}
+                  <Line type="monotone" dataKey="t1" name="t1"
+                    stroke={LINE_COLORS[0]} strokeWidth={2.5}
+                    dot={{ r: 3, fill: LINE_COLORS[0], strokeWidth: 0 }}
+                    activeDot={{ r: 6, fill: '#60a5fa' }} connectNulls />
+                  {comparing && (
+                    <Line type="monotone" dataKey="t2" name="t2"
+                      stroke={LINE_COLORS[1]} strokeWidth={2.5}
+                      dot={{ r: 3, fill: LINE_COLORS[1], strokeWidth: 0 }}
+                      activeDot={{ r: 6, fill: '#fb923c' }} connectNulls />
+                  )}
+                </LineChart>
+              </ResponsiveContainer>
+            </ExportableChart>
 
             {/* Reference line legend */}
             {NOTABLE.some(n => chartData.some(d => d.season === n.season)) && (
