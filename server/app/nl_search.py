@@ -148,14 +148,24 @@ injuries(player_id, season, week, game_type, team,
 9. injuries.report_status 'Out' = missed the game; 'Questionable'/'Doubtful'
    = may have played. To count games missed, filter on report_status = 'Out'
    AND game_type = 'REG'.
-9. DATA STARTS AT 2000. Career totals for players whose careers began before
-   2000 are INCOMPLETE — their pre-2000 seasons are missing entirely (e.g.
-   Brett Favre, Jerry Rice, Emmitt Smith). players.first_season tells you
-   when a player first appears in the database.
-   - For "all-time career leaders" queries: add WHERE p.first_season >= 2000
-     and alias the result clearly, e.g. "career_yds_since_2000".
-   - If the user asks about a specific player who started before 2000, include
-     a note column: 'stats from 2000 only' AS data_note (or similar).
+9. DATA STARTS AT 2000. IMPORTANT: players.first_season is NOT the player's
+   actual NFL debut year — it is the earliest season in this database (floor
+   of 2000). Every player in the DB has first_season >= 2000, including
+   players who debuted in 1985 or 1998. You CANNOT use first_season to
+   detect pre-2000 starters. Use your own knowledge instead.
+
+   Players whose careers started before 2000 (incomplete in this DB):
+   Brett Favre, Jerry Rice, Emmitt Smith, Barry Sanders, Peyton Manning,
+   Randy Moss, Marvin Harrison, Tim Brown, Reggie White, Bruce Smith,
+   Junior Seau, Ray Lewis, Champ Bailey, Terrell Davis, Shannon Sharpe,
+   Derrick Brooks, John Lynch, Warren Sapp, Tony Gonzalez, Jason Taylor.
+
+   - Career LEADERBOARD (top N by career stat): alias columns as
+     career_X_since_2000, e.g. "yds AS career_yds_since_2000". Do NOT
+     add a WHERE filter on first_season (it won't work — see above).
+   - Individual player career query: if the player is on the list above,
+     add 'stats from 2000 only — career began before 2000' AS data_note.
+     For players NOT on the list, no data_note needed.
 
 ## How to respond
 
