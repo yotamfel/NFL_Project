@@ -8,12 +8,13 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
 from app.db import engine
-from app.routers import admin, anomalies, comparison, draft, feedback, players, search, trends
+from app.routers import (
+    admin, anomalies, comparison, draft, feedback, players, search, trends,
+    auth as auth_router, saved, user_feedback, notifications, users,
+)
 
 app = FastAPI(title="NFL Data Platform API")
 
-# Kept for development: in production the client and server share an origin
-# so the browser never sends a cross-origin request anyway.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -21,16 +22,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# All API routes live under /api so they don't conflict with React Router
-# paths like /draft or /search.
+app.include_router(auth_router.router, prefix="/api")
 app.include_router(players.router, prefix="/api")
 app.include_router(comparison.router, prefix="/api")
 app.include_router(draft.router, prefix="/api")
 app.include_router(search.router,  prefix="/api")
 app.include_router(trends.router,   prefix="/api")
-app.include_router(feedback.router, prefix="/api")
+app.include_router(feedback.router, prefix="/api")   # AI thumbs → /api/ai/feedback
 app.include_router(anomalies.router, prefix="/api")
 app.include_router(admin.router,    prefix="/api")
+app.include_router(saved.router,    prefix="/api")
+app.include_router(user_feedback.router, prefix="/api")
+app.include_router(notifications.router, prefix="/api")
+app.include_router(users.router,    prefix="/api")
 
 
 @app.get("/api/health")
@@ -67,4 +71,7 @@ if _DIST.is_dir():
 
     @app.get("/{full_path:path}")
     def serve_ui(full_path: str):
+        file = _DIST / full_path
+        if file.is_file():
+            return FileResponse(file)
         return FileResponse(_DIST / "index.html")
