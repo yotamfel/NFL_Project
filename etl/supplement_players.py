@@ -96,7 +96,18 @@ def supplement_players():
     with engine.begin() as conn:
         extended = conn.execute(text("""
             UPDATE players
-            SET last_season = ws.max_season
+            SET last_season = ws.max_season,
+                n_seasons = (
+                    SELECT COUNT(DISTINCT season) FROM (
+                        SELECT season FROM passing_seasons WHERE player_id = players.player_id
+                        UNION SELECT season FROM offense_seasons  WHERE player_id = players.player_id
+                        UNION SELECT season FROM defense_seasons  WHERE player_id = players.player_id
+                        UNION SELECT season FROM kicking_seasons  WHERE player_id = players.player_id
+                        UNION SELECT season FROM punting_seasons  WHERE player_id = players.player_id
+                        UNION SELECT season FROM returns_seasons  WHERE player_id = players.player_id
+                        UNION SELECT season FROM weekly_stats     WHERE player_id = players.player_id
+                    ) all_seasons
+                )
             FROM (
                 SELECT player_id, MAX(season) AS max_season
                 FROM weekly_stats
