@@ -38,6 +38,41 @@ def _team_codes(team: str) -> list[str]:
     return _TEAM_ALIASES.get(team.upper(), [team.upper()])
 
 
+# PFR stores side-specific position tags (LCB, RCB, FS, SS, …).
+# Map each variant → canonical position the platform uses.
+_POS_NORMALIZE: dict[str, str] = {
+    "LCB": "CB", "RCB": "CB", "NCB": "CB", "DB": "CB",
+    "FS": "S", "SS": "S",
+    "ILB": "LB", "OLB": "LB", "MLB": "LB",
+    "LILB": "LB", "RILB": "LB", "ROLB": "LB", "LOLB": "LB",
+    "DE": "DL", "DT": "DL", "NT": "DL",
+    "T": "OL", "G": "OL", "C": "OL",
+    "LT": "OL", "RT": "OL", "LG": "OL", "RG": "OL",
+    "OT": "OL", "OG": "OL", "LS": "OL",
+}
+_POS_EXPAND: dict[str, list[str]] = {
+    "CB": ["CB", "LCB", "RCB", "NCB", "DB"],
+    "S":  ["S", "FS", "SS"],
+    "LB": ["LB", "ILB", "OLB", "MLB", "LILB", "RILB", "ROLB", "LOLB"],
+    "DL": ["DL", "DE", "DT", "NT"],
+    "OL": ["OL", "T", "G", "C", "LT", "RT", "LG", "RG", "OT", "OG", "LS"],
+}
+
+
+def _normalize_pos(pos: str | None) -> str | None:
+    if not pos:
+        return pos
+    return _POS_NORMALIZE.get(pos.upper(), pos.upper())
+
+
+def _pos_variants(pos: str | None) -> list[str] | None:
+    """All DB-level pos values that map to a canonical pos (for WHERE filtering)."""
+    if not pos:
+        return None
+    up = pos.upper()
+    return _POS_EXPAND.get(up, [up])
+
+
 # Whitelisted stat columns per category — stat is interpolated into SQL after
 # this check, so the whitelist is the sole injection guard.
 _ALLOWED_STATS: dict[str, frozenset[str]] = {
@@ -89,15 +124,15 @@ def popular_players(pos: str | None = None, limit: int = 10) -> list[dict]:
                MAX(d.career_av) AS career_av
         FROM players p
         JOIN draft d ON d.player_id = p.player_id
-        WHERE (:pos IS NULL OR UPPER(p.pos) = UPPER(:pos))
+        WHERE (:pos IS NULL OR UPPER(p.pos) = ANY(:pos_variants))
           AND d.career_av IS NOT NULL
         GROUP BY p.player_id, p.player_name, p.pos, p.first_season, p.last_season
         ORDER BY career_av DESC
         LIMIT :limit
     """)
     with engine.connect() as conn:
-        rows = conn.execute(sql, {"pos": pos, "limit": limit}).fetchall()
-    return [dict(r._mapping) for r in rows]
+        rows = conn.execute(sql, {"pos": pos, "pos_variants": _pos_variants(pos), "limit": limit}).fetchall()
+    return [{**dict(r._mapping), "pos": _normalize_pos(r._mapping.get("pos"))} for r in rows]
 
 
 def top_players_by_stat(
@@ -118,7 +153,7 @@ def top_players_by_stat(
                MAX(s.{stat}) AS best_value
         FROM {category}_seasons s
         JOIN players p ON p.player_id = s.player_id
-        WHERE (:pos    IS NULL OR UPPER(p.pos) = UPPER(:pos))
+        WHERE (:pos    IS NULL OR UPPER(p.pos) = ANY(:pos_variants))
           AND (:season IS NULL OR s.season = :season)
           AND s.{stat} IS NOT NULL
         GROUP BY p.player_id, p.player_name, p.pos
@@ -128,8 +163,8 @@ def top_players_by_stat(
     """)
 
     with engine.connect() as conn:
-        rows = conn.execute(sql, {"pos": pos, "season": season, "min_val": min_val, "limit": limit}).fetchall()
-    return [dict(r._mapping) for r in rows]
+        rows = conn.execute(sql, {"pos": pos, "pos_variants": _pos_variants(pos), "season": season, "min_val": min_val, "limit": limit}).fetchall()
+    return [{**dict(r._mapping), "pos": _normalize_pos(r._mapping.get("pos"))} for r in rows]
 
 
 def search_players(
@@ -139,7 +174,7 @@ def search_players(
     season: int | None = None,
     team: str | None = None,
 ) -> list[Player]:
-    params: dict = {"pattern": f"%{query}%", "limit": limit, "pos": pos, "season": season, "teams": []}
+    params: dict = {"pattern": f"%{query}%", "limit": limit, "pos": pos, "pos_variants": _pos_variants(pos), "season": season, "teams": []}
 
     if team:
         # team lives on the *_seasons tables, not on players directly.
@@ -163,7 +198,7 @@ def search_players(
             FROM players p
             JOIN team_players tp ON tp.player_id = p.player_id
             WHERE p.player_name ILIKE :pattern
-              AND (:pos    IS NULL OR UPPER(p.pos) = UPPER(:pos))
+              AND (:pos    IS NULL OR UPPER(p.pos) = ANY(:pos_variants))
               AND (:season IS NULL OR (p.first_season <= :season AND p.last_season >= :season))
             ORDER BY p.last_season DESC NULLS LAST, p.player_name
             LIMIT :limit
@@ -173,7 +208,7 @@ def search_players(
             SELECT player_id, player_name, pos, first_season, last_season, n_seasons
             FROM players
             WHERE player_name ILIKE :pattern
-              AND (:pos    IS NULL OR UPPER(pos) = UPPER(:pos))
+              AND (:pos    IS NULL OR UPPER(pos) = ANY(:pos_variants))
               AND (:season IS NULL OR (first_season <= :season AND last_season >= :season))
             ORDER BY last_season DESC NULLS LAST, player_name
             LIMIT :limit
@@ -181,7 +216,10 @@ def search_players(
 
     with engine.connect() as conn:
         rows = conn.execute(sql, params).fetchall()
-    return [Player(**row._mapping) for row in rows]
+    players = [Player(**row._mapping) for row in rows]
+    for p in players:
+        p.pos = _normalize_pos(p.pos)
+    return players
 
 
 def _category_stats(conn, player_id: str, category: str) -> CategoryStats | None:
@@ -226,6 +264,7 @@ def get_player_profile(player_id: str) -> PlayerProfile | None:
         if player_row is None:
             return None
         player = Player(**player_row._mapping)
+        player.pos = _normalize_pos(player.pos)
 
         categories = [
             stats for stats in (_category_stats(conn, player_id, cat) for cat in CATEGORIES)
