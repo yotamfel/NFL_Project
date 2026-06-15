@@ -88,10 +88,16 @@ export default function Nav() {
 
   return (
     <nav className="bg-slate-900/95 backdrop-blur border-b border-slate-800 sticky top-0 z-50">
-      <div className="px-4 flex items-center gap-2 h-12 overflow-x-auto scrollbar-none">
+      {/*
+        Split into two sections so overflow-x-auto on the links section
+        does NOT clip the absolutely-positioned dropdowns on the right.
+        (Setting overflow-x on a container implicitly changes overflow-y
+        from 'visible', which hides children that extend below the nav.)
+      */}
+      <div className="px-4 flex items-center h-12">
 
-        {/* Logo */}
-        <NavLink to="/" className="flex items-center gap-1.5 shrink-0 mr-1">
+        {/* Logo — never shrinks */}
+        <NavLink to="/" className="flex items-center gap-1.5 shrink-0 mr-2">
           <img src="/logo.png" alt="" className="w-6 h-6" />
           <span className="font-black text-sm tracking-tight whitespace-nowrap">
             <span className="bg-gradient-to-r from-amber-400 to-yellow-200 bg-clip-text text-transparent">FOURTH</span>
@@ -99,18 +105,18 @@ export default function Nav() {
           </span>
         </NavLink>
 
-        {/* Nav links */}
-        {LINKS.map(({ to, label }) => (
-          <NavLink key={to} to={to} className={({ isActive }) =>
-            `text-xs font-medium px-2.5 py-1.5 rounded-lg transition-colors whitespace-nowrap shrink-0 ${
-              isActive ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-            }`
-          }>
-            {label}
-          </NavLink>
-        ))}
-
-        <div className="flex-1 min-w-2" />
+        {/* Scrollable links section — overflow only here, not on parent */}
+        <div className="flex items-center gap-1 overflow-x-auto flex-1 mr-3" style={{ scrollbarWidth: 'none' }}>
+          {LINKS.map(({ to, label }) => (
+            <NavLink key={to} to={to} className={({ isActive }) =>
+              `text-xs font-medium px-2.5 py-1.5 rounded-lg transition-colors whitespace-nowrap shrink-0 ${
+                isActive ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              }`
+            }>
+              {label}
+            </NavLink>
+          ))}
+        </div>
 
         {/* Player search */}
         <div ref={searchRef} className="relative shrink-0">
