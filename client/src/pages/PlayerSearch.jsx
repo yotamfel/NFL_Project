@@ -61,7 +61,7 @@ export default function PlayerSearch() {
 
       {/* Hero */}
       <div className="text-center mb-10">
-        <img src="/logo.png" alt="Fourth & Data" className="w-48 h-48 mx-auto mb-4" />
+        <img src="/logo.png" alt="Fourth & Data" className="w-36 h-36 mx-auto mb-4" />
         <h1 className="text-6xl font-black tracking-tighter mb-3 leading-none">
           <span className="bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 bg-clip-text text-transparent">FOURTH</span>
           <span className="text-white"> & DATA</span>
