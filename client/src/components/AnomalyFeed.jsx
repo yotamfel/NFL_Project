@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { api } from '../api'
 import { useApi } from '../hooks/useApi'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 
 const FILTERS = [
   { key: null,              label: 'All' },
@@ -82,8 +82,9 @@ function AlertCard({ alert }) {
   )
 }
 
-export default function AnomalyFeed({ limit = 12 }) {
+export default function AnomalyFeed({ limit = 12, compact = false }) {
   const [activeFilter, setActiveFilter] = useState(null)
+  const navigate = useNavigate()
 
   const { data, loading } = useApi(
     () => api.getAnomalies({ limit, alert_type: activeFilter ?? undefined }),
@@ -102,6 +103,14 @@ export default function AnomalyFeed({ limit = 12 }) {
             {season && <span className="text-slate-600 font-normal text-sm ml-2">{season}</span>}
           </h2>
         </div>
+        {compact && (
+          <button
+            onClick={() => navigate('/anomalies')}
+            className="text-xs font-semibold text-violet-400 hover:text-violet-300 transition-colors border border-violet-800 hover:border-violet-600 px-3 py-1.5 rounded-lg"
+          >
+            View all →
+          </button>
+        )}
       </div>
 
       {/* Filter chips */}

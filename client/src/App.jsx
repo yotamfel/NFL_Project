@@ -14,6 +14,7 @@ import Guide from './pages/Guide'
 import AdminAi from './pages/AdminAi'
 import Dashboard from './pages/Dashboard'
 import DashboardBuilder from './pages/DashboardBuilder'
+import Anomalies from './pages/Anomalies'
 
 function AppInner() {
   const { username } = useUser()
@@ -37,6 +38,7 @@ function AppInner() {
           <Route path="/admin/ai" element={<AdminAi />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/dashboard/:id" element={<DashboardBuilder />} />
+          <Route path="/anomalies" element={<Anomalies />} />
         </Routes>
       </main>
     </div>

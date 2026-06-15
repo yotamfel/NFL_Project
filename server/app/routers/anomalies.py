@@ -9,7 +9,7 @@ router = APIRouter(prefix="/anomalies", tags=["anomalies"])
 
 @router.get("")
 def get_anomalies(
-    limit:  int         = Query(20, ge=1, le=100),
+    limit:  int         = Query(20, ge=1, le=500),
     season: int | None  = Query(None),
     alert_type: str | None = Query(None, description="career_high | above_avg | below_avg"),
 ):
