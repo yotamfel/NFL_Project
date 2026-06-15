@@ -53,7 +53,7 @@ export default function PlayerSearch() {
           <span className="text-white"> DATA</span>
         </h1>
         <p className="text-slate-400 text-sm tracking-wide">
-          11,000+ players &nbsp;·&nbsp; 25 seasons &nbsp;·&nbsp; 32 teams
+          20,000+ players &nbsp;·&nbsp; 56 seasons &nbsp;·&nbsp; 32 teams
         </p>
         <p className="text-slate-400 text-sm mt-4 leading-relaxed max-w-md mx-auto">
           An NFL analytics platform built on a full historical database.

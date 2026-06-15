@@ -6,7 +6,7 @@ import { useUser } from '../context/UserContext'
 import { addToHistory, topSearched, dominantPos } from '../utils/searchHistory'
 
 const POSITIONS = ['QB', 'RB', 'WR', 'TE', 'OL', 'DL', 'LB', 'CB', 'S', 'K', 'P']
-const YEARS = Array.from({ length: 26 }, (_, i) => 2025 - i)
+const YEARS = Array.from({ length: 56 }, (_, i) => 2025 - i)
 const TEAMS = [
   'ARI','ATL','BAL','BUF','CAR','CHI','CIN','CLE',
   'DAL','DEN','DET','GB', 'HOU','IND','JAX','KC',

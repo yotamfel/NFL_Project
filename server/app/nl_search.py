@@ -77,8 +77,9 @@ and a `*_career` view (lifetime totals per player):
 draft(draft_year, round, pick, team, player_name, pos, age, college,
       career_av, g, pass_yds, pass_td, rush_yds, rush_td, rec_yds, rec_td,
       solo_tkl, def_int, sk, player_id)
-  One row per pick, 2000-2025. career_av = PFR Approximate Value (best
-  cross-position career-quality metric). player_id null for ~8% of picks.
+  One row per pick, 1970-2025. career_av = PFR Approximate Value (best
+  cross-position career-quality metric). player_id null for ~30% of picks.
+  Note: solo_tkl is NULL for picks from 1970-1979 (not tracked by source).
 
 combine_seasons(season, player_id, player_name, pos, school, ht, wt,
                 "_40yd", vertical, bench, broad_jump, "_3cone", shuttle,
@@ -154,8 +155,8 @@ injuries(player_id, season, week, game_type, team,
    AND game_type = 'REG'.
 9. DATA COVERAGE: seasonal stats (passing/offense/defense/kicking/punting/returns)
    go back to 1970. players.first_season accurately reflects the player's actual
-   NFL debut year (within the 1970-2025 window). Draft data starts 2000 only.
-   Combine data starts 1987.
+   NFL debut year (within the 1970-2025 window). Draft data covers 1970-2025.
+   Combine data starts 2000.
 
    Players whose careers started BEFORE 1970 have incomplete stats in this DB
    (e.g., Jim Brown retired 1965, Johnny Unitas debuted 1956). For pre-1970

@@ -11,7 +11,7 @@ import AiFeedback from '../components/AiFeedback'
 const CATEGORIES = ['passing', 'offense', 'defense', 'kicking', 'punting', 'returns']
 const BAR_COLORS = ['#60a5fa', '#fbbf24', '#4ade80', '#f87171']
 const POSITIONS  = ['QB', 'RB', 'WR', 'TE', 'OL', 'DL', 'LB', 'CB', 'S', 'K', 'P']
-const YEARS      = Array.from({ length: 26 }, (_, i) => 2025 - i)
+const YEARS      = Array.from({ length: 56 }, (_, i) => 2025 - i)
 
 const STAT_OPTIONS = {
   passing: [

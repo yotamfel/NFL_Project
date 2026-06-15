@@ -177,7 +177,7 @@ export default function LeagueTrends() {
   const [team2,      setTeam2]      = useState('')
   const [seasonFrom, setSeasonFrom] = useState('')
   const [seasonTo,   setSeasonTo]   = useState('')
-  const [metaRange,  setMetaRange]  = useState({ min: 1999, max: 2025 })
+  const [metaRange,  setMetaRange]  = useState({ min: 1970, max: 2025 })
 
   const [viewMode, setViewMode] = useState('over_time') // 'over_time' | 'by_team'
 
