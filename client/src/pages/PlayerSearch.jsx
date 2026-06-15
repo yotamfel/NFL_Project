@@ -82,7 +82,7 @@ export default function PlayerSearch() {
       </div>
 
       <div className="mt-12">
-        <AnomalyFeed limit={10} compact />
+        <AnomalyFeed limit={10} compact sort="latest" />
       </div>
     </div>
   )

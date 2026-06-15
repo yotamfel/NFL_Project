@@ -82,13 +82,13 @@ function AlertCard({ alert }) {
   )
 }
 
-export default function AnomalyFeed({ limit = 12, compact = false }) {
+export default function AnomalyFeed({ limit = 12, compact = false, season, sort }) {
   const [activeFilter, setActiveFilter] = useState(null)
   const navigate = useNavigate()
 
   const { data, loading } = useApi(
-    () => api.getAnomalies({ limit, alert_type: activeFilter ?? undefined }),
-    [activeFilter, limit]
+    () => api.getAnomalies({ limit, alert_type: activeFilter ?? undefined, season, sort }),
+    [activeFilter, limit, season, sort]
   )
 
   const season = data?.[0]?.season

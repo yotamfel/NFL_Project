@@ -119,12 +119,15 @@ export const api = {
   getComparisonNarrative: (player_ids, category, season) =>
     post('/compare/narrative', { player_ids, category, season: season || null }),
 
-  getAnomalies: ({ limit = 20, season, alert_type } = {}) => {
+  getAnomalies: ({ limit = 20, season, alert_type, sort } = {}) => {
     const p = new URLSearchParams({ limit })
     if (season)     p.set('season', season)
     if (alert_type) p.set('alert_type', alert_type)
+    if (sort)       p.set('sort', sort)
     return get(`/anomalies?${p}`)
   },
+
+  getAnomalySeasons: () => get('/anomalies/seasons'),
 
   getAdminAi: () => get('/admin/ai'),
 }
