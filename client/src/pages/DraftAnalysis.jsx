@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  ScatterChart, Scatter, XAxis, YAxis, CartesianGrid,
+  ScatterChart, Scatter, BarChart, Bar, LabelList,
+  XAxis, YAxis, CartesianGrid,
   Tooltip as RTooltip, ResponsiveContainer, Cell,
 } from 'recharts'
 import { api } from '../api'
@@ -448,6 +449,127 @@ function DraftScatter({ results, yKey = 'career_av', statLabel: yLabel }) {
   )
 }
 
+// ── Composite ranking ─────────────────────────────────────────────────────────
+// For each player, compute a z-score across all stat columns (career_av + extra criteria).
+// For steals: high z-score = big over-performer. For busts: invert so big under-performer
+// floats to the top. Normalise the composite to 0-100 for display.
+function computeRanking(results, selectedCriteria, isSteal) {
+  if (!results.length) return []
+
+  const scoreCols = [
+    'career_av',
+    ...selectedCriteria
+      .map((c, i) => c.category !== 'career_av' ? `crit_${i}_value` : null)
+      .filter(Boolean),
+  ]
+
+  const colStats = scoreCols.map(col => {
+    const vals = results.map(r => r[col]).filter(v => v != null && !isNaN(v))
+    if (vals.length < 2) return { col, mean: 0, std: 1 }
+    const mean = vals.reduce((a, b) => a + b, 0) / vals.length
+    const variance = vals.reduce((a, v) => a + (v - mean) ** 2, 0) / vals.length
+    return { col, mean, std: Math.sqrt(variance) || 1 }
+  })
+
+  const scored = results.map(r => {
+    const zs = colStats.map(({ col, mean, std }) => {
+      const v = r[col]
+      return v != null && !isNaN(v) ? (v - mean) / std : 0
+    })
+    const composite = zs.reduce((a, b) => a + b, 0) / (zs.length || 1)
+    return { ...r, _composite: isSteal ? composite : -composite }
+  })
+
+  scored.sort((a, b) => b._composite - a._composite)
+
+  const maxC = scored[0]._composite
+  const minC = scored[scored.length - 1]._composite
+  const range = maxC - minC || 1
+
+  return scored.map((r, i) => ({
+    ...r,
+    _rank:  i + 1,
+    _score: Math.round(((r._composite - minC) / range) * 100),
+  }))
+}
+
+// ── Ranking chart ─────────────────────────────────────────────────────────────
+function RankingChart({ ranked, isSteal, selectedCriteria }) {
+  const top = ranked.slice(0, 15)
+  if (top.length < 2) return null
+
+  const scoreColor = isSteal ? '#22c55e' : '#f43f5e'
+  const label = isSteal ? 'Steal Score' : 'Bust Score'
+
+  return (
+    <div className="rounded-2xl border border-slate-700/60 bg-slate-900/60 p-5">
+      <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">
+        {label} Ranking — top {top.length}
+      </p>
+      <p className="text-xs text-slate-600 mb-5">
+        Composite z-score across all criteria, normalised 0–100.
+        {isSteal ? ' Highest = biggest over-performer relative to draft slot.' : ' Highest = biggest under-performer relative to draft slot.'}
+      </p>
+
+      <ResponsiveContainer width="100%" height={top.length * 32 + 20}>
+        <BarChart layout="vertical" data={top}
+          margin={{ left: 8, right: 55, top: 0, bottom: 0 }}>
+          <XAxis type="number" domain={[0, 100]} hide />
+          <YAxis type="category" dataKey="player_name" width={150}
+            tick={{ fill: '#94a3b8', fontSize: 11 }} tickLine={false} axisLine={false} />
+          <RTooltip
+            cursor={{ fill: 'rgba(255,255,255,0.03)' }}
+            content={({ active, payload }) => {
+              if (!active || !payload?.length) return null
+              const p = payload[0]?.payload
+              return (
+                <div className="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs shadow-xl space-y-1">
+                  <p className="text-white font-semibold">{p.player_name}</p>
+                  <p className="text-slate-400">
+                    {p.pos} · Rd {p.round}, Pick {p.pick} · {p.draft_year} · {p.team}
+                  </p>
+                  <p className="text-slate-400">
+                    Career AV: <span className="text-white font-semibold">{p.career_av}</span>
+                  </p>
+                  {selectedCriteria.map((c, i) => {
+                    if (c.category === 'career_av') return null
+                    const val = p[`crit_${i}_value`]
+                    return (
+                      <p key={i} className="text-slate-400">
+                        {statLabel(c)}: <span className="text-white font-semibold">{val?.toLocaleString() ?? '—'}</span>
+                      </p>
+                    )
+                  })}
+                  <p style={{ color: scoreColor }} className="font-semibold pt-0.5">
+                    {label}: {p._score}/100
+                  </p>
+                </div>
+              )
+            }}
+          />
+          <Bar dataKey="_score" radius={[0, 4, 4, 0]}>
+            <LabelList dataKey="_score" position="right"
+              style={{ fill: '#64748b', fontSize: 11 }}
+              formatter={v => v} />
+            {top.map((p, i) => (
+              <Cell key={i} fill={posColor(p.pos)}
+                fillOpacity={0.45 + 0.55 * (p._score / 100)} />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+
+      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
+        {[...new Set(top.map(p => p.pos))].filter(Boolean).sort().map(pos => (
+          <span key={pos} className="flex items-center gap-1.5 text-xs text-slate-400">
+            <span className="w-2 h-2 rounded-full" style={{ background: posColor(pos) }} />{pos}
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ── Steal / Bust panel ────────────────────────────────────────────────────────
 function StealBustPanel({ mode }) {
   const isSteal = mode === 'steal'
@@ -459,6 +581,7 @@ function StealBustPanel({ mode }) {
   const [yearFrom,    setYearFrom]    = useState('')
   const [yearTo,      setYearTo]      = useState('')
   const [results,     setResults]     = useState(null)
+  const [ranked,      setRanked]      = useState(null)
   const [loading,     setLoading]     = useState(false)
   const [error,       setError]       = useState(null)
   const timer = useRef()
@@ -511,7 +634,7 @@ function StealBustPanel({ mode }) {
   useEffect(() => {
     clearTimeout(timer.current)
     if (!selectedIds.length || !selectedCriteria.every(isCriterionComplete)) {
-      setResults(null); setError(null); return
+      setResults(null); setRanked(null); setError(null); return
     }
     setLoading(true); setError(null)
     timer.current = setTimeout(async () => {
@@ -531,13 +654,14 @@ function StealBustPanel({ mode }) {
           draft_year_to:   yearTo   ? parseInt(yearTo)   : null,
         })
         setResults(data)
+        setRanked(computeRanking(data, selectedCriteria, isSteal))
       } catch (e) { setError(e.message) }
       finally { setLoading(false) }
     }, 350)
     return () => clearTimeout(timer.current)
   }, [fetchKey])
 
-  // Build result columns dynamically
+  // Build result columns dynamically (ranked: add # and Score columns)
   const extraCols = selectedCriteria
     .map((c, i) => ({ ...c, idx: i }))
     .filter(c => c.category !== 'career_av')
@@ -546,7 +670,9 @@ function StealBustPanel({ mode }) {
       label:  statLabel(c),
       format: v => v?.toLocaleString() ?? '—',
     }))
-  const resultCols = [...DRAFT_COLS, ...extraCols]
+  const rankCol  = { key: '_rank',  label: '#' }
+  const scoreCol = { key: '_score', label: isSteal ? 'Steal Score' : 'Bust Score', format: v => `${v}/100` }
+  const resultCols = [rankCol, ...DRAFT_COLS, ...extraCols, scoreCol]
 
   // Colour palette
   const C = isSteal
@@ -586,6 +712,12 @@ function StealBustPanel({ mode }) {
             </span>
           </div>
           <CriterionBuilder value={builder} onChange={setBuilder} onAdd={addCriterion} mode={mode} />
+          {/* Live recommendation preview — helps user decide what threshold to enter */}
+          <SystemRecommendation
+            def={builder}
+            mode={mode}
+            onApply={v => setBuilder(b => ({ ...b, statVal: String(v) }))}
+          />
         </div>
       </div>
 
@@ -707,12 +839,15 @@ function StealBustPanel({ mode }) {
       {/* Results */}
       {loading && <Loading text="Searching…" />}
       {error   && <ErrorMsg message={error} />}
-      {results && (
+      {ranked && (
         <>
-          <DraftScatter results={results} yKey="career_av" statLabel="Career AV" />
+          <RankingChart ranked={ranked} isSteal={isSteal} selectedCriteria={selectedCriteria} />
+          <DraftScatter results={ranked} yKey="career_av" statLabel="Career AV" />
           <div className={`bg-slate-800/70 border rounded-2xl p-5 ${C.resBorder}`}>
-            <p className="text-xs text-slate-600 mb-3">{results.length} players found</p>
-            <StatTable columns={resultCols} rows={results} keyField="player_name"
+            <p className="text-xs text-slate-600 mb-3">
+              {ranked.length} players found — sorted by {isSteal ? 'Steal' : 'Bust'} Score
+            </p>
+            <StatTable columns={resultCols} rows={ranked} keyField="player_name"
               title={isSteal ? 'Draft Steals' : 'Draft Busts'} />
           </div>
         </>
