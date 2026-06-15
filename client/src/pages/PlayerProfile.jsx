@@ -786,6 +786,9 @@ export default function PlayerProfile() {
   const { data: profile, loading, error } = useApi(() => api.getPlayer(id), [id])
   const { data: injData } = useApi(() => api.getInjuries(id), [id])
   const [advancedSections, setAdvancedSections] = useState(new Set())
+  const [scope, setScope] = useState('reg')        // 'reg' | 'post' | 'both'
+  const [playoffCats, setPlayoffCats] = useState(null)
+  const [playoffLoading, setPlayoffLoading] = useState(false)
 
   // Build season -> games_missed map for chart annotations
   // Use the larger of official Out count vs. estimated missed (catches IR absences)
@@ -801,6 +804,21 @@ export default function PlayerProfile() {
     if (next.has(cat)) { next.delete(cat) } else { next.add(cat) }
     return next
   })
+
+  useEffect(() => {
+    const pid = profile?.player?.player_id
+    if (!pid || scope === 'reg' || playoffCats !== null) return
+    setPlayoffLoading(true)
+    api.getPlayerPlayoffs(pid)
+      .then(d => { setPlayoffCats(d.categories || []); setPlayoffLoading(false) })
+      .catch(() => { setPlayoffCats([]); setPlayoffLoading(false) })
+  }, [scope, profile?.player?.player_id, playoffCats])
+
+  // Reset playoff data when player changes
+  useEffect(() => {
+    setPlayoffCats(null)
+    setScope('reg')
+  }, [id])
 
   if (loading) return <Loading text="Loading player…" />
   if (error)   return <ErrorMsg message={error} />
@@ -827,6 +845,45 @@ export default function PlayerProfile() {
   const sortedCategories = [...categories].sort(
     (a, b) => priorityOrder.indexOf(a.category) - priorityOrder.indexOf(b.category)
   )
+
+  // ── Playoff data merging ───────────────────────────────────────────────────
+  const playoffCatMap = Object.fromEntries((playoffCats ?? []).map(pc => [pc.category, pc]))
+
+  function mergeCategory(regCat) {
+    const postCat = playoffCatMap[regCat.category]
+    if (!postCat) return regCat
+    const postSeasonMap = Object.fromEntries(postCat.seasons.map(s => [s.season, s]))
+    const mergedSeasons = regCat.seasons.map(regS => {
+      const postS = postSeasonMap[regS.season]
+      if (!postS) return regS
+      const merged = { ...regS }
+      for (const [k, v] of Object.entries(postS)) {
+        if (k !== 'season' && k !== 'team' && typeof v === 'number' && merged[k] != null) {
+          merged[k] = (merged[k] || 0) + (v || 0)
+        }
+      }
+      return merged
+    })
+    const mergedCareer = { ...regCat.career }
+    if (postCat.career) {
+      for (const [k, v] of Object.entries(postCat.career)) {
+        if (k !== 'player_id' && typeof v === 'number' && mergedCareer[k] != null) {
+          mergedCareer[k] = (mergedCareer[k] || 0) + (v || 0)
+        }
+      }
+    }
+    return { ...regCat, seasons: mergedSeasons, career: mergedCareer }
+  }
+
+  const displayCategories = (() => {
+    if (scope === 'reg' || !playoffCats) return sortedCategories
+    if (scope === 'post') {
+      return (playoffCats ?? [])
+        .filter(pc => COLS[pc.category])
+        .sort((a, b) => priorityOrder.indexOf(a.category) - priorityOrder.indexOf(b.category))
+    }
+    return sortedCategories.map(mergeCategory)
+  })()
 
   return (
     <div className="space-y-5">
@@ -915,8 +972,38 @@ export default function PlayerProfile() {
 
       <InsightsSection playerId={player.player_id} accentColor={c.hex} />
 
+      {/* Scope toggle: Regular Season / Playoffs / All Games */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-1 rounded-xl bg-slate-900 border border-slate-700 p-1 text-xs">
+          {[
+            { key: 'reg',  label: 'Regular Season' },
+            { key: 'post', label: 'Playoffs' },
+            { key: 'both', label: 'All Games' },
+          ].map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => setScope(key)}
+              className={`px-3 py-1.5 rounded-lg transition-colors font-medium ${
+                scope === key ? 'bg-slate-700 text-white' : 'text-slate-500 hover:text-slate-300'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        {scope !== 'reg' && playoffLoading && (
+          <span className="text-slate-500 text-xs animate-pulse">Loading playoff data…</span>
+        )}
+        {scope === 'post' && !playoffLoading && playoffCats?.length === 0 && (
+          <span className="text-slate-500 text-xs">No playoff data available (1999+ only, offense only)</span>
+        )}
+        {scope === 'both' && !playoffLoading && playoffCats !== null && (
+          <span className="text-slate-600 text-xs">Regular season + playoff totals combined</span>
+        )}
+      </div>
+
       {/* Stat sections */}
-      {sortedCategories.map(cat => {
+      {displayCategories.map(cat => {
         const colSet = COLS[cat.category]
         if (!colSet) return null
         const isAdv      = advancedSections.has(cat.category)

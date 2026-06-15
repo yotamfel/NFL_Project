@@ -101,6 +101,15 @@ const CONTENT = {
             body: 'Shows what percentage of the team\'s offensive, defensive, or special-teams snaps the player was on the field for. Use the season dropdown to see a week-by-week breakdown for any season, or scroll down to see the career trend. A sudden drop in snap% is often an early sign of injury, role change, or decline.',
           },
           {
+            title: 'Scope toggle — Regular Season / Playoffs / All Games',
+            body: [
+              'Regular Season (default) — shows only regular-season stats, same as always.',
+              'Playoffs — shows playoff-only stats per season. Coverage is 1999–2025 for Passing and Offense categories. Defense, Kicking, Punting, and Returns playoff data are not yet available.',
+              'All Games — merges regular-season and playoff totals into one combined view. Each season row shows the combined count (e.g., regular-season games + playoff games), and the Career row sums everything. Useful for comparing true career totals including postseason contributions.',
+              'The toggle appears above the stats sections on every player profile. Playoff data loads on first request and is cached for the session.',
+            ],
+          },
+          {
             title: 'AI Career Insights',
             body: 'At the bottom of every player profile, click "Generate Insights" to get a Claude-written 3–5 sentence analytical paragraph about the player\'s career. The narrative covers key stats, career trajectory, and interesting observations. Results are cached for 24 hours so repeat visits load instantly. Rate the insight with 👍 or 👎 to help improve future responses.',
           },
@@ -514,6 +523,15 @@ const CONTENT = {
           {
             title: 'Snap Counts (2013+)',
             body: 'מציג איזה אחוז מה-Snaps של הקבוצה השחקן היה על המגרש. השתמש ב-Dropdown של העונה לפירוט שבועי, או גלול למטה לראות את מגמת הקריירה. ירידה פתאומית ב-Snap% היא לעיתים קרובות אינדיקציה מוקדמת לפציעה, שינוי תפקיד או ירידה.',
+          },
+          {
+            title: 'בחירת טווח — עונה סדירה / Playoffs / כל המשחקים',
+            body: [
+              'Regular Season (ברירת מחדל) — מציג רק סטטיסטיקות עונה סדירה, כפי שתמיד היה.',
+              'Playoffs — מציג סטטיסטיקות Playoffs בלבד לפי עונה. כיסוי: 1999–2025 לקטגוריות Passing ו-Offense. ספרי הגנה, Kicking, Punting, ו-Returns בפלייאוף אינם זמינים עדיין.',
+              'All Games — ממזג את סטטיסטיקות העונה הסדירה והפלייאוף לתצוגה משולבת אחת. כל שורת עונה מציגה את הסכום הכולל (כולל משחקי פלייאוף), ושורת Karriere מסכמת הכל. שימושי להשוואת ערכי קריירה אמיתיים כולל תרומות לפוסט-סיזן.',
+              'הלחצן מופיע מעל סעיפי הסטטיסטיקות בכל פרופיל שחקן. נתוני הפלייאוף נטענים בבקשה ראשונה ושמורים בזיכרון המהיר לאורך הסשן.',
+            ],
           },
           {
             title: 'AI Career Insights — תובנות קריירה',

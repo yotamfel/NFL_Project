@@ -92,6 +92,7 @@ export const api = {
     return get(`/trends/by_team?${p}`)
   },
 
+  getPlayerPlayoffs: id => get(`/players/${id}/playoffs`),
   getAdvReceiving:  id => get(`/players/${id}/adv_receiving`),
   getInjuries: (id, season) => {
     const p = new URLSearchParams()
