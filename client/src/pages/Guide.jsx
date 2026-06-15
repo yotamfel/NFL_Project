@@ -216,7 +216,7 @@ const CONTENT = {
           },
           {
             title: 'Limitations',
-            body: 'The AI only has access to data in this database (seasonal stats 1970–2025, combine from 1987, draft from 2000). It cannot answer questions about play-by-play events, individual game logs, or real-time data. If it cannot find the data, it will say so.',
+            body: 'The AI only has access to data in this database (seasonal stats 1970–2025, combine + draft from 2000). It cannot answer questions about play-by-play events, individual game logs, or real-time data. If it cannot find the data, it will say so.',
           },
           {
             title: 'Feedback',
@@ -631,7 +631,7 @@ const CONTENT = {
           },
           {
             title: 'מגבלות',
-            body: 'ה-AI ניגש רק לנתונים שבבסיס הנתונים (סטטיסטיקות עונה 1970–2025, Combine מ-1987, Draft מ-2000). הוא לא יכול לענות על שאלות Play-by-Play, Game Logs פרטניים, או נתונים בזמן אמת. אם הנתון לא קיים, הוא יאמר זאת ישירות.',
+            body: 'ה-AI ניגש רק לנתונים שבבסיס הנתונים (סטטיסטיקות עונה 1970–2025, Combine ו-Draft מ-2000). הוא לא יכול לענות על שאלות Play-by-Play, Game Logs פרטניים, או נתונים בזמן אמת. אם הנתון לא קיים, הוא יאמר זאת ישירות.',
           },
           {
             title: 'Feedback — משוב',

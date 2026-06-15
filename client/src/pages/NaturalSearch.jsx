@@ -115,7 +115,7 @@ export default function NaturalSearch() {
             <span className="mt-0.5 shrink-0">⚠</span>
             <span>
               Seasonal stats cover <strong className="text-amber-400/80">1970–2025</strong>.
-              Draft data starts 2000. Combine data starts 1987. Players who debuted before 1970 have partial coverage.
+              Draft &amp; Combine data starts 2000. Players who debuted before 1970 have partial coverage.
             </span>
           </div>
 

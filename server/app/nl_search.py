@@ -83,7 +83,7 @@ draft(draft_year, round, pick, team, player_name, pos, age, college,
 combine_seasons(season, player_id, player_name, pos, school, ht, wt,
                 "_40yd", vertical, bench, broad_jump, "_3cone", shuttle,
                 drafted_tm_per_rnd_per_yr)
-  Pre-draft workout measurements. Coverage: 1987-2025. ht is text "feet_inches" e.g. '6_2'.
+  Pre-draft workout measurements. Coverage: 2000-2025. ht is text "feet_inches" e.g. '6_2'.
 
 ### Supplementary tables (newer data)
 snap_counts(player_id, season, week, game_type, team, opponent,
