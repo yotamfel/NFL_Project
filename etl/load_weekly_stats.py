@@ -1,10 +1,11 @@
 """
 Load per-game player stats (1999–present) from nflreadpy into weekly_stats.
-Used by detect_anomalies.py to detect career single-game highs.
+Used by detect_anomalies.py to detect career single-game highs and by the
+playoff stats endpoint to aggregate POST rows into season-level playoff stats.
 
 Table schema:
   weekly_stats(player_id, season, week, game_type, team, opponent,
-               pass_yds, pass_td, pass_int, pass_att,
+               pass_cmp, pass_att, pass_yds, pass_td, pass_int, sk, sack_yds_lost,
                rush_yds, rush_td, rush_att,
                rec_yds, rec_td, rec, targets)
 """
@@ -33,31 +34,43 @@ CURRENT_YEAR = 2025
 
 CREATE_TABLE = """
 CREATE TABLE IF NOT EXISTS weekly_stats (
-    player_id  TEXT NOT NULL,
-    season     INT  NOT NULL,
-    week       INT  NOT NULL,
-    game_type  TEXT,
-    team       TEXT,
-    opponent   TEXT,
-    pass_yds   INT,
-    pass_td    INT,
-    pass_int   INT,
-    pass_att   INT,
-    rush_yds   INT,
-    rush_td    INT,
-    rush_att   INT,
-    rec_yds    INT,
-    rec_td     INT,
-    rec        INT,
-    targets    INT,
+    player_id      TEXT NOT NULL,
+    season         INT  NOT NULL,
+    week           INT  NOT NULL,
+    game_type      TEXT,
+    team           TEXT,
+    opponent       TEXT,
+    pass_cmp       INT,
+    pass_att       INT,
+    pass_yds       INT,
+    pass_td        INT,
+    pass_int       INT,
+    sk             INT,
+    sack_yds_lost  INT,
+    rush_yds       INT,
+    rush_td        INT,
+    rush_att       INT,
+    rec_yds        INT,
+    rec_td         INT,
+    rec            INT,
+    targets        INT,
     PRIMARY KEY (player_id, season, week, game_type)
 );
 CREATE INDEX IF NOT EXISTS weekly_stats_player ON weekly_stats (player_id, season);
 CREATE INDEX IF NOT EXISTS weekly_stats_season ON weekly_stats (season, week);
 """
 
+# Add new columns to existing tables without wiping data.
+ALTER_TABLE = """
+ALTER TABLE weekly_stats
+    ADD COLUMN IF NOT EXISTS pass_cmp      INT,
+    ADD COLUMN IF NOT EXISTS sk            INT,
+    ADD COLUMN IF NOT EXISTS sack_yds_lost INT;
+"""
+
 INT_COLS = [
-    "pass_yds", "pass_td", "pass_int", "pass_att",
+    "pass_cmp", "pass_att", "pass_yds", "pass_td", "pass_int",
+    "sk", "sack_yds_lost",
     "rush_yds", "rush_td", "rush_att",
     "rec_yds",  "rec_td",  "rec",      "targets",
 ]
@@ -98,20 +111,30 @@ def load_year(year: int, id_map: dict, known_players: set, engine) -> int:
     raw = raw[raw["season_type"].isin(["REG", "POST"])].copy()
 
     raw = raw.rename(columns={
-        "season_type":    "game_type",
-        "recent_team":    "team",
-        "opponent_team":  "opponent",
-        "attempts":       "pass_att",
-        "passing_yards":  "pass_yds",
-        "passing_tds":    "pass_td",
-        "interceptions":  "pass_int",
-        "carries":        "rush_att",
-        "rushing_yards":  "rush_yds",
-        "rushing_tds":    "rush_td",
-        "receptions":     "rec",
+        "season_type":     "game_type",
+        "recent_team":     "team",
+        "opponent_team":   "opponent",
+        "completions":     "pass_cmp",
+        "attempts":        "pass_att",
+        "passing_yards":   "pass_yds",
+        "passing_tds":     "pass_td",
+        "interceptions":   "pass_int",
+        # nflreadpy uses 'sacks' at game level (vs 'sacks_suffered' at season level)
+        "sacks":           "sk",
+        "sacks_suffered":  "sk",          # fallback if season-level name appears
+        "sack_yards":      "sack_yds_lost",
+        "sack_yards_lost": "sack_yds_lost",  # fallback
+        "carries":         "rush_att",
+        "rushing_yards":   "rush_yds",
+        "rushing_tds":     "rush_td",
+        "receptions":      "rec",
         "receiving_yards": "rec_yds",
-        "receiving_tds":  "rec_td",
+        "receiving_tds":   "rec_td",
     })
+
+    # sack yards are a loss — store as positive magnitude (matches PFR convention)
+    if "sack_yds_lost" in raw.columns:
+        raw["sack_yds_lost"] = raw["sack_yds_lost"].abs()
 
     keep = ["player_id", "season", "week", "game_type", "team", "opponent"] + INT_COLS
     raw = raw[[c for c in keep if c in raw.columns]].copy()
@@ -145,6 +168,7 @@ def load_weekly_stats(years=None):
     engine = get_engine()
     with engine.begin() as conn:
         conn.execute(text(CREATE_TABLE))
+        conn.execute(text(ALTER_TABLE))
 
     id_map = _build_id_map()
     with engine.connect() as conn:
