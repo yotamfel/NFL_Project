@@ -153,7 +153,7 @@ function TableRenderer({ savedTable, config = {} }) {
 // For chart/table widgets: renders live first, then captures itself as a PNG
 // and switches to <img> display — making resize trivial (just image scaling).
 function WidgetWrapper({ widget, savedItem, onDelete, onUpdateConfig, isSelected, onSelect }) {
-  const cardRef = useRef(null)
+  const contentRef = useRef(null)
   const [capturing, setCapturing] = useState(false)
   const [editingText, setEditingText] = useState(false)
   const [localContent, setLocalContent] = useState(widget.config.content || '')
@@ -171,13 +171,10 @@ function WidgetWrapper({ widget, savedItem, onDelete, onUpdateConfig, isSelected
     // Charts (Recharts) need ~1.5s to finish SVG rendering; tables are immediate
     const delay = type === 'table' ? 400 : 1600
     const t = setTimeout(async () => {
-      const el = cardRef.current
+      const el = contentRef.current
       if (!el) { setCapturing(false); return }
       try {
-        const png = await toPng(el, {
-          pixelRatio: 2,
-          backgroundColor: config.bgColor || DEFAULT_WIDGET_BG,
-        })
+        const png = await toPng(el, { pixelRatio: 2 })
         onUpdateConfig({ snapshot: png })
       } catch (e) {
         console.warn('Widget snapshot failed:', e)
@@ -233,7 +230,7 @@ function WidgetWrapper({ widget, savedItem, onDelete, onUpdateConfig, isSelected
   // ── Chart / table card ────────────────────────────────────────────────────────
   const widgetBg = config.bgColor || DEFAULT_WIDGET_BG
   return (
-    <div ref={cardRef}
+    <div
       className={`flex flex-col h-full rounded-xl border overflow-hidden ${
         isSelected ? 'border-amber-500/60 shadow-lg shadow-amber-500/10' : 'border-slate-700/60'
       }`}
@@ -252,13 +249,16 @@ function WidgetWrapper({ widget, savedItem, onDelete, onUpdateConfig, isSelected
           className="text-slate-600 hover:text-red-400 transition-colors text-sm leading-none ml-1 shrink-0">×</button>
       </div>
 
-      {/* Content: PNG snapshot when ready, live render while capturing */}
+      {/* Content: PNG snapshot when ready, live render while capturing.
+          contentRef targets only this area so the captured PNG excludes
+          the title bar and border (preventing the double-frame issue). */}
       <div className="flex-1 relative" style={{ minHeight: 0 }}>
         {config.snapshot ? (
           <img src={config.snapshot} alt={savedItem?.title || type} draggable={false}
             style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} />
         ) : (
-          <div className="absolute inset-0 overflow-hidden">
+          <div ref={contentRef} className="absolute inset-0 overflow-hidden"
+            style={{ backgroundColor: widgetBg }}>
             {type === 'chart' && (
               <ChartRenderer savedChart={savedItem} colorOverrides={config.colorOverrides} showInjuries={config.showInjuries ?? true} />
             )}
