@@ -103,15 +103,17 @@ def admin_stats(admin: dict = Depends(_require_admin)):
     with engine.connect() as conn:
         total_users   = conn.execute(text("SELECT COUNT(*) FROM users")).scalar() or 0
         total_visits  = conn.execute(text("SELECT COUNT(*) FROM user_visits")).scalar() or 0
+        visits_today  = conn.execute(text("SELECT COUNT(*) FROM user_visits WHERE visited_at >= CURRENT_DATE")).scalar() or 0
         visits_7d     = conn.execute(text("SELECT COUNT(*) FROM user_visits WHERE visited_at > now() - INTERVAL '7 days'")).scalar() or 0
         visits_30d    = conn.execute(text("SELECT COUNT(*) FROM user_visits WHERE visited_at > now() - INTERVAL '30 days'")).scalar() or 0
         total_fb      = conn.execute(text("SELECT COUNT(*) FROM feedback")).scalar() or 0
         unresolved_fb = conn.execute(text("SELECT COUNT(*) FROM feedback WHERE resolved = FALSE")).scalar() or 0
     return {
-        "total_users":      total_users,
-        "total_visits":     total_visits,
-        "visits_7d":        visits_7d,
-        "visits_30d":       visits_30d,
-        "total_feedback":   total_fb,
+        "total_users":         total_users,
+        "total_visits":        total_visits,
+        "visits_today":        visits_today,
+        "visits_7d":           visits_7d,
+        "visits_30d":          visits_30d,
+        "total_feedback":      total_fb,
         "unresolved_feedback": unresolved_fb,
     }

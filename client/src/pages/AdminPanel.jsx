@@ -49,19 +49,20 @@ function OverviewTab() {
   useEffect(() => { api.getAdminStats().then(setStats).catch(() => {}) }, [])
   if (!stats) return <Spinner />
   const cards = [
-    { label: 'Total Users',        value: stats.total_users },
-    { label: 'Total Visits',       value: stats.total_visits },
-    { label: 'Visits (7 days)',    value: stats.visits_7d },
-    { label: 'Visits (30 days)',   value: stats.visits_30d },
-    { label: 'Total Feedback',     value: stats.total_feedback },
-    { label: 'Unresolved Feedback',value: stats.unresolved_feedback },
+    { label: 'Total Users',         value: stats.total_users },
+    { label: 'Total Visits',        value: stats.total_visits },
+    { label: 'Visits Today',        value: stats.visits_today, highlight: true },
+    { label: 'Visits (7 days)',     value: stats.visits_7d },
+    { label: 'Visits (30 days)',    value: stats.visits_30d },
+    { label: 'Total Feedback',      value: stats.total_feedback },
+    { label: 'Unresolved Feedback', value: stats.unresolved_feedback },
   ]
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
       {cards.map(c => (
-        <div key={c.label} className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-          <p className="text-slate-400 text-xs font-medium mb-1">{c.label}</p>
-          <p className="text-3xl font-bold text-white">{c.value.toLocaleString()}</p>
+        <div key={c.label} className={`rounded-xl p-5 border ${c.highlight ? 'bg-amber-500/10 border-amber-500/30' : 'bg-slate-900 border-slate-800'}`}>
+          <p className={`text-xs font-medium mb-1 ${c.highlight ? 'text-amber-400' : 'text-slate-400'}`}>{c.label}</p>
+          <p className={`text-3xl font-bold ${c.highlight ? 'text-amber-300' : 'text-white'}`}>{c.value.toLocaleString()}</p>
         </div>
       ))}
     </div>
