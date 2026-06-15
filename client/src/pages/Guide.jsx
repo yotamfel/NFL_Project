@@ -1,10 +1,4 @@
-import { useState } from 'react'
-
-const useLang = () => {
-  const [lang, setLang] = useState(() => localStorage.getItem('helpLang') ?? 'en')
-  const set = l => { setLang(l); localStorage.setItem('helpLang', l) }
-  return [lang, set]
-}
+import { useAuth } from '../context/AuthContext'
 
 // ─── content ─────────────────────────────────────────────────────────────────
 
@@ -862,9 +856,11 @@ const CONTENT = {
 // ─── component ────────────────────────────────────────────────────────────────
 
 export default function Guide() {
-  const [lang, setLang] = useLang()
+  const { user, updatePreferences } = useAuth()
+  const lang  = user?.guide_lang ?? 'en'
+  const setLang = l => updatePreferences({ guide_lang: l })
   const isHe = lang === 'he'
-  const c = CONTENT[lang]
+  const c = CONTENT[lang] ?? CONTENT['en']
 
   return (
     <div dir={isHe ? 'rtl' : 'ltr'} className="space-y-6">

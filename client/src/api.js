@@ -4,21 +4,39 @@
 
 const BASE = '/api'
 
-async function get(path) {
-  const res = await fetch(`${BASE}${path}`)
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}))
-    throw new Error(body.detail ?? `${res.status} ${res.statusText}`)
-  }
-  return res.json()
-}
+// Access token lives in memory (not localStorage) for security.
+// AuthContext sets this via setAccessToken() after login/refresh.
+let _accessToken = null
+let _onUnauthorized = null   // callback set by AuthContext to trigger logout
 
-async function post(path, body) {
+export function setAccessToken(token) { _accessToken = token }
+export function setUnauthorizedHandler(fn) { _onUnauthorized = fn }
+
+async function request(method, path, body, { skipAuth = false } = {}) {
+  const headers = { 'Content-Type': 'application/json' }
+  if (!skipAuth && _accessToken) headers['Authorization'] = `Bearer ${_accessToken}`
+
   const res = await fetch(`${BASE}${path}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+    method,
+    headers,
+    body: body !== undefined ? JSON.stringify(body) : undefined,
   })
+
+  if (res.status === 401 && !skipAuth) {
+    // Try to refresh the access token once, then retry
+    const refreshed = await _tryRefresh()
+    if (refreshed) {
+      const retryHeaders = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_accessToken}` }
+      const retry = await fetch(`${BASE}${path}`, {
+        method, headers: retryHeaders,
+        body: body !== undefined ? JSON.stringify(body) : undefined,
+      })
+      if (retry.ok) return retry.json()
+    }
+    _onUnauthorized?.()
+    throw new Error('Session expired. Please log in again.')
+  }
+
   if (!res.ok) {
     const b = await res.json().catch(() => ({}))
     throw new Error(b.detail ?? `${res.status} ${res.statusText}`)
@@ -26,7 +44,60 @@ async function post(path, body) {
   return res.json()
 }
 
+async function _tryRefresh() {
+  const rt = localStorage.getItem('nfl_refresh_token')
+  if (!rt) return false
+  try {
+    const res = await fetch(`${BASE}/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: rt }),
+    })
+    if (!res.ok) return false
+    const data = await res.json()
+    setAccessToken(data.access_token)
+    return true
+  } catch { return false }
+}
+
+const get  = (path, opts) => request('GET',    path, undefined, opts)
+const post = (path, body, opts) => request('POST',   path, body, opts)
+const patch = (path, body, opts) => request('PATCH',  path, body, opts)
+const del   = (path, opts) => request('DELETE', path, undefined, opts)
+
 export const api = {
+  // ── Auth ──────────────────────────────────────────────────────────────────
+  register: (username, email, password) => post('/auth/register', { username, email, password }, { skipAuth: true }),
+  login:    (username, password)        => post('/auth/login',    { username, password },         { skipAuth: true }),
+  refresh:  (refresh_token)             => post('/auth/refresh',  { refresh_token },               { skipAuth: true }),
+  logout:   (refresh_token)             => post('/auth/logout',   { refresh_token }),
+  me:       ()                          => get('/auth/me'),
+
+  // ── Preferences ───────────────────────────────────────────────────────────
+  updatePreferences: (prefs) => patch('/users/preferences', prefs),
+
+  // ── Saved items ───────────────────────────────────────────────────────────
+  getSaved:    ()             => get('/saved'),
+  createSaved: (item)         => post('/saved', item),
+  updateSaved: (id, note)     => patch(`/saved/${id}`, { note }),
+  deleteSaved: (id)           => del(`/saved/${id}`),
+  migrateSaved: (items)       => post('/saved/migrate', { items }),
+
+  // ── User feedback ─────────────────────────────────────────────────────────
+  submitUserFeedback: (category, message) => post('/feedback', { category, message }),
+
+  // ── Notifications ─────────────────────────────────────────────────────────
+  getNotifications: ()   => get('/notifications'),
+  markNotifRead:    (id) => patch(`/notifications/${id}/read`, {}),
+
+  // ── Admin ─────────────────────────────────────────────────────────────────
+  getAdminFeedback: ()              => get('/admin/feedback'),
+  patchAdminFeedback: (id, body)    => patch(`/admin/feedback/${id}`, body),
+  getAdminVisits: ()                => get('/admin/visits'),
+  getAdminStats: ()                 => get('/admin/stats'),
+  getAdminAi: ()                    => get('/admin/ai'),
+
+  // ── Players ───────────────────────────────────────────────────────────────
   searchPlayers: (q = '', { pos, season, team, limit = 10 } = {}) => {
     const p = new URLSearchParams({ q, limit })
     if (pos)    p.set('pos', pos)
@@ -119,7 +190,7 @@ export const api = {
   },
 
   askQuestion: question => post('/search/natural', { question }),
-  submitFeedback: (log_id, thumbs) => post('/feedback', { log_id, thumbs }),
+  submitFeedback: (log_id, thumbs) => post('/ai/feedback', { log_id, thumbs }),
 
   getPlayerInsights: id => get(`/players/${id}/insights`),
 
@@ -135,8 +206,6 @@ export const api = {
   },
 
   getAnomalySeasons: () => get('/anomalies/seasons'),
-
-  getAdminAi: () => get('/admin/ai'),
 
   getMeta: () => get('/meta'),
 }
