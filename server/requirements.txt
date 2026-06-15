@@ -10,3 +10,6 @@ joblib
 pandas
 matplotlib
 anthropic
+bcrypt
+python-jose[cryptography]
+python-multipart

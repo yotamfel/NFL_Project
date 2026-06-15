@@ -4,7 +4,7 @@ from pydantic import BaseModel, field_validator
 
 from app.ai_log import set_thumbs
 
-router = APIRouter(prefix="/feedback", tags=["feedback"])
+router = APIRouter(prefix="/ai/feedback", tags=["feedback"])
 
 
 class FeedbackBody(BaseModel):

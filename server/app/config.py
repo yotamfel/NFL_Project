@@ -28,3 +28,6 @@ DATABASE_URL = os.environ.get(
 # that one feature degrades to an honest "not configured" response rather
 # than the rest of the server failing to start.
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
+
+JWT_SECRET    = os.environ.get("JWT_SECRET", "change-me-in-production")
+ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "")
