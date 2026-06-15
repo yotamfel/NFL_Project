@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { api } from '../api'
 import { useApi } from '../hooks/useApi'
 import { Link, useNavigate } from 'react-router-dom'
+import { fmtSeason } from '../utils'
 
 const FILTERS = [
   { key: null,              label: 'All' },
@@ -62,7 +63,7 @@ function AlertCard({ alert }) {
               Wk {alert.week}{alert.opponent ? ` vs ${alert.opponent}` : ''}
             </span>
           )}
-          <span className="text-xs text-slate-600">{alert.season}</span>
+          <span className="text-xs text-slate-600">{fmtSeason(alert.season)}</span>
         </div>
       </div>
       <p className="text-sm text-slate-200 leading-snug">
@@ -100,7 +101,7 @@ export default function AnomalyFeed({ limit = 12, compact = false, season, sort 
           <p className="text-xs font-bold uppercase tracking-widest text-violet-500 mb-0.5">Season Highlights</p>
           <h2 className="text-xl font-black text-white tracking-tight">
             Statistical Anomalies
-            {dataSeason && <span className="text-slate-600 font-normal text-sm ml-2">{dataSeason}</span>}
+            {dataSeason && <span className="text-slate-600 font-normal text-sm ml-2">{fmtSeason(dataSeason)}</span>}
           </h2>
         </div>
         {compact && (

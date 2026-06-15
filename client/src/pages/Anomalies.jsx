@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useApi } from '../hooks/useApi'
 import { api } from '../api'
 import AnomalyFeed from '../components/AnomalyFeed'
+import { fmtSeason } from '../utils'
 
 export default function Anomalies() {
   const navigate = useNavigate()
@@ -47,7 +48,7 @@ export default function Anomalies() {
                     : { background: 'transparent', border: '1px solid #334155', color: '#64748b' }
                   }
                 >
-                  {yr}
+                  {fmtSeason(yr)}
                 </button>
               ))}
             </div>
