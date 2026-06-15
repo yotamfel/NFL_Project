@@ -91,7 +91,7 @@ export default function AnomalyFeed({ limit = 12, compact = false, season, sort 
     [activeFilter, limit, season, sort]
   )
 
-  const season = data?.[0]?.season
+  const dataSeason = data?.[0]?.season
 
   return (
     <div className="space-y-4">
@@ -100,7 +100,7 @@ export default function AnomalyFeed({ limit = 12, compact = false, season, sort 
           <p className="text-xs font-bold uppercase tracking-widest text-violet-500 mb-0.5">Season Highlights</p>
           <h2 className="text-xl font-black text-white tracking-tight">
             Statistical Anomalies
-            {season && <span className="text-slate-600 font-normal text-sm ml-2">{season}</span>}
+            {dataSeason && <span className="text-slate-600 font-normal text-sm ml-2">{dataSeason}</span>}
           </h2>
         </div>
         {compact && (
