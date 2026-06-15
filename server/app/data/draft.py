@@ -172,6 +172,8 @@ def get_draft_round_stats(
     scope: str = "career",    # "career" | "season"
     pos: str | None = None,
     min_seasoning_years: int = DEFAULT_MIN_SEASONING_YEARS,
+    draft_year_from: int | None = None,
+    draft_year_to: int | None = None,
 ) -> dict:
     """Percentile distribution of a stat for a round/position cohort.
 
@@ -189,7 +191,7 @@ def get_draft_round_stats(
         raise ValueError("scope must be 'career' or 'season'")
 
     round_sql = ">=" if round_op == "gte" else "<="
-    params: dict = {"round_val": round_val, "pos": pos}
+    params: dict = {"round_val": round_val, "pos": pos, "year_from": draft_year_from, "year_to": draft_year_to}
 
     with engine.connect() as conn:
         params["cutoff"] = _latest_draft_year(conn) - min_seasoning_years
@@ -208,6 +210,8 @@ def get_draft_round_stats(
                   AND career_av IS NOT NULL AND career_av > 0
                   AND draft_year <= :cutoff
                   AND (:pos IS NULL OR UPPER(pos) = UPPER(:pos))
+                  AND (:year_from IS NULL OR draft_year >= :year_from)
+                  AND (:year_to   IS NULL OR draft_year <= :year_to)
             """)
         else:
             valid = _STAT_WHITELIST.get(category, frozenset())
@@ -236,6 +240,8 @@ def get_draft_round_stats(
                       AND c.g >= :min_games
                       AND d.draft_year <= :cutoff
                       AND (:pos IS NULL OR UPPER(d.pos) = UPPER(:pos))
+                      AND (:year_from IS NULL OR d.draft_year >= :year_from)
+                      AND (:year_to   IS NULL OR d.draft_year <= :year_to)
                 """)
             else:
                 sql = text(f"""
@@ -253,6 +259,8 @@ def get_draft_round_stats(
                         WHERE d.round {round_sql} :round_val
                           AND d.draft_year <= :cutoff
                           AND (:pos IS NULL OR UPPER(d.pos) = UPPER(:pos))
+                          AND (:year_from IS NULL OR d.draft_year >= :year_from)
+                          AND (:year_to   IS NULL OR d.draft_year <= :year_to)
                         GROUP BY d.player_id
                     ) sub
                     WHERE best_stat IS NOT NULL AND best_stat > 0

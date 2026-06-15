@@ -293,18 +293,20 @@ function SystemRecommendation({ def, mode, onApply }) {
     setLoading(true)
     timer.current = setTimeout(() => {
       api.getDraftRoundStats({
-        roundVal: def.roundVal,
-        roundOp:  mode === 'steal' ? 'gte' : 'lte',
-        category: def.category,
-        stat:     def.category !== 'career_av' ? def.stat : undefined,
-        scope:    def.scope,
-        pos:      def.pos || undefined,
+        roundVal:      def.roundVal,
+        roundOp:       mode === 'steal' ? 'gte' : 'lte',
+        category:      def.category,
+        stat:          def.category !== 'career_av' ? def.stat : undefined,
+        scope:         def.scope,
+        pos:           def.pos || undefined,
+        draftYearFrom: def.yearFrom || undefined,
+        draftYearTo:   def.yearTo   || undefined,
       })
         .then(s => { setStats(s); setLoading(false) })
         .catch(() => setLoading(false))
     }, 400)
     return () => clearTimeout(timer.current)
-  }, [def.roundVal, def.pos, def.category, def.stat, def.scope, mode])
+  }, [def.roundVal, def.pos, def.category, def.stat, def.scope, def.yearFrom, def.yearTo, mode])
 
   const isSteal = mode === 'steal'
   const S = isSteal
@@ -326,6 +328,11 @@ function SystemRecommendation({ def, mode, onApply }) {
   const filterNote     = isCareerNonAv
     ? 'Players with ≥16 career games and non-zero production only.'
     : def.scope === 'season' ? 'Players with non-zero best season only.' : ''
+  const yearNote = def.yearFrom && def.yearTo
+    ? `${def.yearFrom}–${def.yearTo}, `
+    : def.yearFrom ? `from ${def.yearFrom}, `
+    : def.yearTo   ? `up to ${def.yearTo}, `
+    : ''
 
   return (
     <div className={`rounded-xl border ${S.border} ${S.bg} p-3 space-y-2 mt-3`}>
@@ -334,7 +341,7 @@ function SystemRecommendation({ def, mode, onApply }) {
       {/* Cohort + stat context */}
       <p className="text-xs text-slate-400 leading-relaxed">
         Among <span className="text-white font-semibold">{stats.count}</span> {roundLabel}{posLabel} picks
-        (≥4 seasons elapsed) — <span className="text-slate-300">{statName}{scopeSuffix}</span>:
+        ({yearNote}≥4 seasons elapsed) — <span className="text-slate-300">{statName}{scopeSuffix}</span>:
         avg = <span className="text-white font-semibold">{stats.avg}</span>,
         median = <span className="text-white font-semibold">{stats.p50}</span>.
         {filterNote && <span className="text-slate-600"> {filterNote}</span>}

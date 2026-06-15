@@ -70,10 +70,12 @@ export const api = {
     return get(`/players/top_by_stat?${p}`)
   },
 
-  getDraftRoundStats: ({ roundVal, roundOp, category = 'career_av', stat, scope = 'career', pos } = {}) => {
+  getDraftRoundStats: ({ roundVal, roundOp, category = 'career_av', stat, scope = 'career', pos, draftYearFrom, draftYearTo } = {}) => {
     const p = new URLSearchParams({ round_val: roundVal, round_op: roundOp, category, scope })
-    if (stat) p.set('stat', stat)
-    if (pos)  p.set('pos', pos)
+    if (stat)          p.set('stat', stat)
+    if (pos)           p.set('pos', pos)
+    if (draftYearFrom) p.set('draft_year_from', draftYearFrom)
+    if (draftYearTo)   p.set('draft_year_to',   draftYearTo)
     return get(`/draft/round_stats?${p}`)
   },
 

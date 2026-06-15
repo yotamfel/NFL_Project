@@ -46,17 +46,20 @@ def custom_rank(
 
 @router.get("/round_stats")
 def round_stats(
-    round_val: int       = Query(4, ge=1, le=7),
-    round_op:  str       = Query("gte"),
-    category:  str       = Query("career_av"),
-    stat:      str | None = Query(None),
-    scope:     str       = Query("career"),
-    pos:       str | None = Query(None),
+    round_val:       int       = Query(4, ge=1, le=7),
+    round_op:        str       = Query("gte"),
+    category:        str       = Query("career_av"),
+    stat:            str | None = Query(None),
+    scope:           str       = Query("career"),
+    pos:             str | None = Query(None),
+    draft_year_from: int | None = Query(None),
+    draft_year_to:   int | None = Query(None),
 ):
     try:
         return get_draft_round_stats(
             round_val=round_val, round_op=round_op,
             category=category, stat=stat, scope=scope, pos=pos,
+            draft_year_from=draft_year_from, draft_year_to=draft_year_to,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
