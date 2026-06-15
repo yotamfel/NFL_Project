@@ -36,7 +36,7 @@ const FEATURE_CARDS = [
     icon: '📋', title: 'Dashboard',
     desc: 'Build custom dashboards with charts, tables and text widgets — drag, resize, and export',
     href: '/dashboard',
-    color: '#fb923c', dark: '#431407',
+    color: '#22d3ee', dark: '#083344',
   },
 ]
 
