@@ -113,8 +113,8 @@ def register(body: RegisterBody):
             raise HTTPException(status_code=409, detail="Username or email already taken")
 
         is_admin = (
-            (ADMIN_USERNAME and username == ADMIN_USERNAME.lower()) or
-            (ADMIN_EMAIL    and email_lc == ADMIN_EMAIL.lower())
+            ADMIN_USERNAME and username == ADMIN_USERNAME.lower() and
+            ADMIN_EMAIL    and email_lc == ADMIN_EMAIL.lower()
         )
         row = conn.execute(text(
             "INSERT INTO users (username, email, password_hash, is_admin) VALUES (:u, :e, :h, :a) RETURNING id"
