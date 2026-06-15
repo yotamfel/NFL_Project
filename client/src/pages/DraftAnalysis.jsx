@@ -495,6 +495,7 @@ function computeRanking(results, selectedCriteria, isSteal) {
 
 // ── Ranking chart ─────────────────────────────────────────────────────────────
 function RankingChart({ ranked, isSteal, selectedCriteria }) {
+  const [showInfo, setShowInfo] = useState(false)
   const top = ranked.slice(0, 15)
   if (top.length < 2) return null
 
@@ -503,12 +504,42 @@ function RankingChart({ ranked, isSteal, selectedCriteria }) {
 
   return (
     <div className="rounded-2xl border border-slate-700/60 bg-slate-900/60 p-5">
-      <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">
-        {label} Ranking — top {top.length}
-      </p>
+      <div className="flex items-center gap-2 mb-1">
+        <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 flex-1">
+          {label} Ranking — top {top.length}
+        </p>
+        <button
+          onClick={() => setShowInfo(v => !v)}
+          className="w-5 h-5 rounded-full border border-slate-600 text-slate-500 hover:border-slate-400 hover:text-slate-300 transition-colors text-[11px] font-bold leading-none flex items-center justify-center"
+          aria-label="How scoring works">
+          ?
+        </button>
+      </div>
+
+      {showInfo && (
+        <div className="mb-4 rounded-xl border border-slate-700/50 bg-slate-800/60 p-4 space-y-2 text-xs text-slate-400 leading-relaxed">
+          <p className="text-slate-200 font-semibold text-sm">How the {label} is calculated</p>
+          <p>
+            Each player is scored across <span className="text-white">every criterion you combined</span> (including Career AV, which is always included).
+            For each stat, we compute how many standard deviations the player is above or below the <span className="text-white">average of all players in this result set</span> — this is called a <span className="text-white">z-score</span>.
+          </p>
+          <p>
+            {isSteal
+              ? <>A player who dominated in <em>every</em> criterion — e.g. high Career AV <em>and</em> high passing yards for a Round 5+ pick — gets a high average z-score. That makes them the <span className="text-white">biggest steal</span>.</>
+              : <>A player who underperformed in <em>every</em> criterion — e.g. low Career AV <em>and</em> low passing yards for a Round 1–2 pick — gets a very negative average z-score. That makes them the <span className="text-white">biggest bust</span>.</>
+            }
+          </p>
+          <p>
+            Finally, the composite z-scores are <span className="text-white">normalised to 0–100</span> within this result set, so the {isSteal ? 'best steal' : 'biggest bust'} always shows 100 and the lowest-ranked player always shows 0. The score is <span className="text-white">relative to this specific query</span> — not an all-time absolute ranking.
+          </p>
+          <p className="text-slate-600">
+            All criteria are weighted equally. Career AV is always included as one component even if you didn't add it as an explicit criterion, since it is the best position-neutral proxy for overall career quality.
+          </p>
+        </div>
+      )}
+
       <p className="text-xs text-slate-600 mb-5">
-        Composite z-score across all criteria, normalised 0–100.
-        {isSteal ? ' Highest = biggest over-performer relative to draft slot.' : ' Highest = biggest under-performer relative to draft slot.'}
+        {isSteal ? 'Highest = biggest over-performer relative to draft slot.' : 'Highest = biggest under-performer relative to draft slot.'}
       </p>
 
       <ResponsiveContainer width="100%" height={top.length * 32 + 20}>
