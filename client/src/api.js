@@ -70,6 +70,8 @@ export const api = {
     return get(`/players/top_by_stat?${p}`)
   },
 
+  getCombinedDraft: (body) => post('/draft/combined', body),
+
   getDraftRoundStats: ({ roundVal, roundOp, category = 'career_av', stat, scope = 'career', pos, draftYearFrom, draftYearTo } = {}) => {
     const p = new URLSearchParams({ round_val: roundVal, round_op: roundOp, category, scope })
     if (stat)          p.set('stat', stat)

@@ -118,14 +118,12 @@ const AV_SCALE = [
   { range: '100+',   label: 'All-time elite',        color: '#a78bfa' },
 ]
 
-const LS_STEAL = 'draft_steal_def'
-const LS_BUST  = 'draft_bust_def'
+const LS_STEAL_CRITERIA = 'draft_steal_criteria_v2'
+const LS_BUST_CRITERIA  = 'draft_bust_criteria_v2'
 
-const DEFAULT_STEAL = { roundVal: 4, pos: '', category: 'career_av', scope: 'career', stat: '', statVal: '50', yearFrom: '', yearTo: '' }
-const DEFAULT_BUST  = { roundVal: 2, pos: '', category: 'career_av', scope: 'career', stat: '', statVal: '15', yearFrom: '', yearTo: '' }
-
-function loadDef(key, fallback) {
-  try { return JSON.parse(localStorage.getItem(key)) ?? fallback } catch { return fallback }
+const DEFAULT_CRITERION = {
+  roundVal: 4, pos: '', category: 'career_av',
+  stat: '', scope: 'career', statVal: '',
 }
 
 const POS_COLORS = {
@@ -135,12 +133,7 @@ const POS_COLORS = {
 }
 function posColor(pos) { return POS_COLORS[pos?.toUpperCase()] ?? '#64748b' }
 
-function isComplete(def) {
-  const val = parseFloat(def.statVal)
-  if (isNaN(val)) return false
-  if (def.category === 'career_av') return true
-  return !!(def.category && def.stat)
-}
+function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1) }
 
 function statLabel(def) {
   if (def.category === 'career_av') return 'Career AV'
@@ -149,46 +142,55 @@ function statLabel(def) {
   return def.scope === 'season' ? `${name} (best season)` : `${name} (career)`
 }
 
-function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1) }
+function isCriterionComplete(c) {
+  if (!c.pos) return false
+  if (isNaN(parseFloat(c.statVal))) return false
+  if (c.category !== 'career_av' && !c.stat) return false
+  return true
+}
 
-// ── Definition builder ────────────────────────────────────────────────────────
-function DefinitionBuilder({ def, onChange, mode }) {
-  const isSteal  = mode === 'steal'
-  const roundLabel = isSteal ? '≥ round' : '≤ round'
-  const statLabel2 = isSteal ? '≥' : '≤'
+function criterionLabel(c, mode) {
+  const isSteal = mode === 'steal'
+  const roundPart = isSteal ? `Rd ${c.roundVal}+` : `Rd 1–${c.roundVal}`
+  const op = isSteal ? '≥' : '≤'
+  return `${c.pos} · ${roundPart} · ${statLabel(c)} ${op} ${Number(c.statVal).toLocaleString()}`
+}
 
+function loadCriteria(key) {
+  try { return JSON.parse(localStorage.getItem(key)) ?? [] } catch { return [] }
+}
+
+// ── Criterion builder ─────────────────────────────────────────────────────────
+function CriterionBuilder({ value, onChange, onAdd, mode }) {
+  const isSteal = mode === 'steal'
   const inputCls = isSteal
     ? 'bg-slate-800 border border-emerald-900/60 text-white rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:border-emerald-500'
     : 'bg-slate-800 border border-rose-900/60 text-white rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:border-rose-500'
-
   const labelCls = 'text-xs text-slate-500 font-medium mb-1'
+  const canAdd = isCriterionComplete(value)
 
   return (
-    <div className="space-y-4">
-      <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-        Define a "{isSteal ? 'Steal' : 'Bust'}"
-      </p>
-
-      {/* Grid: Round · Position · Stat category · Stat · Scope · Threshold */}
+    <div className="space-y-3">
+      <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Add a criterion</p>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
 
         {/* Round */}
         <div>
           <p className={labelCls}>Draft round {isSteal ? '≥' : '≤'}</p>
-          <select value={def.roundVal}
-            onChange={e => onChange({ ...def, roundVal: parseInt(e.target.value) })}
+          <select value={value.roundVal}
+            onChange={e => onChange({ ...value, roundVal: parseInt(e.target.value) })}
             className={`w-full ${inputCls}`}>
             {ROUNDS.map(r => <option key={r} value={r}>{r}</option>)}
           </select>
         </div>
 
-        {/* Position */}
+        {/* Position — required */}
         <div>
-          <p className={labelCls}>Position</p>
-          <select value={def.pos}
-            onChange={e => onChange({ ...def, pos: e.target.value })}
+          <p className={labelCls}>Position <span className="text-rose-500">*</span></p>
+          <select value={value.pos}
+            onChange={e => onChange({ ...value, pos: e.target.value })}
             className={`w-full ${inputCls}`}>
-            <option value="">All positions</option>
+            <option value="">Select…</option>
             {POSITIONS.map(p => <option key={p} value={p}>{p}</option>)}
           </select>
         </div>
@@ -196,11 +198,11 @@ function DefinitionBuilder({ def, onChange, mode }) {
         {/* Stat category */}
         <div>
           <p className={labelCls}>Stat category</p>
-          <select value={def.category}
+          <select value={value.category}
             onChange={e => {
               const newCat = e.target.value
               const firstStat = newCat !== 'career_av' ? (STAT_OPTIONS[newCat]?.[0]?.key ?? '') : ''
-              onChange({ ...def, category: newCat, stat: firstStat, statVal: '' })
+              onChange({ ...value, category: newCat, stat: firstStat, statVal: '' })
             }}
             className={`w-full ${inputCls}`}>
             {STAT_CATEGORIES.map(c => (
@@ -209,27 +211,27 @@ function DefinitionBuilder({ def, onChange, mode }) {
           </select>
         </div>
 
-        {/* Stat — hidden for career_av */}
-        {def.category !== 'career_av' && (
+        {/* Stat */}
+        {value.category !== 'career_av' && (
           <div className="sm:col-span-2">
             <p className={labelCls}>Stat</p>
-            <select value={def.stat}
-              onChange={e => onChange({ ...def, stat: e.target.value })}
+            <select value={value.stat}
+              onChange={e => onChange({ ...value, stat: e.target.value })}
               className={`w-full ${inputCls}`}>
               <option value="">Select a stat…</option>
-              {(STAT_OPTIONS[def.category] ?? []).map(s => (
+              {(STAT_OPTIONS[value.category] ?? []).map(s => (
                 <option key={s.key} value={s.key}>{s.label}</option>
               ))}
             </select>
           </div>
         )}
 
-        {/* Scope — hidden for career_av */}
-        {def.category !== 'career_av' && (
+        {/* Scope */}
+        {value.category !== 'career_av' && (
           <div>
             <p className={labelCls}>Scope</p>
-            <select value={def.scope}
-              onChange={e => onChange({ ...def, scope: e.target.value })}
+            <select value={value.scope}
+              onChange={e => onChange({ ...value, scope: e.target.value })}
               className={`w-full ${inputCls}`}>
               <option value="career">Career total</option>
               <option value="season">Best season</option>
@@ -237,43 +239,33 @@ function DefinitionBuilder({ def, onChange, mode }) {
           </div>
         )}
 
-        {/* Threshold value */}
+        {/* Threshold */}
         <div>
           <p className={labelCls}>Threshold {isSteal ? '≥' : '≤'}</p>
-          <input type="number" min="0" value={def.statVal}
-            onChange={e => onChange({ ...def, statVal: e.target.value })}
+          <input type="number" min="0" value={value.statVal}
+            onChange={e => onChange({ ...value, statVal: e.target.value })}
             placeholder="value"
             className={`w-full ${inputCls}`} />
         </div>
-
-        {/* Draft year from */}
-        <div>
-          <p className={labelCls}>Draft year from</p>
-          <input type="number" min="1970" max="2025" value={def.yearFrom}
-            onChange={e => onChange({ ...def, yearFrom: e.target.value })}
-            placeholder="e.g. 2000"
-            className={`w-full ${inputCls}`} />
-        </div>
-
-        {/* Draft year to */}
-        <div>
-          <p className={labelCls}>Draft year to</p>
-          <input type="number" min="1970" max="2025" value={def.yearTo}
-            onChange={e => onChange({ ...def, yearTo: e.target.value })}
-            placeholder="e.g. 2020"
-            className={`w-full ${inputCls}`} />
-        </div>
-
       </div>
 
-      {/* Summary sentence */}
-      {isComplete(def) && (
-        <p className="text-xs" style={{ color: isSteal ? '#6ee7b7' : '#fca5a5' }}>
-          {isSteal ? `Round ${def.roundVal}+` : `Rounds 1–${def.roundVal}`} picks
-          {def.pos ? ` (${def.pos})` : ''} with {statLabel(def)}{' '}
-          {isSteal ? '≥' : '≤'} {Number(def.statVal).toLocaleString()}
-        </p>
-      )}
+      <div className="flex items-center gap-3">
+        {canAdd && (
+          <p className="text-xs text-slate-500 flex-1 truncate">
+            {value.pos} · {mode === 'steal' ? `Round ${value.roundVal}+` : `Round 1–${value.roundVal}`} · {statLabel(value)} {mode === 'steal' ? '≥' : '≤'} {Number(value.statVal).toLocaleString()}
+          </p>
+        )}
+        <button onClick={onAdd} disabled={!canAdd}
+          className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ml-auto shrink-0 ${
+            canAdd
+              ? mode === 'steal'
+                ? 'border-emerald-700/60 text-emerald-400 hover:bg-emerald-900/30'
+                : 'border-rose-700/60 text-rose-400 hover:bg-rose-900/30'
+              : 'border-slate-700/40 text-slate-600 cursor-not-allowed'
+          }`}>
+          + Add to list
+        </button>
+      </div>
     </div>
   )
 }
@@ -314,18 +306,15 @@ function SystemRecommendation({ def, mode, onApply }) {
     : { border: 'border-rose-900/50',    bg: 'bg-rose-950/30',    head: 'text-rose-400',    btn: 'border-rose-800/60 text-rose-400 hover:bg-rose-900/40' }
 
   if (!hasValidStat) return null
-  if (loading) return (
-    <p className="text-slate-600 text-xs animate-pulse pt-1">Computing recommendation…</p>
-  )
+  if (loading) return <p className="text-slate-600 text-xs animate-pulse pt-1">Computing recommendation…</p>
   if (!stats || stats.count < 10) return null
 
-  const suggestion     = isSteal ? stats.p75 : stats.p25
-  const roundLabel     = isSteal ? `Round ${def.roundVal}+` : `Rounds 1–${def.roundVal}`
-  const posLabel       = def.pos ? ` ${def.pos}` : ''
-  const statName       = statLabel(def)
-  const isCareerNonAv  = def.category !== 'career_av' && def.scope !== 'season'
-  const scopeSuffix    = def.scope === 'season' ? ' (best season)' : def.category !== 'career_av' ? ' (career total)' : ''
-  const filterNote     = isCareerNonAv
+  const suggestion    = isSteal ? stats.p75 : stats.p25
+  const roundLabel    = isSteal ? `Round ${def.roundVal}+` : `Rounds 1–${def.roundVal}`
+  const posLabel      = def.pos ? ` ${def.pos}` : ''
+  const statName      = statLabel(def)
+  const isCareerNonAv = def.category !== 'career_av' && def.scope !== 'season'
+  const filterNote    = isCareerNonAv
     ? 'Players with ≥16 career games and non-zero production only.'
     : def.scope === 'season' ? 'Players with non-zero best season only.' : ''
   const yearNote = def.yearFrom && def.yearTo
@@ -335,19 +324,17 @@ function SystemRecommendation({ def, mode, onApply }) {
     : ''
 
   return (
-    <div className={`rounded-xl border ${S.border} ${S.bg} p-3 space-y-2 mt-3`}>
+    <div className={`rounded-xl border ${S.border} ${S.bg} p-3 space-y-2`}>
       <p className={`text-xs font-bold uppercase tracking-wider ${S.head}`}>System recommendation</p>
 
-      {/* Cohort + stat context */}
       <p className="text-xs text-slate-400 leading-relaxed">
         Among <span className="text-white font-semibold">{stats.count}</span> {roundLabel}{posLabel} picks
-        ({yearNote}≥4 seasons elapsed) — <span className="text-slate-300">{statName}{scopeSuffix}</span>:
+        ({yearNote}≥4 seasons elapsed) — <span className="text-slate-300">{statName}</span>:
         avg = <span className="text-white font-semibold">{stats.avg}</span>,
         median = <span className="text-white font-semibold">{stats.p50}</span>.
         {filterNote && <span className="text-slate-600"> {filterNote}</span>}
       </p>
 
-      {/* Percentile bar — raw totals */}
       <div className="flex items-center gap-1 text-xs text-slate-500 pt-0.5">
         <span className="w-5 text-right shrink-0">p25</span>
         <span className="text-slate-600 px-1 font-mono shrink-0">{stats.p25}</span>
@@ -367,7 +354,6 @@ function SystemRecommendation({ def, mode, onApply }) {
         <span>p75: {stats.p75}</span>
       </div>
 
-      {/* Per-game row — only for career totals */}
       {isCareerNonAv && stats.p50_pg != null && (
         <div className="rounded-lg bg-slate-900/60 border border-slate-700/40 px-3 py-2 space-y-1">
           <p className="text-xs text-slate-500 font-medium">Per game (normalized)</p>
@@ -388,7 +374,6 @@ function SystemRecommendation({ def, mode, onApply }) {
         </div>
       )}
 
-      {/* Explanation + Apply */}
       <div className="flex items-start justify-between gap-3 pt-1">
         <p className="text-xs text-slate-400 leading-relaxed flex-1">
           {isSteal
@@ -396,8 +381,7 @@ function SystemRecommendation({ def, mode, onApply }) {
             : <>The bottom 25% of these picks had {statName} ≤ <span className="text-white font-semibold">{stats.p25}</span>. A high pick below that bar is considered a bust.</>
           }
         </p>
-        <button
-          onClick={() => onApply(suggestion)}
+        <button onClick={() => onApply(suggestion)}
           className={`shrink-0 text-xs px-3 py-1.5 rounded-lg border transition-colors ${S.btn}`}>
           Apply ({suggestion})
         </button>
@@ -406,48 +390,13 @@ function SystemRecommendation({ def, mode, onApply }) {
   )
 }
 
-// ── Custom results hook ───────────────────────────────────────────────────────
-function useCustomDraft(def, mode) {
-  const [results, setResults] = useState(null)
-  const [loading, setLoading] = useState(false)
-  const [error,   setError]   = useState(null)
-  const timer = useRef()
-
-  useEffect(() => {
-    clearTimeout(timer.current)
-    if (!isComplete(def)) { setResults(null); setError(null); return }
-    timer.current = setTimeout(async () => {
-      setLoading(true); setError(null)
-      try {
-        const data = await api.getCustomDraft({
-          roundVal:      def.roundVal,
-          roundOp:       mode === 'steal' ? 'gte' : 'lte',
-          statVal:       parseFloat(def.statVal),
-          statOp:        mode === 'steal' ? 'gte' : 'lte',
-          category:      def.category,
-          stat:          def.category !== 'career_av' ? def.stat : undefined,
-          scope:         def.scope,
-          pos:           def.pos || undefined,
-          draftYearFrom: def.yearFrom || undefined,
-          draftYearTo:   def.yearTo   || undefined,
-        })
-        setResults(data)
-      } catch(e) { setError(e.message) }
-      finally    { setLoading(false) }
-    }, 350)
-    return () => clearTimeout(timer.current)
-  }, [JSON.stringify(def), mode])
-
-  return { results, loading, error }
-}
-
-// ── Scatter chart component ───────────────────────────────────────────────────
-function DraftScatter({ results, statLabel: yLabel }) {
+// ── Scatter chart ─────────────────────────────────────────────────────────────
+function DraftScatter({ results, yKey = 'career_av', statLabel: yLabel }) {
   const navigate = useNavigate()
   if (!results || results.length < 3) return null
   const dots = results
-    .filter(r => r.round != null && r.stat_value != null)
-    .map(r => ({ x: r.round, y: r.stat_value, name: r.player_name, pos: r.pos, id: r.player_id }))
+    .filter(r => r.round != null && r[yKey] != null)
+    .map(r => ({ x: r.round, y: r[yKey], name: r.player_name, pos: r.pos, id: r.player_id }))
   if (dots.length < 3) return null
 
   return (
@@ -499,13 +448,284 @@ function DraftScatter({ results, statLabel: yLabel }) {
   )
 }
 
+// ── Steal / Bust panel ────────────────────────────────────────────────────────
+function StealBustPanel({ mode }) {
+  const isSteal = mode === 'steal'
+  const LS_KEY  = isSteal ? LS_STEAL_CRITERIA : LS_BUST_CRITERIA
+
+  const [criteria,    setCriteria]    = useState(() => loadCriteria(LS_KEY))
+  const [builder,     setBuilder]     = useState(DEFAULT_CRITERION)
+  const [selectedIds, setSelectedIds] = useState([])
+  const [yearFrom,    setYearFrom]    = useState('')
+  const [yearTo,      setYearTo]      = useState('')
+  const [results,     setResults]     = useState(null)
+  const [loading,     setLoading]     = useState(false)
+  const [error,       setError]       = useState(null)
+  const timer = useRef()
+
+  // Persist criteria
+  useEffect(() => {
+    localStorage.setItem(LS_KEY, JSON.stringify(criteria))
+  }, [criteria, LS_KEY])
+
+  // Derived
+  const selectedCriteria = criteria.filter(c => selectedIds.includes(c.id))
+  const firstSel = selectedCriteria[0]
+  const isCompatible = c => !firstSel || (c.pos === firstSel.pos && c.roundVal === firstSel.roundVal)
+
+  // Add criterion
+  const addCriterion = () => {
+    if (!isCriterionComplete(builder)) return
+    setCriteria(prev => [...prev, { ...builder, id: crypto.randomUUID() }])
+    setBuilder(DEFAULT_CRITERION)
+  }
+
+  // Toggle selection (enforce pos+round compatibility)
+  const toggleSelect = id => {
+    setSelectedIds(prev => {
+      if (prev.includes(id)) return prev.filter(x => x !== id)
+      const c = criteria.find(x => x.id === id)
+      if (!c || !isCompatible(c)) return prev
+      return [...prev, id]
+    })
+  }
+
+  // Delete criterion
+  const deleteCriterion = id => {
+    setCriteria(prev => prev.filter(c => c.id !== id))
+    setSelectedIds(prev => prev.filter(x => x !== id))
+  }
+
+  // Update a criterion's threshold (from SystemRecommendation Apply)
+  const updateThreshold = (id, val) => {
+    setCriteria(prev => prev.map(c => c.id === id ? { ...c, statVal: String(val) } : c))
+  }
+
+  // Fetch combined results
+  const fetchKey = JSON.stringify({
+    ids: selectedIds,
+    vals: selectedCriteria.map(c => c.statVal),
+    yearFrom, yearTo,
+  })
+
+  useEffect(() => {
+    clearTimeout(timer.current)
+    if (!selectedIds.length || !selectedCriteria.every(isCriterionComplete)) {
+      setResults(null); setError(null); return
+    }
+    setLoading(true); setError(null)
+    timer.current = setTimeout(async () => {
+      try {
+        const data = await api.getCombinedDraft({
+          criteria: selectedCriteria.map(c => ({
+            category: c.category,
+            stat:     c.category !== 'career_av' ? c.stat : undefined,
+            scope:    c.scope,
+            stat_val: parseFloat(c.statVal),
+            stat_op:  isSteal ? 'gte' : 'lte',
+          })),
+          round_val:       firstSel.roundVal,
+          round_op:        isSteal ? 'gte' : 'lte',
+          pos:             firstSel.pos,
+          draft_year_from: yearFrom ? parseInt(yearFrom) : null,
+          draft_year_to:   yearTo   ? parseInt(yearTo)   : null,
+        })
+        setResults(data)
+      } catch (e) { setError(e.message) }
+      finally { setLoading(false) }
+    }, 350)
+    return () => clearTimeout(timer.current)
+  }, [fetchKey])
+
+  // Build result columns dynamically
+  const extraCols = selectedCriteria
+    .map((c, i) => ({ ...c, idx: i }))
+    .filter(c => c.category !== 'career_av')
+    .map(c => ({
+      key:    `crit_${c.idx}_value`,
+      label:  statLabel(c),
+      format: v => v?.toLocaleString() ?? '—',
+    }))
+  const resultCols = [...DRAFT_COLS, ...extraCols]
+
+  // Colour palette
+  const C = isSteal
+    ? {
+        border:     'border-emerald-900/60',
+        bgGrad:     'linear-gradient(135deg, #052e16 0%, #0f172a 100%)',
+        barColor:   '#22c55e',
+        head:       'text-emerald-400',
+        selBorder:  'border-emerald-700/60 bg-emerald-950/40',
+        resBorder:  'border-emerald-900/40',
+        inputFocus: 'focus:border-emerald-500',
+        checkBg:    'bg-emerald-500 border-emerald-400',
+      }
+    : {
+        border:     'border-rose-900/60',
+        bgGrad:     'linear-gradient(135deg, #4c0519 0%, #0f172a 100%)',
+        barColor:   '#f43f5e',
+        head:       'text-rose-400',
+        selBorder:  'border-rose-700/60 bg-rose-950/40',
+        resBorder:  'border-rose-900/40',
+        inputFocus: 'focus:border-rose-500',
+        checkBg:    'bg-rose-500 border-rose-400',
+      }
+
+  return (
+    <div className="space-y-4">
+
+      {/* Builder card */}
+      <div className={`rounded-2xl overflow-hidden border ${C.border}`} style={{ background: C.bgGrad }}>
+        <div className="h-1" style={{ background: `linear-gradient(90deg, ${C.barColor}, transparent)` }} />
+        <div className="p-5 space-y-4">
+          <div className="flex items-center gap-2">
+            <span className="text-xl">{isSteal ? '💎' : '📉'}</span>
+            <p className={`font-bold ${C.head}`}>{isSteal ? 'Draft Steals' : 'Draft Busts'}</p>
+            <span className="text-slate-600 text-xs ml-auto">
+              {isSteal ? 'Players who over-delivered on their draft slot' : 'High picks whose careers fell short'}
+            </span>
+          </div>
+          <CriterionBuilder value={builder} onChange={setBuilder} onAdd={addCriterion} mode={mode} />
+        </div>
+      </div>
+
+      {/* Saved criteria list */}
+      {criteria.length > 0 && (
+        <div className="rounded-2xl border border-slate-700/60 bg-slate-900/60 p-5 space-y-3">
+          <div className="flex items-center gap-3 flex-wrap">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 flex-1">
+              Saved criteria — select to combine
+            </p>
+            {firstSel && (
+              <p className="text-xs text-slate-600">
+                {firstSel.pos} · {isSteal ? `Round ${firstSel.roundVal}+` : `Round 1–${firstSel.roundVal}`} · {selectedIds.length} selected
+              </p>
+            )}
+            <button onClick={() => { setCriteria([]); setSelectedIds([]) }}
+              className="text-xs text-slate-600 hover:text-red-400 transition-colors">
+              Clear all
+            </button>
+          </div>
+
+          <div className="space-y-2">
+            {criteria.map(c => {
+              const selected    = selectedIds.includes(c.id)
+              const compatible  = isCompatible(c)
+              const disabled    = !selected && !compatible
+              return (
+                <div key={c.id}
+                  onClick={() => !disabled && toggleSelect(c.id)}
+                  className={`flex items-center gap-3 rounded-lg px-3 py-2.5 border transition-colors ${
+                    disabled
+                      ? 'border-slate-800/30 bg-slate-900/20 opacity-40 cursor-default'
+                      : selected
+                        ? `${C.selBorder} cursor-pointer`
+                        : 'border-slate-700/40 bg-slate-800/40 hover:border-slate-600/60 cursor-pointer'
+                  }`}>
+                  {/* Checkbox */}
+                  <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
+                    selected ? C.checkBg : 'border-slate-600'
+                  }`}>
+                    {selected && <span className="text-white text-[10px] leading-none font-bold">✓</span>}
+                  </div>
+                  {/* Label */}
+                  <p className="flex-1 text-xs text-slate-300 truncate">{criterionLabel(c, mode)}</p>
+                  {/* Group badge */}
+                  <span className="text-[10px] font-mono text-slate-600 bg-slate-800/60 rounded px-1.5 py-0.5 shrink-0">
+                    {c.pos} Rd{c.roundVal}{isSteal ? '+' : '−'}
+                  </span>
+                  {/* Delete */}
+                  <button
+                    onClick={e => { e.stopPropagation(); deleteCriterion(c.id) }}
+                    className="text-slate-600 hover:text-red-400 transition-colors text-xs shrink-0 ml-1">
+                    ✕
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+
+          {!firstSel && (
+            <p className="text-xs text-slate-600 text-center pt-1">
+              Click criteria to select. Only criteria with the same position and round can be combined.
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Year filter + System Recommendations (when criteria are selected) */}
+      {selectedIds.length > 0 && (
+        <div className="space-y-4">
+          {/* Year filter */}
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="text-xs text-slate-500 font-medium shrink-0">Draft year range:</p>
+            <input type="number" min="1970" max="2025" value={yearFrom}
+              onChange={e => setYearFrom(e.target.value)} placeholder="From"
+              className={`w-28 bg-slate-800 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-sm focus:outline-none ${C.inputFocus}`} />
+            <span className="text-slate-600 text-xs">–</span>
+            <input type="number" min="1970" max="2025" value={yearTo}
+              onChange={e => setYearTo(e.target.value)} placeholder="To"
+              className={`w-28 bg-slate-800 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-sm focus:outline-none ${C.inputFocus}`} />
+            {(yearFrom || yearTo) && (
+              <button onClick={() => { setYearFrom(''); setYearTo('') }}
+                className="text-xs text-slate-600 hover:text-slate-400 transition-colors">
+                Clear
+              </button>
+            )}
+          </div>
+
+          {/* System Recommendation per selected criterion */}
+          <div className={selectedCriteria.length > 1 ? 'grid md:grid-cols-2 gap-4' : ''}>
+            {selectedCriteria.map(c => (
+              <div key={c.id} className="space-y-1">
+                {selectedCriteria.length > 1 && (
+                  <p className="text-[10px] font-mono text-slate-600 px-1">{criterionLabel(c, mode)}</p>
+                )}
+                <SystemRecommendation
+                  def={{ ...c, yearFrom, yearTo }}
+                  mode={mode}
+                  onApply={v => updateThreshold(c.id, v)}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Empty states */}
+      {!selectedIds.length && criteria.length === 0 && (
+        <p className="text-slate-600 text-sm text-center py-8">
+          Build your first criterion above and add it to the list.
+        </p>
+      )}
+      {!selectedIds.length && criteria.length > 0 && (
+        <p className="text-slate-600 text-sm text-center py-6">
+          Select criteria above to see results.
+        </p>
+      )}
+
+      {/* Results */}
+      {loading && <Loading text="Searching…" />}
+      {error   && <ErrorMsg message={error} />}
+      {results && (
+        <>
+          <DraftScatter results={results} yKey="career_av" statLabel="Career AV" />
+          <div className={`bg-slate-800/70 border rounded-2xl p-5 ${C.resBorder}`}>
+            <p className="text-xs text-slate-600 mb-3">{results.length} players found</p>
+            <StatTable columns={resultCols} rows={results} keyField="player_name"
+              title={isSteal ? 'Draft Steals' : 'Draft Busts'} />
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function DraftAnalysis() {
-  const [tab,     setTab]     = useState('picks')
-  const [avInfo,  setAvInfo]  = useState(false)
+  const [tab,     setTab]    = useState('picks')
+  const [avInfo,  setAvInfo] = useState(false)
   const [filters, setFilters] = useState({ year: '', team: '', pos: '' })
-  const [stealDef, setStealDef] = useState(() => loadDef(LS_STEAL, DEFAULT_STEAL))
-  const [bustDef,  setBustDef]  = useState(() => loadDef(LS_BUST,  DEFAULT_BUST))
 
   const set = key => e => setFilters(f => ({ ...f, [key]: e.target.value }))
 
@@ -513,18 +733,6 @@ export default function DraftAnalysis() {
     () => api.getDraftPicks({ draft_year: filters.year || undefined, team: filters.team || undefined, pos: filters.pos || undefined, limit: 100 }),
     [filters.year, filters.team, filters.pos]
   )
-
-  const { results: steals, loading: sl, error: se } = useCustomDraft(stealDef, 'steal')
-  const { results: busts,  loading: bl, error: be } = useCustomDraft(bustDef,  'bust')
-
-  const stealCols = [
-    ...DRAFT_COLS.filter(c => stealDef.category !== 'career_av' || c.key !== 'career_av'),
-    { key: 'stat_value', label: statLabel(stealDef), format: v => v?.toLocaleString() ?? '—' },
-  ]
-  const bustCols = [
-    ...DRAFT_COLS.filter(c => bustDef.category !== 'career_av' || c.key !== 'career_av'),
-    { key: 'stat_value', label: statLabel(bustDef), format: v => v?.toLocaleString() ?? '—' },
-  ]
 
   return (
     <div className="space-y-5">
@@ -628,93 +836,8 @@ export default function DraftAnalysis() {
         </div>
       )}
 
-      {/* ── Steals ── */}
-      {tab === 'steals' && (
-        <div className="space-y-4">
-          <div className="rounded-2xl overflow-hidden border border-emerald-900/60"
-            style={{ background: 'linear-gradient(135deg, #052e16 0%, #0f172a 100%)' }}>
-            <div className="h-1" style={{ background: 'linear-gradient(90deg, #22c55e, transparent)' }} />
-            <div className="p-5">
-              <div className="flex items-center gap-2 mb-4">
-                <span className="text-xl">💎</span>
-                <p className="text-emerald-400 font-bold">Draft Steals</p>
-                <span className="text-slate-600 text-xs ml-auto">Players who over-delivered on their draft slot</span>
-                <button
-                  onClick={() => { localStorage.setItem(LS_STEAL, JSON.stringify(stealDef)) }}
-                  className="text-xs px-2.5 py-1 rounded-lg border border-emerald-900/60 text-emerald-600 hover:text-emerald-400 transition-colors">
-                  💾 Save preset
-                </button>
-              </div>
-              <DefinitionBuilder def={stealDef} onChange={setStealDef} mode="steal" />
-              <SystemRecommendation
-                def={stealDef} mode="steal"
-                onApply={v => setStealDef(d => ({ ...d, statVal: String(v) }))}
-              />
-            </div>
-          </div>
-
-          {!isComplete(stealDef) && (
-            <p className="text-slate-600 text-sm text-center py-6">
-              Complete the definition above to see results.
-            </p>
-          )}
-          {sl && <Loading text="Searching…" />}
-          {se && <ErrorMsg message={se} />}
-          {steals && (
-            <>
-              <DraftScatter results={steals} statLabel={statLabel(stealDef)} />
-              <div className="bg-slate-800/70 border border-emerald-900/40 rounded-2xl p-5">
-                <p className="text-xs text-slate-600 mb-3">{steals.length} players found</p>
-                <StatTable columns={stealCols} rows={steals} keyField="player_name" title="Draft Steals" />
-              </div>
-            </>
-          )}
-        </div>
-      )}
-
-      {/* ── Busts ── */}
-      {tab === 'busts' && (
-        <div className="space-y-4">
-          <div className="rounded-2xl overflow-hidden border border-rose-900/60"
-            style={{ background: 'linear-gradient(135deg, #4c0519 0%, #0f172a 100%)' }}>
-            <div className="h-1" style={{ background: 'linear-gradient(90deg, #f43f5e, transparent)' }} />
-            <div className="p-5">
-              <div className="flex items-center gap-2 mb-4">
-                <span className="text-xl">📉</span>
-                <p className="text-rose-400 font-bold">Draft Busts</p>
-                <span className="text-slate-600 text-xs ml-auto">High picks whose careers fell short</span>
-                <button
-                  onClick={() => { localStorage.setItem(LS_BUST, JSON.stringify(bustDef)) }}
-                  className="text-xs px-2.5 py-1 rounded-lg border border-rose-900/60 text-rose-600 hover:text-rose-400 transition-colors">
-                  💾 Save preset
-                </button>
-              </div>
-              <DefinitionBuilder def={bustDef} onChange={setBustDef} mode="bust" />
-              <SystemRecommendation
-                def={bustDef} mode="bust"
-                onApply={v => setBustDef(d => ({ ...d, statVal: String(v) }))}
-              />
-            </div>
-          </div>
-
-          {!isComplete(bustDef) && (
-            <p className="text-slate-600 text-sm text-center py-6">
-              Complete the definition above to see results.
-            </p>
-          )}
-          {bl && <Loading text="Searching…" />}
-          {be && <ErrorMsg message={be} />}
-          {busts && (
-            <>
-              <DraftScatter results={busts} statLabel={statLabel(bustDef)} />
-              <div className="bg-slate-800/70 border border-rose-900/40 rounded-2xl p-5">
-                <p className="text-xs text-slate-600 mb-3">{busts.length} players found</p>
-                <StatTable columns={bustCols} rows={busts} keyField="player_name" title="Draft Busts" />
-              </div>
-            </>
-          )}
-        </div>
-      )}
+      {tab === 'steals' && <StealBustPanel mode="steal" />}
+      {tab === 'busts'  && <StealBustPanel mode="bust"  />}
     </div>
   )
 }

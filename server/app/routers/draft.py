@@ -1,12 +1,46 @@
 """Module 3 endpoints: draft picks with filters, plus steals/busts."""
-from fastapi import APIRouter, Query
+from typing import Optional
+from fastapi import APIRouter, Query, HTTPException
+from pydantic import BaseModel
 
-from fastapi import HTTPException
 from app.data.draft import (DEFAULT_MIN_SEASONING_YEARS, find_busts, find_steals,
-                             get_custom_draft_rank, get_draft_picks,
+                             get_combined_draft, get_custom_draft_rank, get_draft_picks,
                              get_draft_round_stats)
 
+
+class CriterionItem(BaseModel):
+    category: str
+    stat: Optional[str] = None
+    scope: str = "career"
+    stat_val: float
+    stat_op: str = "gte"
+
+class CombinedDraftRequest(BaseModel):
+    criteria: list[CriterionItem]
+    round_val: int = 4
+    round_op: str = "gte"
+    pos: str
+    draft_year_from: Optional[int] = None
+    draft_year_to: Optional[int] = None
+    limit: int = 100
+
 router = APIRouter(prefix="/draft", tags=["draft"])
+
+
+@router.post("/combined")
+def combined_draft(req: CombinedDraftRequest):
+    try:
+        return get_combined_draft(
+            criteria=[c.model_dump() for c in req.criteria],
+            round_val=req.round_val,
+            round_op=req.round_op,
+            pos=req.pos,
+            draft_year_from=req.draft_year_from,
+            draft_year_to=req.draft_year_to,
+            limit=req.limit,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
 
 @router.get("")

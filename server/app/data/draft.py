@@ -273,6 +273,90 @@ def get_draft_round_stats(
     return dict(row._mapping)
 
 
+_VALID_CATEGORIES = frozenset(["career_av", "passing", "offense", "defense", "kicking", "punting", "returns"])
+
+
+def get_combined_draft(
+    criteria: list[dict],
+    round_val: int,
+    round_op: str,           # "gte" or "lte"
+    pos: str,
+    draft_year_from: int | None = None,
+    draft_year_to: int | None = None,
+    limit: int = 100,
+    min_seasoning_years: int = DEFAULT_MIN_SEASONING_YEARS,
+) -> list[dict]:
+    """Return players matching ALL criteria (AND-joined) for a given round/position."""
+    if round_op not in ("gte", "lte"):
+        raise ValueError("round_op must be 'gte' or 'lte'")
+    if not criteria:
+        raise ValueError("at least one criterion required")
+    if not pos:
+        raise ValueError("pos is required for combined queries")
+
+    round_sql = ">=" if round_op == "gte" else "<="
+    order = "DESC" if round_op == "gte" else "ASC"
+
+    params: dict = {
+        "round_val": round_val, "pos": pos,
+        "year_from": draft_year_from, "year_to": draft_year_to, "limit": limit,
+    }
+
+    extra_select: list[str] = []
+    extra_where:  list[str] = []
+
+    for i, crit in enumerate(criteria):
+        cat     = crit["category"]
+        stat    = crit.get("stat")
+        scope   = crit.get("scope", "career")
+        stat_val = crit["stat_val"]
+        stat_op_sql = ">=" if crit.get("stat_op", "gte") == "gte" else "<="
+
+        if cat not in _VALID_CATEGORIES:
+            raise ValueError(f"invalid category {cat!r}")
+
+        val_key = f"crit_{i}_val"
+        params[val_key] = stat_val
+
+        if cat == "career_av":
+            extra_where.append(f"AND d.career_av {stat_op_sql} :{val_key}")
+        else:
+            valid_stats = _STAT_WHITELIST.get(cat, frozenset())
+            if not stat or stat not in valid_stats:
+                raise ValueError(f"stat {stat!r} not allowed for category {cat!r}")
+            if scope == "career":
+                sub = f"(SELECT c.{stat} FROM {cat}_career c WHERE c.player_id = d.player_id)"
+            else:
+                sub = f"(SELECT MAX(s.{stat}) FROM {cat}_seasons s WHERE s.player_id = d.player_id)"
+            extra_select.append(f"{sub} AS crit_{i}_value")
+            extra_where.append(f"AND ({sub}) {stat_op_sql} :{val_key}")
+
+    select_extra = (",\n               " + ",\n               ".join(extra_select)) if extra_select else ""
+    where_extra  = "\n          ".join(extra_where)
+
+    sql = text(f"""
+        SELECT d.draft_year, d.round, d.pick, d.player_name, d.pos, d.team,
+               d.career_av, d.player_id
+               {select_extra}
+        FROM draft d
+        WHERE d.round {round_sql} :round_val
+          AND UPPER(d.pos) = UPPER(:pos)
+          AND d.career_av IS NOT NULL
+          AND d.draft_year <= :cutoff
+          AND (:year_from IS NULL OR d.draft_year >= :year_from)
+          AND (:year_to   IS NULL OR d.draft_year <= :year_to)
+          {where_extra}
+        ORDER BY d.career_av {order}
+        LIMIT :limit
+    """)
+
+    with engine.connect() as conn:
+        params["cutoff"] = _latest_draft_year(conn) - min_seasoning_years
+        rows = conn.execute(sql, params).fetchall()
+
+    return [dict(r._mapping) for r in rows]
+
+
 def find_steals(min_round: int = 4, min_career_av: int = 50,
                 min_seasoning_years: int = DEFAULT_MIN_SEASONING_YEARS,
                 limit: int = 20) -> list[dict]:
