@@ -62,16 +62,23 @@ def get_player_playoff_stats(player_id: str) -> list[dict]:
     if "passing" in existing:
         pass_seasons = []
         for row in seasons_data:
-            if (row.get("pass_att") or 0) == 0:
+            att = row.get("pass_att") or 0
+            if att == 0:
                 continue
+            yds = row.get("pass_yds") or 0
+            td  = row.get("pass_td")  or 0
+            int_ = row.get("pass_int") or 0
             pass_seasons.append({
                 "season":   row["season"],
                 "team":     row["team"],
                 "g":        row["g"],
-                "att":      row["pass_att"],
-                "yds":      row["pass_yds"],
-                "td":       row["pass_td"],
-                "int":      row["pass_int"],
+                "att":      att,
+                "yds":      yds,
+                "td":       td,
+                "int":      int_,
+                # computed rate stats from available weekly data
+                "y_per_a":  round(yds / att, 1) if att else None,
+                "ay_per_a": round((yds + 20 * td - 45 * int_) / att, 1) if att else None,
                 # QBs often rush; include here so the combined view works
                 "rush_att": row["rush_att"],
                 "rush_yds": row["rush_yds"],
@@ -80,6 +87,12 @@ def get_player_playoff_stats(player_id: str) -> list[dict]:
         if pass_seasons:
             sum_keys = ["g", "att", "yds", "td", "int", "rush_att", "rush_yds", "rush_td"]
             career = {k: sum((s.get(k) or 0) for s in pass_seasons) for k in sum_keys}
+            total_att = career["att"]
+            total_yds = career["yds"]
+            total_td  = career["td"]
+            total_int = career["int"]
+            career["y_per_a"]  = round(total_yds / total_att, 1) if total_att else None
+            career["ay_per_a"] = round((total_yds + 20 * total_td - 45 * total_int) / total_att, 1) if total_att else None
             career["player_id"] = player_id
             result.append({"category": "passing", "seasons": pass_seasons, "career": career})
 

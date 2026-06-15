@@ -28,7 +28,7 @@ const COLS = {
       { key: 'g',       label: 'G',    desc: STAT_DEFS.g },
       { key: 'cmp',     label: 'Cmp',  desc: STAT_DEFS.cmp },
       { key: 'att',     label: 'Att',  desc: STAT_DEFS.att },
-      { key: 'cmp_pct', label: 'Cmp%', format: (_, r) => r.att ? `${(100 * r.cmp / r.att).toFixed(1)}%` : '—' },
+      { key: 'cmp_pct', label: 'Cmp%', format: (_, r) => (r.att && r.cmp != null) ? `${(100 * r.cmp / r.att).toFixed(1)}%` : '—' },
       { key: 'yds',     label: 'Yds',  desc: STAT_DEFS.yds,  format: loc },
       { key: 'td',      label: 'TD',   desc: STAT_DEFS.td },
       { key: 'int',     label: 'INT',  desc: STAT_DEFS.int },
