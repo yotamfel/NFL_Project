@@ -19,22 +19,25 @@ def picks(team: str | None = Query(None, description="Three-letter team code, e.
 
 @router.get("/custom")
 def custom_rank(
-    round_val: int   = Query(4, ge=1, le=7),
-    round_op:  str   = Query("gte"),
-    stat_val:  float = Query(50.0, ge=0),
-    stat_op:   str   = Query("gte"),
-    category:  str   = Query("career_av"),
-    stat:      str | None = Query(None),
-    scope:     str   = Query("career"),
-    pos:       str | None = Query(None),
-    limit:     int   = Query(50, ge=1, le=100),
+    round_val:       int   = Query(4, ge=1, le=7),
+    round_op:        str   = Query("gte"),
+    stat_val:        float = Query(50.0, ge=0),
+    stat_op:         str   = Query("gte"),
+    category:        str   = Query("career_av"),
+    stat:            str | None = Query(None),
+    scope:           str   = Query("career"),
+    pos:             str | None = Query(None),
+    draft_year_from: int | None = Query(None),
+    draft_year_to:   int | None = Query(None),
+    limit:           int   = Query(50, ge=1, le=100),
 ):
     try:
         return get_custom_draft_rank(
-            round_val=round_val, round_op=round_op,
-            stat_val=stat_val,   stat_op=stat_op,
-            category=category,   stat=stat,
-            scope=scope,         pos=pos,
+            round_val=round_val,           round_op=round_op,
+            stat_val=stat_val,             stat_op=stat_op,
+            category=category,             stat=stat,
+            scope=scope,                   pos=pos,
+            draft_year_from=draft_year_from, draft_year_to=draft_year_to,
             limit=limit,
         )
     except ValueError as exc:

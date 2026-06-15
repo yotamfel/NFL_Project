@@ -87,6 +87,8 @@ def get_custom_draft_rank(
     stat: str | None = None,
     scope: str = "career",  # "career" or "season" (best single season)
     pos: str | None = None,
+    draft_year_from: int | None = None,
+    draft_year_to: int | None = None,
     min_seasoning_years: int = DEFAULT_MIN_SEASONING_YEARS,
     limit: int = 50,
 ) -> list[dict]:
@@ -101,7 +103,8 @@ def get_custom_draft_rank(
     stat_sql  = ">=" if stat_op  == "gte" else "<="
     order     = "DESC" if stat_op == "gte" else "ASC"
     params    = {"round_val": round_val, "stat_val": stat_val,
-                 "pos": pos, "limit": limit}
+                 "pos": pos, "limit": limit,
+                 "year_from": draft_year_from, "year_to": draft_year_to}
 
     with engine.connect() as conn:
         params["cutoff"] = _latest_draft_year(conn) - min_seasoning_years
@@ -116,6 +119,8 @@ def get_custom_draft_rank(
                   AND d.career_av {stat_sql} :stat_val
                   AND d.draft_year <= :cutoff
                   AND (:pos IS NULL OR UPPER(d.pos) = UPPER(:pos))
+                  AND (:year_from IS NULL OR d.draft_year >= :year_from)
+                  AND (:year_to   IS NULL OR d.draft_year <= :year_to)
                 ORDER BY stat_value {order}
                 LIMIT :limit
             """)

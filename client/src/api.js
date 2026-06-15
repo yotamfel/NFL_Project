@@ -54,10 +54,12 @@ export const api = {
     p.set('limit', limit)
     return get(`/draft?${p}`)
   },
-  getCustomDraft: ({ roundVal, roundOp, statVal, statOp, category = 'career_av', stat, scope = 'career', pos, limit = 50 } = {}) => {
+  getCustomDraft: ({ roundVal, roundOp, statVal, statOp, category = 'career_av', stat, scope = 'career', pos, draftYearFrom, draftYearTo, limit = 50 } = {}) => {
     const p = new URLSearchParams({ round_val: roundVal, round_op: roundOp, stat_val: statVal, stat_op: statOp, category, scope, limit })
-    if (pos)  p.set('pos', pos)
-    if (stat) p.set('stat', stat)
+    if (pos)           p.set('pos', pos)
+    if (stat)          p.set('stat', stat)
+    if (draftYearFrom) p.set('draft_year_from', draftYearFrom)
+    if (draftYearTo)   p.set('draft_year_to',   draftYearTo)
     return get(`/draft/custom?${p}`)
   },
 

@@ -121,8 +121,8 @@ const AV_SCALE = [
 const LS_STEAL = 'draft_steal_def'
 const LS_BUST  = 'draft_bust_def'
 
-const DEFAULT_STEAL = { roundVal: 4, pos: '', category: 'career_av', scope: 'career', stat: '', statVal: '50' }
-const DEFAULT_BUST  = { roundVal: 2, pos: '', category: 'career_av', scope: 'career', stat: '', statVal: '15' }
+const DEFAULT_STEAL = { roundVal: 4, pos: '', category: 'career_av', scope: 'career', stat: '', statVal: '50', yearFrom: '', yearTo: '' }
+const DEFAULT_BUST  = { roundVal: 2, pos: '', category: 'career_av', scope: 'career', stat: '', statVal: '15', yearFrom: '', yearTo: '' }
 
 function loadDef(key, fallback) {
   try { return JSON.parse(localStorage.getItem(key)) ?? fallback } catch { return fallback }
@@ -243,6 +243,24 @@ function DefinitionBuilder({ def, onChange, mode }) {
           <input type="number" min="0" value={def.statVal}
             onChange={e => onChange({ ...def, statVal: e.target.value })}
             placeholder="value"
+            className={`w-full ${inputCls}`} />
+        </div>
+
+        {/* Draft year from */}
+        <div>
+          <p className={labelCls}>Draft year from</p>
+          <input type="number" min="1970" max="2025" value={def.yearFrom}
+            onChange={e => onChange({ ...def, yearFrom: e.target.value })}
+            placeholder="e.g. 2000"
+            className={`w-full ${inputCls}`} />
+        </div>
+
+        {/* Draft year to */}
+        <div>
+          <p className={labelCls}>Draft year to</p>
+          <input type="number" min="1970" max="2025" value={def.yearTo}
+            onChange={e => onChange({ ...def, yearTo: e.target.value })}
+            placeholder="e.g. 2020"
             className={`w-full ${inputCls}`} />
         </div>
 
@@ -395,14 +413,16 @@ function useCustomDraft(def, mode) {
       setLoading(true); setError(null)
       try {
         const data = await api.getCustomDraft({
-          roundVal: def.roundVal,
-          roundOp:  mode === 'steal' ? 'gte' : 'lte',
-          statVal:  parseFloat(def.statVal),
-          statOp:   mode === 'steal' ? 'gte' : 'lte',
-          category: def.category,
-          stat:     def.category !== 'career_av' ? def.stat : undefined,
-          scope:    def.scope,
-          pos:      def.pos || undefined,
+          roundVal:      def.roundVal,
+          roundOp:       mode === 'steal' ? 'gte' : 'lte',
+          statVal:       parseFloat(def.statVal),
+          statOp:        mode === 'steal' ? 'gte' : 'lte',
+          category:      def.category,
+          stat:          def.category !== 'career_av' ? def.stat : undefined,
+          scope:         def.scope,
+          pos:           def.pos || undefined,
+          draftYearFrom: def.yearFrom || undefined,
+          draftYearTo:   def.yearTo   || undefined,
         })
         setResults(data)
       } catch(e) { setError(e.message) }
@@ -490,8 +510,14 @@ export default function DraftAnalysis() {
   const { results: steals, loading: sl, error: se } = useCustomDraft(stealDef, 'steal')
   const { results: busts,  loading: bl, error: be } = useCustomDraft(bustDef,  'bust')
 
-  const stealCols = [...DRAFT_COLS, { key: 'stat_value', label: statLabel(stealDef), format: v => v?.toLocaleString() ?? '—' }]
-  const bustCols  = [...DRAFT_COLS, { key: 'stat_value', label: statLabel(bustDef),  format: v => v?.toLocaleString() ?? '—' }]
+  const stealCols = [
+    ...DRAFT_COLS.filter(c => stealDef.category !== 'career_av' || c.key !== 'career_av'),
+    { key: 'stat_value', label: statLabel(stealDef), format: v => v?.toLocaleString() ?? '—' },
+  ]
+  const bustCols = [
+    ...DRAFT_COLS.filter(c => bustDef.category !== 'career_av' || c.key !== 'career_av'),
+    { key: 'stat_value', label: statLabel(bustDef), format: v => v?.toLocaleString() ?? '—' },
+  ]
 
   return (
     <div className="space-y-5">

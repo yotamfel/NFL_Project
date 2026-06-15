@@ -207,7 +207,7 @@ const CONTENT = {
         subsections: [
           {
             title: 'How it works',
-            body: 'Type any question in natural English or Hebrew. The AI (Claude) translates your question into a SQL query and runs it directly against the database. Results appear as a table below.',
+            body: 'Type any question in natural English. The AI (Claude) translates your question into a SQL query and runs it directly against the database. Results appear as a table below.',
           },
           {
             title: 'Example questions',
@@ -276,12 +276,16 @@ const CONTENT = {
         title: 'Saved',
         subsections: [
           {
+            title: 'Accessing Saved',
+            body: 'Click the "Saved" tab in the top navigation bar from any page to open your saved items.',
+          },
+          {
             title: 'Saved players',
             body: 'Players you bookmark with the ★ button on their profile appear here. Click the name to go to their profile.',
           },
           {
             title: 'Saved charts & tables',
-            body: 'Hover over any career chart or stat table — a bookmark icon (🔖) appears in the top-right corner. Click it to save that chart or table to your Saved list. Saved charts and tables can then be added to a Dashboard.',
+            body: 'Hover over any career chart or stat table — a bookmark icon (🔖) appears in the top-right corner. Click it to save that chart or table to your Saved list. Each saved chart and table shows a "View source" link that takes you back to the page where you saved it from. Saved charts and tables can also be added to a Dashboard.',
           },
           {
             title: 'Notes on saved items',
@@ -700,12 +704,16 @@ const CONTENT = {
         title: 'Saved',
         subsections: [
           {
+            title: 'גישה ל-Saved',
+            body: 'לחץ על טאב "Saved" בסרגל הניווט העליון מכל עמוד כדי לפתוח את הפריטים השמורים שלך.',
+          },
+          {
             title: 'שחקנים שמורים',
             body: 'שחקנים שסימנת עם ★ בפרופיל שלהם מופיעים כאן. לחץ על השם כדי לעבור לפרופיל.',
           },
           {
             title: 'גרפים וטבלאות שמורים',
-            body: 'רחף מעל גרף קריירה או טבלת סטטיסטיקות — אייקון הסימניה (🔖) יופיע בפינה הימנית העליונה. לחץ עליו כדי לשמור את הגרף או הטבלה. פריטים שמורים אלה ניתן להוסיף לדשבורד.',
+            body: 'רחף מעל גרף קריירה או טבלת סטטיסטיקות — אייקון הסימניה (🔖) יופיע בפינה הימנית העליונה. לחץ עליו כדי לשמור. כל גרף וטבלה שמורים מציגים קישור "View source" שמחזיר אותך לעמוד שממנו שמרת. ניתן גם להוסיף פריטים אלה לדשבורד.',
           },
           {
             title: 'הערות על פריטים שמורים',
@@ -865,7 +873,7 @@ export default function Guide() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-0.5">
-            {isHe ? 'NFL DATA' : 'NFL DATA'}
+            FOURTH & DATA
           </p>
           <h1 className="text-3xl font-black text-white tracking-tight">{c.title}</h1>
         </div>
@@ -903,7 +911,7 @@ export default function Guide() {
         <div key={section.id} id={section.id}
           className="bg-slate-800/70 border border-slate-700/60 rounded-2xl p-6 space-y-5 scroll-mt-20">
 
-          <h2 className="text-xl font-black text-white flex items-center gap-2">
+          <h2 className={`text-xl flex items-center gap-2 ${isHe ? 'font-bold text-amber-400/90' : 'font-black text-white'}`}>
             <span>{section.icon}</span>
             {section.title}
           </h2>
@@ -944,7 +952,7 @@ export default function Guide() {
       <p className="text-center text-slate-600 text-xs pb-4">
         {isHe
           ? 'מקור נתונים: Pro Football Reference · Next Gen Stats · 1970–2025 · 20,000+ שחקנים'
-          : 'Data: Pro Football Reference · Next Gen Stats · 1970–2025 · 20,000+ players'}
+          : 'Data: Pro Football Reference · Next Gen Stats · 1970–2025 · 18,000+ players'}
       </p>
     </div>
   )
