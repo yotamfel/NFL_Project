@@ -185,14 +185,6 @@ export default function Nav() {
                 <p className="text-slate-500 text-xs truncate">{user?.email}</p>
               </div>
               <div className="px-4 py-3 border-b border-slate-700/60 flex items-center justify-between">
-                <span className="text-slate-300 text-sm">Theme</span>
-                <button
-                  onClick={() => updatePreferences({ theme: user?.theme === 'light' ? 'dark' : 'light' })}
-                  className={`relative w-11 h-6 rounded-full transition-colors ${user?.theme === 'light' ? 'bg-amber-500' : 'bg-slate-600'}`}>
-                  <span className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${user?.theme === 'light' ? 'translate-x-5' : 'translate-x-0'}`} />
-                </button>
-              </div>
-              <div className="px-4 py-3 border-b border-slate-700/60 flex items-center justify-between">
                 <span className="text-slate-300 text-sm">Guide language</span>
                 <div className="flex gap-1">
                   {[['en', 'EN'], ['he', 'עב']].map(([code, label]) => (
