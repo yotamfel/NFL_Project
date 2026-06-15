@@ -448,32 +448,51 @@ if __name__ == "__main__":
         conn.execute(text(CREATE_TABLE))
         conn.execute(text(ALTER_TABLE))
 
+        # Latest completed season (has full passing_seasons data)
         row = conn.execute(text(
             "SELECT MAX(season) AS s FROM passing_seasons WHERE att >= 100"
         )).fetchone()
-        target = int(row.s) if row and row.s else None
-        if not target:
+        season_target = int(row.s) if row and row.s else None
+
+        # Latest season with any game data (may be the current in-progress season)
+        row2 = conn.execute(text(
+            "SELECT MAX(season) AS s FROM weekly_stats WHERE game_type = 'REG'"
+        )).fetchone()
+        game_target = int(row2.s) if row2 and row2.s else season_target
+
+        if not season_target:
             print("No season data found — skipping.")
             sys.exit(0)
 
-        print(f"Detecting anomalies for season {target}…")
-        conn.execute(text("DELETE FROM anomaly_alerts WHERE season = :s"), {"s": target})
+        # ── Season-level anomalies (completed season) ────────────────────────
+        print(f"Detecting season anomalies for {season_target}…")
+        conn.execute(text("DELETE FROM anomaly_alerts WHERE season = :s AND alert_type NOT IN ('game_high','game_milestone')"), {"s": season_target})
 
-        all_alerts: list[dict] = []
-        all_alerts += detect_counting(target, conn)
-        all_alerts += detect_yoy_surge(target, conn)
-        all_alerts += detect_efficiency(target, conn)
-        all_alerts += detect_versatile(target, conn)
-        all_alerts += detect_game_highs(target, conn)
-        all_alerts += detect_game_milestones(target, conn)
+        season_alerts: list[dict] = []
+        season_alerts += detect_counting(season_target, conn)
+        season_alerts += detect_yoy_surge(season_target, conn)
+        season_alerts += detect_efficiency(season_target, conn)
+        season_alerts += detect_versatile(season_target, conn)
 
-        if all_alerts:
-            conn.execute(text(INSERT_SQL), all_alerts)
+        if season_alerts:
+            conn.execute(text(INSERT_SQL), season_alerts)
 
+        # ── Game-level anomalies (current active season) ─────────────────────
+        print(f"Detecting game anomalies for {game_target}…")
+        conn.execute(text("DELETE FROM anomaly_alerts WHERE season = :s AND alert_type IN ('game_high','game_milestone')"), {"s": game_target})
+
+        game_alerts: list[dict] = []
+        game_alerts += detect_game_highs(game_target, conn)
+        game_alerts += detect_game_milestones(game_target, conn)
+
+        if game_alerts:
+            conn.execute(text(INSERT_SQL), game_alerts)
+
+        all_alerts = season_alerts + game_alerts
         by_type: dict[str, int] = {}
         for a in all_alerts:
             by_type[a["alert_type"]] = by_type.get(a["alert_type"], 0) + 1
 
-        print(f"Inserted {len(all_alerts)} anomaly alerts for season {target}:")
+        print(f"\nTotal: {len(all_alerts)} anomaly alerts inserted:")
         for t, n in sorted(by_type.items()):
             print(f"  {t}: {n}")
