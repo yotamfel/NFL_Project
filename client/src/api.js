@@ -96,6 +96,8 @@ export const api = {
   getAdminVisits: ()                => get('/admin/visits'),
   getAdminStats: ()                 => get('/admin/stats'),
   getAdminAi: ()                    => get('/admin/ai'),
+  getAdminUsers: ()                 => get('/admin/users'),
+  deleteAdminUser: (id)             => del(`/admin/users/${id}`),
 
   // ── Players ───────────────────────────────────────────────────────────────
   searchPlayers: (q = '', { pos, season, team, limit = 10 } = {}) => {

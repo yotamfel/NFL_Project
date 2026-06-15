@@ -26,7 +26,7 @@ export default function AdminPanel() {
 
       {/* Tabs */}
       <div className="flex gap-1 bg-slate-900 border border-slate-800 rounded-xl p-1 mb-6 w-fit">
-        {['overview', 'visits', 'feedback'].map(t => (
+        {['overview', 'visits', 'users', 'feedback'].map(t => (
           <button key={t} onClick={() => setTab(t)}
             className={`px-4 py-1.5 rounded-lg text-sm font-medium capitalize transition-colors ${
               tab === t ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'
@@ -38,6 +38,7 @@ export default function AdminPanel() {
 
       {tab === 'overview' && <OverviewTab />}
       {tab === 'visits'   && <VisitsTab />}
+      {tab === 'users'    && <UsersTab />}
       {tab === 'feedback' && <FeedbackTab />}
     </div>
   )
@@ -91,6 +92,82 @@ function VisitsTab() {
           <Line type="monotone" dataKey="visits" stroke="#f59e0b" strokeWidth={2} dot={false} />
         </LineChart>
       </ResponsiveContainer>
+    </div>
+  )
+}
+
+// ── Users management ──────────────────────────────────────────────────────────
+function UsersTab() {
+  const { user: me } = useAuth()
+  const [users,     setUsers]     = useState(null)
+  const [confirming, setConfirming] = useState(null)
+  const [deleting,  setDeleting]  = useState({})
+
+  useEffect(() => { api.getAdminUsers().then(setUsers).catch(() => {}) }, [])
+
+  const deleteUser = async (id) => {
+    setDeleting(d => ({ ...d, [id]: true }))
+    try {
+      await api.deleteAdminUser(id)
+      setUsers(prev => prev.filter(u => u.id !== id))
+    } catch { /* ignore */ }
+    finally {
+      setDeleting(d => ({ ...d, [id]: false }))
+      setConfirming(null)
+    }
+  }
+
+  if (!users) return <Spinner />
+
+  return (
+    <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-slate-800 text-left">
+            <th className="px-4 py-3 text-slate-400 font-medium">Username</th>
+            <th className="px-4 py-3 text-slate-400 font-medium">Email</th>
+            <th className="px-4 py-3 text-slate-400 font-medium">Role</th>
+            <th className="px-4 py-3 text-slate-400 font-medium">Joined</th>
+            <th className="px-4 py-3"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {users.map(u => (
+            <tr key={u.id} className="border-b border-slate-800/60 last:border-0 hover:bg-slate-800/30">
+              <td className="px-4 py-3 text-white font-medium">{u.username}</td>
+              <td className="px-4 py-3 text-slate-400">{u.email}</td>
+              <td className="px-4 py-3">
+                {u.is_admin
+                  ? <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 font-semibold">admin</span>
+                  : <span className="text-xs px-2 py-0.5 rounded-full bg-slate-700 text-slate-400">user</span>}
+              </td>
+              <td className="px-4 py-3 text-slate-500 text-xs">{new Date(u.created_at).toLocaleDateString()}</td>
+              <td className="px-4 py-3 text-right">
+                {u.id !== me?.id && (
+                  confirming === u.id ? (
+                    <div className="flex items-center gap-2 justify-end">
+                      <span className="text-slate-400 text-xs">Delete {u.username}?</span>
+                      <button onClick={() => deleteUser(u.id)} disabled={deleting[u.id]}
+                        className="px-2.5 py-1 bg-red-500 hover:bg-red-400 disabled:opacity-50 text-white text-xs font-bold rounded-lg transition-colors">
+                        {deleting[u.id] ? '…' : 'Yes'}
+                      </button>
+                      <button onClick={() => setConfirming(null)}
+                        className="px-2.5 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs rounded-lg transition-colors">
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <button onClick={() => setConfirming(u.id)}
+                      className="px-2.5 py-1 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors">
+                      Delete
+                    </button>
+                  )
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   )
 }

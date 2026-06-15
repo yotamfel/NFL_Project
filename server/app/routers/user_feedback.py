@@ -85,6 +85,25 @@ def admin_patch_feedback(feedback_id: int, body: AdminFeedbackPatch, admin: dict
     return {"ok": True}
 
 
+@router.get("/admin/users")
+def admin_list_users(admin: dict = Depends(_require_admin)):
+    with engine.connect() as conn:
+        rows = conn.execute(text(
+            "SELECT id, username, email, is_admin, created_at FROM users ORDER BY created_at DESC"
+        )).fetchall()
+    return [dict(r._mapping) for r in rows]
+
+
+@router.delete("/admin/users/{user_id}", status_code=204)
+def admin_delete_user(user_id: int, admin: dict = Depends(_require_admin)):
+    if user_id == int(admin["sub"]):
+        raise HTTPException(status_code=400, detail="Cannot delete your own account")
+    with engine.begin() as conn:
+        result = conn.execute(text("DELETE FROM users WHERE id = :uid"), {"uid": user_id})
+        if result.rowcount == 0:
+            raise HTTPException(status_code=404, detail="User not found")
+
+
 @router.get("/admin/visits")
 def admin_visits(admin: dict = Depends(_require_admin)):
     with engine.connect() as conn:
