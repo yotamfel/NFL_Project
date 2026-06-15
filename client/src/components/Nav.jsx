@@ -90,7 +90,7 @@ export default function Nav() {
       <div className="max-w-6xl mx-auto px-4 flex flex-wrap items-center gap-x-4 gap-y-2 py-2 min-h-14">
 
         {/* Logo */}
-        <NavLink to="/" className="flex items-center gap-2 shrink-0">
+        <NavLink to="/" className="flex items-center gap-1 shrink-0">
           <img src="/logo.png" alt="" className="w-7 h-7" />
           <span className="font-black text-base tracking-tight">
             <span className="bg-gradient-to-r from-amber-400 to-yellow-200 bg-clip-text text-transparent">FOURTH</span>

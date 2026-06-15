@@ -39,7 +39,7 @@ export default function Auth() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="text-4xl mb-3">🏈</div>
+          <img src="/logo.png" alt="" className="w-16 h-16 mx-auto mb-3" />
           <h1 className="font-black text-2xl tracking-tight">
             <span className="bg-gradient-to-r from-amber-400 to-yellow-200 bg-clip-text text-transparent">FOURTH</span>
             <span className="text-white"> & DATA</span>
