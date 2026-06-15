@@ -271,62 +271,47 @@ const CONTENT = {
         subsections: [
           {
             title: 'Accessing Saved',
-            body: 'Click the "Saved" tab in the top navigation bar from any page to open your saved items.',
+            body: 'Click "Saved" in the top navigation bar. The default view is the "Saved & Notes" tab — it shows all your saved charts, tables, and notes in one place where you can edit and export them.',
           },
           {
             title: 'Saved players',
-            body: 'Players you bookmark with the ★ button on their profile appear here. Click the name to go to their profile.',
+            body: 'Players you bookmark with the ★ button on their profile appear in the Players tab. Click the name to go to their profile.',
           },
           {
             title: 'Saved charts & tables',
-            body: 'Hover over any career chart or stat table — a bookmark icon (🔖) appears in the top-right corner. Click it to save that chart or table to your Saved list. Each saved chart and table shows a "View source" link that takes you back to the page where you saved it from. Saved charts and tables can also be added to a Dashboard.',
+            body: 'Hover over any career chart or stat table — a bookmark icon (🔖) appears in the top-right corner. Click it to save. Saved charts and tables appear fully rendered in the Saved & Notes tab, ready to edit and export.',
+          },
+          {
+            title: 'Editing chart colors',
+            body: 'Each chart card shows a color swatch per data line below the chart. Click a swatch to change that line\'s color. Changes are applied live before you export.',
+          },
+          {
+            title: 'Injury bands',
+            body: 'Career charts include an "Injury bands" toggle in the controls row. Turn it off to hide the red vertical bands that mark seasons with 4+ missed games — useful for a cleaner export.',
+          },
+          {
+            title: 'Editing table colors',
+            body: 'Each table card shows color pickers for the header row, even rows, and odd rows. Changes apply instantly to the live preview.',
+          },
+          {
+            title: 'Export PNG',
+            body: 'Every chart and table card has an "Export PNG" button. Click it after making your edits to download the chart or table as a high-resolution image.',
+          },
+          {
+            title: 'Notes',
+            body: 'The Notes section is at the bottom of the Saved & Notes tab. Type anything and press Enter (or click Save) to add a note. Click any existing note to edit it — Enter saves, Shift+Enter adds a new line, Escape cancels. Delete a note with the × button.',
           },
           {
             title: 'Notes on saved items',
-            body: 'Every saved item (player, comparison, or search) can have a personal note. Click "+ Add a note…" below the item to write one. Click an existing note to edit it. Notes save automatically when you press Enter, click Save, or click away. Press Escape to cancel.',
+            body: 'Every saved player, comparison, or search can have a personal note. Click "+ Add a note…" below the item to write one. Notes save automatically when you press Enter, click Save, or click away. Press Escape to cancel.',
           },
           {
             title: 'Saved comparisons',
-            body: 'After building a comparison, click "Save comparison" to store it. It appears here with the player names and category. Click it to reload the comparison instantly.',
+            body: 'After building a comparison, click "Save comparison" to store it. It appears in the Comparisons tab with the player names and category. Click it to reload the comparison instantly.',
           },
           {
             title: 'Saved searches',
             body: 'Smart Search results can be saved. Each saved search shows the original question, the SQL, and the result table. Expand any entry to review.',
-          },
-          {
-            title: 'Notes tab',
-            body: 'The Notes tab is a free-form scratchpad. Type anything and press Enter (or click Save) to add a note. Click any existing note to edit it — it opens as a text area; Enter saves, Shift+Enter adds a new line, Escape cancels. Delete a note with the × button.',
-          },
-        ],
-      },
-      {
-        id: 'dashboard',
-        icon: '🗂️',
-        title: 'Dashboard',
-        subsections: [
-          {
-            title: 'Creating a dashboard',
-            body: 'Go to the Dashboard tab and type a name in the text box, then click Create. Your new dashboard opens immediately in the builder.',
-          },
-          {
-            title: 'Adding widgets',
-            body: 'The left sidebar has three tabs — Charts, Tables, and Widgets. Charts and Tables show items you\'ve previously saved (use the bookmark icon on any chart or table to save it). Click any item in the sidebar to add it to the canvas. The Widgets tab lets you add text headings and free-form text blocks.',
-          },
-          {
-            title: 'Arranging & resizing',
-            body: 'Drag a widget by its title bar (the ⠿ handle) to move it. Drag the bottom-right corner of any widget to resize it. The canvas snaps to a 12-column grid.',
-          },
-          {
-            title: 'Widget settings',
-            body: 'Click a widget to select it. A settings panel appears at the bottom of the canvas. For chart widgets, you can toggle the injury overlay on or off and change the color of each line using the color pickers. For text widgets, click directly in the widget to edit the content.',
-          },
-          {
-            title: 'Exporting as PNG',
-            body: 'Click the "Export PNG" button in the top toolbar to save the dashboard canvas as a high-resolution image. The export captures the currently visible portion of the canvas.',
-          },
-          {
-            title: 'Dashboard name',
-            body: 'Click the dashboard name in the top toolbar to rename it.',
           },
         ],
       },
@@ -699,62 +684,47 @@ const CONTENT = {
         subsections: [
           {
             title: 'גישה ל-Saved',
-            body: 'לחץ על טאב "Saved" בסרגל הניווט העליון מכל עמוד כדי לפתוח את הפריטים השמורים שלך.',
+            body: 'לחץ על "Saved" בסרגל הניווט העליון. התצוגה הראשית היא טאב "Saved & Notes" — מציג את כל הגרפים, הטבלאות וההערות השמורות שלך במקום אחד, עם אפשרות עריכה וייצוא.',
           },
           {
             title: 'שחקנים שמורים',
-            body: 'שחקנים שסימנת עם ★ בפרופיל שלהם מופיעים כאן. לחץ על השם כדי לעבור לפרופיל.',
+            body: 'שחקנים שסימנת עם ★ בפרופיל שלהם מופיעים בטאב Players. לחץ על השם כדי לעבור לפרופיל.',
           },
           {
             title: 'גרפים וטבלאות שמורים',
-            body: 'רחף מעל גרף קריירה או טבלת סטטיסטיקות — אייקון הסימניה (🔖) יופיע בפינה הימנית העליונה. לחץ עליו כדי לשמור. כל גרף וטבלה שמורים מציגים קישור "View source" שמחזיר אותך לעמוד שממנו שמרת. ניתן גם להוסיף פריטים אלה לדשבורד.',
+            body: 'רחף מעל גרף קריירה או טבלת סטטיסטיקות — אייקון הסימניה (🔖) יופיע בפינה הימנית העליונה. לחץ עליו לשמירה. הגרפים והטבלאות השמורים מופיעים מרונדרים במלואם בטאב Saved & Notes, מוכנים לעריכה וייצוא.',
+          },
+          {
+            title: 'עריכת צבעי גרף',
+            body: 'כל כרטיס גרף מציג בחירת צבע לכל קו נתונים מתחת לגרף. לחץ על הצבע לשינויו. השינויים נראים בזמן אמת לפני הייצוא.',
+          },
+          {
+            title: 'פסי פציעות',
+            body: 'גרפי קריירה כוללים Toggle לـ "Injury bands" בשורת הפקדים. כבה אותו להסתרת הפסים האדומים שמסמנים עונות עם 4+ משחקים חסרים — שימושי לייצוא נקי יותר.',
+          },
+          {
+            title: 'עריכת צבעי טבלה',
+            body: 'כל כרטיס טבלה מציג בוחרי צבע לשורת הכותרת, שורות זוגיות ושורות אי-זוגיות. השינויים מיועדים מיידית בתצוגה המקדימה.',
+          },
+          {
+            title: 'ייצוא PNG',
+            body: 'לכל כרטיס גרף וטבלה יש כפתור "Export PNG". לחץ עליו לאחר העריכות כדי להוריד את הגרף או הטבלה כתמונה ברזולוציה גבוהה.',
+          },
+          {
+            title: 'הערות',
+            body: 'מדור ההערות נמצא בתחתית טאב Saved & Notes. הקלד כל דבר ולחץ Enter (או כפתור Save) להוספת הערה. לחץ על הערה קיימת לעריכה — Enter שומר, Shift+Enter מוסיף שורה, Escape מבטל. מחק עם ×.',
           },
           {
             title: 'הערות על פריטים שמורים',
-            body: 'לכל פריט שמור (שחקן, השוואה, או חיפוש) ניתן להוסיף הערה אישית. לחץ על "+ Add a note…" מתחת לפריט כדי לכתוב אחת. לחץ על הערה קיימת כדי לערוך אותה. ההערה נשמרת אוטומטית בלחיצה על Enter, כפתור Save, או לחיצה מחוץ לשדה. לחץ Escape לביטול.',
+            body: 'לכל פריט שמור (שחקן, השוואה, או חיפוש) ניתן להוסיף הערה אישית. לחץ על "+ Add a note…" מתחת לפריט לכתיבה. ההערה נשמרת אוטומטית בלחיצה על Enter, כפתור Save, או לחיצה מחוץ לשדה. Escape לביטול.',
           },
           {
             title: 'השוואות שמורות',
-            body: 'לאחר בניית השוואה, לחץ "Save comparison" לשמירתה. היא מופיעה כאן עם שמות השחקנים והקטגוריה. לחץ עליה לטעינה מחדש מיידית.',
+            body: 'לאחר בניית השוואה, לחץ "Save comparison" לשמירתה. היא מופיעה בטאב Comparisons עם שמות השחקנים והקטגוריה. לחץ עליה לטעינה מחדש מיידית.',
           },
           {
             title: 'Smart Search שמורות',
             body: 'תוצאות Smart Search ניתנות לשמירה. כל רשומה מציגה את השאלה המקורית, ה-SQL, וטבלת התוצאות. פתח כל רשומה לסקירה.',
-          },
-          {
-            title: 'טאב Notes',
-            body: 'טאב Notes הוא לוח כתיבה חופשי. הקלד כל דבר ולחץ Enter (או כפתור Save) להוספת הערה. לחץ על הערה קיימת כדי לערוך אותה — היא נפתחת כ-Textarea; Enter שומר, Shift+Enter מוסיף שורה, Escape מבטל. מחק הערה עם כפתור ×.',
-          },
-        ],
-      },
-      {
-        id: 'dashboard',
-        icon: '🗂️',
-        title: 'Dashboard',
-        subsections: [
-          {
-            title: 'יצירת דשבורד',
-            body: 'עבור לטאב Dashboard, הקלד שם בתיבת הטקסט ולחץ Create. הדשבורד החדש נפתח מיד בבנאי.',
-          },
-          {
-            title: 'הוספת ווידג\'טים',
-            body: 'הסרגל השמאלי מכיל שלושה טאבים — Charts, Tables, ו-Widgets. Charts ו-Tables מציגים פריטים ששמרת קודם (השתמש באייקון הסימניה על כל גרף או טבלה). לחץ על פריט בסרגל להוספתו לקנבס. טאב Widgets מאפשר הוספת כותרות ובלוקי טקסט חופשי.',
-          },
-          {
-            title: 'סידור ושינוי גודל',
-            body: 'גרור ווידג\'ט בשורת הכותרת שלו (ידית ⠿) להזזתו. גרור את הפינה הימנית התחתונה לשינוי הגודל. הקנבס מסתנכרן לרשת 12 עמודות.',
-          },
-          {
-            title: 'הגדרות ווידג\'ט',
-            body: 'לחץ על ווידג\'ט לבחירתו. פאנל הגדרות מופיע בתחתית הקנבס. לגרפים: ניתן להפעיל/לכבות שכבת פציעות ולשנות את צבע כל קו. לטקסט: לחץ ישירות בתוך הווידג\'ט לעריכה.',
-          },
-          {
-            title: 'ייצוא כ-PNG',
-            body: 'לחץ "Export PNG" בסרגל הכלים העליון לשמירת הקנבס כתמונה ברזולוציה גבוהה.',
-          },
-          {
-            title: 'שינוי שם',
-            body: 'לחץ על שם הדשבורד בסרגל הכלים העליון לשינויו.',
           },
         ],
       },

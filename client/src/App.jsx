@@ -25,7 +25,6 @@ function AppInner() {
   const location = useLocation()
   const isBuilder = /^\/dashboard\/.+/.test(location.pathname)
 
-  // Apply theme class to <html> whenever the user's theme preference changes
   useEffect(() => {
     const html = document.documentElement
     const theme = user?.theme || 'dark'
@@ -41,12 +40,10 @@ function AppInner() {
     )
   }
 
-  // Login page is always accessible; redirect logged-in users away from it
   if (location.pathname === '/login') {
     return user ? <Navigate to="/" replace /> : <Auth />
   }
 
-  // All other routes require authentication
   if (!user) {
     return <Navigate to="/login" replace state={{ from: location }} />
   }

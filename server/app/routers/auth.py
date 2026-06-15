@@ -102,43 +102,47 @@ def register(body: RegisterBody):
     if len(body.password) < 8:
         raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
 
+    username = body.username.strip().lower()
+
     with engine.begin() as conn:
         existing = conn.execute(text(
-            "SELECT id FROM users WHERE username = :u OR email = :e"
-        ), {"u": body.username, "e": body.email}).fetchone()
+            "SELECT id FROM users WHERE LOWER(username) = :u OR LOWER(email) = :e"
+        ), {"u": username, "e": body.email.lower()}).fetchone()
         if existing:
             raise HTTPException(status_code=409, detail="Username or email already taken")
 
+        is_admin = (username == ADMIN_USERNAME.lower()) if ADMIN_USERNAME else False
         row = conn.execute(text(
-            "INSERT INTO users (username, email, password_hash) VALUES (:u, :e, :h) RETURNING id"
-        ), {"u": body.username, "e": body.email, "h": hash_password(body.password)}).fetchone()
+            "INSERT INTO users (username, email, password_hash, is_admin) VALUES (:u, :e, :h, :a) RETURNING id"
+        ), {"u": username, "e": body.email.lower(), "h": hash_password(body.password), "a": is_admin}).fetchone()
         user_id = row.id
 
         refresh = create_refresh_token()
         _store_refresh(conn, user_id, refresh)
 
     return {
-        "access_token":  create_access_token(user_id, body.username, is_admin=False),
+        "access_token":  create_access_token(user_id, username, is_admin=is_admin),
         "refresh_token": refresh,
-        "user": {"id": user_id, "username": body.username, "email": body.email,
-                 "guide_lang": "en", "theme": "dark", "is_admin": False},
+        "user": {"id": user_id, "username": username, "email": body.email.lower(),
+                 "guide_lang": "en", "theme": "dark", "is_admin": is_admin},
     }
 
 
 @router.post("/login")
 def login(body: LoginBody):
-    _check_rate_limit(body.username)
+    username = body.username.strip().lower()
+    _check_rate_limit(username)
 
     with engine.begin() as conn:
         row = conn.execute(text(
-            "SELECT id, username, email, password_hash, guide_lang, theme, is_admin FROM users WHERE username = :u"
-        ), {"u": body.username}).fetchone()
+            "SELECT id, username, email, password_hash, guide_lang, theme, is_admin FROM users WHERE LOWER(username) = :u"
+        ), {"u": username}).fetchone()
 
         if not row or not verify_password(body.password, row.password_hash):
-            _record_fail(body.username)
+            _record_fail(username)
             raise HTTPException(status_code=401, detail="Invalid username or password")
 
-        _clear_fails(body.username)
+        _clear_fails(username)
         refresh = create_refresh_token()
         _store_refresh(conn, row.id, refresh)
 
