@@ -147,13 +147,25 @@ def login(body: LoginBody):
             raise HTTPException(status_code=401, detail="Invalid username or password")
 
         _clear_fails(username)
+
+        # Grant admin if credentials match, and sync to DB if not already set
+        should_be_admin = bool(
+            ADMIN_USERNAME and username == ADMIN_USERNAME.lower() and
+            ADMIN_EMAIL    and row.email.lower() == ADMIN_EMAIL.lower()
+        )
+        if should_be_admin and not row.is_admin:
+            conn.execute(text("UPDATE users SET is_admin = TRUE WHERE id = :uid"), {"uid": row.id})
+        is_admin = should_be_admin or bool(row.is_admin)
+
         refresh = create_refresh_token()
         _store_refresh(conn, row.id, refresh)
 
+    user_dict = _user_row_to_dict(row)
+    user_dict["is_admin"] = is_admin
     return {
-        "access_token":  create_access_token(row.id, row.username, is_admin=bool(row.is_admin)),
+        "access_token":  create_access_token(row.id, row.username, is_admin=is_admin),
         "refresh_token": refresh,
-        "user": _user_row_to_dict(row),
+        "user": user_dict,
     }
 
 
