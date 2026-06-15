@@ -90,6 +90,25 @@ def supplement_players():
     if refreshed:
         print(f"  refreshed (span/name/pos changed): {refreshed[:10]}{' ...' if len(refreshed) > 10 else ''}")
 
+    # weekly_stats has game-by-game data loaded more frequently than *_seasons.
+    # Extend last_season for any player whose weekly data shows a newer season
+    # than what the seasons tables know about (e.g. current season in progress).
+    with engine.begin() as conn:
+        extended = conn.execute(text("""
+            UPDATE players
+            SET last_season = ws.max_season
+            FROM (
+                SELECT player_id, MAX(season) AS max_season
+                FROM weekly_stats
+                GROUP BY player_id
+            ) ws
+            WHERE ws.player_id = players.player_id
+              AND ws.max_season > players.last_season
+            RETURNING players.player_id
+        """)).fetchall()
+    if extended:
+        print(f"  last_season extended from weekly_stats: {len(extended)} players")
+
 
 if __name__ == "__main__":
     supplement_players()
