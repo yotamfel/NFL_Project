@@ -1,5 +1,4 @@
 """FastAPI app — wires up the module routers (see app/routers/)."""
-import time
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -40,26 +39,22 @@ def health():
 
 
 _meta_cache: dict = {}
-_META_TTL = 3600  # refresh counts once per hour
 
 
 @app.get("/api/meta")
 def meta():
-    now = time.time()
-    if _meta_cache and now - _meta_cache["ts"] < _META_TTL:
-        return _meta_cache["data"]
-    with engine.connect() as conn:
-        n_players = conn.execute(text("SELECT COUNT(*) FROM players")).scalar() or 0
-        n_seasons = conn.execute(text("""
-            SELECT COUNT(DISTINCT season) FROM (
-                SELECT season FROM passing_seasons
-                UNION SELECT season FROM offense_seasons
-                UNION SELECT season FROM defense_seasons
-            ) s
-        """)).scalar() or 0
-    data = {"players": n_players, "seasons": n_seasons, "teams": 32}
-    _meta_cache.update({"ts": now, "data": data})
-    return data
+    if not _meta_cache:
+        with engine.connect() as conn:
+            n_players = conn.execute(text("SELECT COUNT(*) FROM players")).scalar() or 0
+            n_seasons = conn.execute(text("""
+                SELECT COUNT(DISTINCT season) FROM (
+                    SELECT season FROM passing_seasons
+                    UNION SELECT season FROM offense_seasons
+                    UNION SELECT season FROM defense_seasons
+                ) s
+            """)).scalar() or 0
+        _meta_cache.update({"players": n_players, "seasons": n_seasons, "teams": 32})
+    return _meta_cache
 
 
 # --- Production static-file serving -----------------------------------------
