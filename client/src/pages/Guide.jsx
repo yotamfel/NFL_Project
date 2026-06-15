@@ -826,9 +826,8 @@ const CONTENT = {
 // ─── component ────────────────────────────────────────────────────────────────
 
 export default function Guide() {
-  const { user, updatePreferences } = useAuth()
+  const { user } = useAuth()
   const lang  = user?.guide_lang ?? 'en'
-  const setLang = l => updatePreferences({ guide_lang: l })
   const isHe = lang === 'he'
   const c = CONTENT[lang] ?? CONTENT['en']
 
@@ -836,25 +835,11 @@ export default function Guide() {
     <div dir={isHe ? 'rtl' : 'ltr'} className="space-y-6">
 
       {/* Page header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-0.5">
-            FOURTH & DATA
-          </p>
-          <h1 className="text-3xl font-black text-white tracking-tight">{c.title}</h1>
-        </div>
-
-        {/* Language toggle */}
-        <div className="flex bg-slate-800 border border-slate-700 rounded-xl p-1 text-sm font-semibold">
-          <button onClick={() => setLang('en')}
-            className={`px-4 py-1.5 rounded-lg transition-colors ${!isHe ? 'bg-slate-600 text-white' : 'text-slate-500 hover:text-slate-300'}`}>
-            English
-          </button>
-          <button onClick={() => setLang('he')}
-            className={`px-4 py-1.5 rounded-lg transition-colors ${isHe ? 'bg-slate-600 text-white' : 'text-slate-500 hover:text-slate-300'}`}>
-            עברית
-          </button>
-        </div>
+      <div>
+        <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-0.5">
+          FOURTH & DATA
+        </p>
+        <h1 className="text-3xl font-black text-white tracking-tight">{c.title}</h1>
       </div>
 
       {/* Table of contents */}
