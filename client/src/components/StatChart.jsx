@@ -89,7 +89,7 @@ export function CareerLineChart({ data, xKey, lines, injuryMap = {}, height = 26
     if (isSaved) {
       removeChart?.(title)
     } else {
-      saveChart?.({ title, chartType: 'CareerLine', data, config: { xKey, lines, injuryMap } })
+      saveChart?.({ title, chartType: 'CareerLine', data, config: { xKey, lines, injuryMap }, sourceUrl: window.location.pathname })
     }
   }
 
@@ -163,7 +163,7 @@ export function ExportableChart({ title, filename, children, chartData }) {
     if (isSaved) {
       removeChart?.(title)
     } else {
-      saveChart?.({ title, ...chartData })
+      saveChart?.({ title, ...chartData, sourceUrl: window.location.pathname })
     }
   }
 

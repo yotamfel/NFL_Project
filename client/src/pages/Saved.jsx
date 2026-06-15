@@ -212,6 +212,9 @@ export default function Saved() {
                   <p className="text-slate-500 text-xs mt-0.5">
                     {c.chartType} · {c.config?.lines?.length ?? 0} line{(c.config?.lines?.length ?? 0) !== 1 ? 's' : ''}
                     {' · '}{fmt(c.savedAt)}
+                    {c.sourceUrl && (
+                      <> · <Link to={c.sourceUrl} className="text-amber-500/70 hover:text-amber-400 transition-colors">View source</Link></>
+                    )}
                   </p>
                 </div>
                 <button onClick={() => removeChart(c.title)} className="text-slate-600 hover:text-red-400 transition-colors text-lg leading-none shrink-0">×</button>
@@ -237,6 +240,9 @@ export default function Saved() {
                   <p className="text-white font-semibold text-sm truncate">{t.title}</p>
                   <p className="text-slate-500 text-xs mt-0.5">
                     {t.columns?.length} cols · {t.rows?.length} rows · {fmt(t.savedAt)}
+                    {t.sourceUrl && (
+                      <> · <Link to={t.sourceUrl} className="text-amber-500/70 hover:text-amber-400 transition-colors">View source</Link></>
+                    )}
                   </p>
                 </div>
                 <button onClick={() => removeTable(t.title)} className="text-slate-600 hover:text-red-400 transition-colors text-lg leading-none shrink-0">×</button>

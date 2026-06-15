@@ -176,6 +176,7 @@ export function TableExportButtons({ columns, rows, title }) {
         title,
         columns: csvCols,
         rows,
+        sourceUrl: window.location.pathname,
       })
     }
   }
