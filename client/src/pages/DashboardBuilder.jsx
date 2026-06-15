@@ -20,19 +20,30 @@ const DEFAULT_SIZE = {
 }
 
 const MIN_SIZE = {
-  chart:   { minW: 3, minH: 4 },
-  table:   { minW: 3, minH: 3 },
+  chart:   { minW: 2, minH: 3 },
+  table:   { minW: 2, minH: 3 },
   heading: { minW: 2, minH: 1 },
   text:    { minW: 2, minH: 1 },
 }
 
-// CSS injected once for resize handle styling
-const HANDLE_CSS = `
-  .react-grid-item .react-resizable-handle { opacity: 0; transition: opacity 0.15s; background-color: rgba(148,163,184,0.5); border-radius: 3px; }
-  .react-grid-item:hover .react-resizable-handle { opacity: 0.6; }
-  .react-grid-item:hover .react-resizable-handle:hover { opacity: 1; background-color: rgba(251,191,36,0.7); }
+// Default colors
+const DEFAULT_CANVAS_BG   = '#020617'
+const DEFAULT_WIDGET_BG   = '#0f172a'
+const DEFAULT_HEADER_COL  = '#1e293b'
+const DEFAULT_ROW_EVEN    = '#0f172a99'
+const DEFAULT_ROW_ODD     = 'transparent'
 
-  /* Edge handles – override corner arrow to a clean bar */
+// Resize handle CSS — handles are subtly visible at all times, brighter on hover
+const HANDLE_CSS = `
+  .react-grid-item .react-resizable-handle {
+    opacity: 0.25;
+    transition: opacity 0.15s;
+    background-color: rgba(148,163,184,0.6);
+    border-radius: 3px;
+  }
+  .react-grid-item:hover .react-resizable-handle { opacity: 0.7; }
+  .react-grid-item .react-resizable-handle:hover  { opacity: 1; background-color: rgba(251,191,36,0.85); }
+
   .react-resizable-handle-n, .react-resizable-handle-s {
     left: 50% !important; width: 44px !important; height: 6px !important;
     margin-left: -22px !important; background-image: none !important; padding: 0 !important;
@@ -47,7 +58,6 @@ const HANDLE_CSS = `
   .react-resizable-handle-e { right: 2px !important; transform: none !important; }
   .react-resizable-handle-w { left: 2px !important; transform: none !important; }
 
-  /* Corner handles – smaller, cleaner */
   .react-resizable-handle-se, .react-resizable-handle-sw,
   .react-resizable-handle-ne, .react-resizable-handle-nw {
     width: 10px !important; height: 10px !important;
@@ -55,83 +65,85 @@ const HANDLE_CSS = `
   }
 `
 
-// ─── Chart renderer ───────────────────────────────────────────────────────────
-// Charts always render at their original fixed scale (260px).
-// The widget content div clips with overflow:hidden — the chart never squishes.
-const CHART_HEIGHT = 260
-
+// ─── Chart renderer — fills its container (absolute inset-0 parent) ──────────
 function ChartWidgetContent({ savedChart, colorOverrides, showInjuries }) {
   if (!savedChart) return <div className="text-slate-600 text-sm p-4">Chart not found</div>
   const { chartType, config, data } = savedChart
 
-  if (chartType === 'CareerLine') {
-    const lines = (config.lines || []).map(l => ({
-      ...l, color: colorOverrides?.[l.dataKey] || l.color,
-    }))
-    const injuryMap = showInjuries ? (config.injuryMap || {}) : {}
-    return (
-      <CareerLineChart
-        data={data}
-        xKey={config.xKey || 'season'}
-        lines={lines}
-        injuryMap={injuryMap}
-        height={CHART_HEIGHT}
-        hideActions
-      />
-    )
-  }
+  const lines = (config.lines || []).map(l => ({
+    ...l, color: colorOverrides?.[l.dataKey] || l.color,
+  }))
 
-  if (chartType === 'GenericLine' && config.lines) {
-    return (
-      <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
-        <LineChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-          <XAxis dataKey={config.xKey || 'x'} stroke="#475569" tick={{ fill: '#94a3b8', fontSize: 11 }} />
-          <YAxis stroke="#475569" tick={{ fill: '#94a3b8', fontSize: 11 }} />
-          <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }} />
-          <Legend wrapperStyle={{ fontSize: 11, color: '#94a3b8' }} />
-          {config.lines.map(l => (
-            <Line key={l.dataKey} type="monotone" dataKey={l.dataKey} name={l.label}
-              stroke={colorOverrides?.[l.dataKey] || l.color || '#3b82f6'} strokeWidth={2} dot={{ r: 2 }} />
-          ))}
-        </LineChart>
-      </ResponsiveContainer>
-    )
-  }
+  return (
+    <div style={{ width: '100%', height: '100%' }}>
+      {chartType === 'CareerLine' && (
+        <CareerLineChart
+          data={data}
+          xKey={config.xKey || 'season'}
+          lines={lines}
+          injuryMap={showInjuries ? (config.injuryMap || {}) : {}}
+          fill
+          hideActions
+        />
+      )}
 
-  if (chartType === 'GenericBar' && config.bars) {
-    return (
-      <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
-        <BarChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-          <XAxis dataKey={config.xKey || 'x'} stroke="#475569" tick={{ fill: '#94a3b8', fontSize: 11 }} />
-          <YAxis stroke="#475569" tick={{ fill: '#94a3b8', fontSize: 11 }} />
-          <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }} />
-          <Legend wrapperStyle={{ fontSize: 11, color: '#94a3b8' }} />
-          {config.bars.map(b => (
-            <Bar key={b.dataKey} dataKey={b.dataKey} name={b.label}
-              fill={colorOverrides?.[b.dataKey] || b.color || '#3b82f6'} radius={[3, 3, 0, 0]} />
-          ))}
-        </BarChart>
-      </ResponsiveContainer>
-    )
-  }
+      {chartType === 'GenericLine' && config.lines && (
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={data} margin={{ top: 8, right: 20, left: 0, bottom: 8 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+            <XAxis dataKey={config.xKey || 'x'} stroke="#475569" tick={{ fill: '#94a3b8', fontSize: 11 }} />
+            <YAxis stroke="#475569" tick={{ fill: '#94a3b8', fontSize: 11 }} />
+            <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }} />
+            <Legend wrapperStyle={{ fontSize: 11, color: '#94a3b8' }} />
+            {config.lines.map(l => (
+              <Line key={l.dataKey} type="monotone" dataKey={l.dataKey} name={l.label}
+                stroke={colorOverrides?.[l.dataKey] || l.color || '#3b82f6'} strokeWidth={2} dot={{ r: 2 }} />
+            ))}
+          </LineChart>
+        </ResponsiveContainer>
+      )}
 
-  return <div className="text-slate-600 text-sm p-4">Chart type "{chartType}" not supported</div>
+      {chartType === 'GenericBar' && config.bars && (
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data} margin={{ top: 8, right: 20, left: 0, bottom: 8 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+            <XAxis dataKey={config.xKey || 'x'} stroke="#475569" tick={{ fill: '#94a3b8', fontSize: 11 }} />
+            <YAxis stroke="#475569" tick={{ fill: '#94a3b8', fontSize: 11 }} />
+            <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }} />
+            <Legend wrapperStyle={{ fontSize: 11, color: '#94a3b8' }} />
+            {config.bars.map(b => (
+              <Bar key={b.dataKey} dataKey={b.dataKey} name={b.label}
+                fill={colorOverrides?.[b.dataKey] || b.color || '#3b82f6'} radius={[3, 3, 0, 0]} />
+            ))}
+          </BarChart>
+        </ResponsiveContainer>
+      )}
+
+      {!['CareerLine', 'GenericLine', 'GenericBar'].includes(chartType) && (
+        <div className="text-slate-600 text-sm p-4">Chart type "{chartType}" not supported</div>
+      )}
+    </div>
+  )
 }
 
 // ─── Table renderer ───────────────────────────────────────────────────────────
-function TableWidgetContent({ savedTable }) {
+function TableWidgetContent({ savedTable, config = {} }) {
   if (!savedTable) return <div className="text-slate-600 text-sm p-4">Table not found</div>
   const { columns, rows } = savedTable
   const visible = rows.slice(0, 50)
+  const headerBg = config.headerColor || DEFAULT_HEADER_COL
+  const rowEven  = config.rowEvenColor || DEFAULT_ROW_EVEN
+  const rowOdd   = config.rowOddColor  || DEFAULT_ROW_ODD
+
   return (
     <div className="overflow-auto h-full text-xs">
       <table className="min-w-full" style={{ borderCollapse: 'collapse' }}>
         <thead>
           <tr>
             {columns.map(col => (
-              <th key={col.key} className="px-2 py-1.5 text-left text-slate-500 font-medium whitespace-nowrap bg-slate-800/80 sticky top-0">
+              <th key={col.key}
+                className="px-2 py-1.5 text-left text-slate-300 font-medium whitespace-nowrap sticky top-0"
+                style={{ backgroundColor: headerBg }}>
                 {col.label}
               </th>
             ))}
@@ -139,7 +151,7 @@ function TableWidgetContent({ savedTable }) {
         </thead>
         <tbody>
           {visible.map((row, i) => (
-            <tr key={i} className={i % 2 === 0 ? 'bg-slate-900/60' : ''}>
+            <tr key={i} style={{ backgroundColor: i % 2 === 0 ? rowEven : rowOdd }}>
               {columns.map(col => (
                 <td key={col.key} className="px-2 py-1 text-slate-300 whitespace-nowrap border-t border-slate-800">
                   {row[col.key] ?? '—'}
@@ -167,18 +179,17 @@ function WidgetWrapper({ widget, savedChart, savedTable, onDelete, onUpdateConfi
     onUpdateConfig({ content: localContent })
   }
 
-  // ── Overlay mode: text/heading float directly on the canvas background ──────
+  // ── Overlay mode: text / heading ─────────────────────────────────────────────
   if (widget.type === 'heading' || widget.type === 'text') {
     return (
       <div
-        className="drag-handle relative h-full group cursor-grab active:cursor-grabbing"
+        className="drag-handle relative h-full group cursor-grab active:cursor-grabbing rounded-lg"
+        style={{ backgroundColor: config.bgColor || 'transparent' }}
         onClick={onSelect}
       >
-        {/* Selection ring */}
         {isSelected && (
-          <div className="absolute inset-0 ring-2 ring-amber-500/50 rounded pointer-events-none z-10" />
+          <div className="absolute inset-0 ring-2 ring-amber-500/50 rounded-lg pointer-events-none z-10" />
         )}
-        {/* Delete button — floats top-right, visible on hover */}
         <button
           onClick={e => { e.stopPropagation(); onDelete() }}
           className="absolute top-1 right-1 z-20 w-5 h-5 flex items-center justify-center text-slate-500 hover:text-red-400 bg-slate-800/70 rounded opacity-0 group-hover:opacity-100 transition-opacity text-sm leading-none"
@@ -186,20 +197,18 @@ function WidgetWrapper({ widget, savedChart, savedTable, onDelete, onUpdateConfi
 
         {widget.type === 'heading' && (
           editingText ? (
-            <input
-              autoFocus
-              value={localContent}
+            <input autoFocus value={localContent}
               onChange={e => setLocalContent(e.target.value)}
               onBlur={commitText}
               onKeyDown={e => { if (e.key === 'Enter' || e.key === 'Escape') commitText() }}
               onClick={e => e.stopPropagation()}
               className="w-full h-full bg-transparent text-white text-2xl font-bold px-2 py-1 outline-none cursor-text"
-              style={{ caretColor: '#f59e0b' }}
-            />
+              style={{ caretColor: '#f59e0b', color: config.textColor || undefined }} />
           ) : (
             <h2
               onClick={e => { e.stopPropagation(); setEditingText(true) }}
               className="h-full w-full px-2 py-1 text-white text-2xl font-bold flex items-center cursor-text"
+              style={{ color: config.textColor || undefined }}
             >
               {config.content || <span className="text-slate-700 italic font-normal text-base">Heading…</span>}
             </h2>
@@ -208,20 +217,18 @@ function WidgetWrapper({ widget, savedChart, savedTable, onDelete, onUpdateConfi
 
         {widget.type === 'text' && (
           editingText ? (
-            <textarea
-              autoFocus
-              value={localContent}
+            <textarea autoFocus value={localContent}
               onChange={e => setLocalContent(e.target.value)}
               onBlur={commitText}
               onKeyDown={e => { if (e.key === 'Escape') commitText() }}
               onClick={e => e.stopPropagation()}
-              className="w-full h-full bg-transparent text-slate-300 text-sm px-2 py-1 outline-none resize-none cursor-text"
-              style={{ caretColor: '#f59e0b' }}
-            />
+              className="w-full h-full bg-transparent text-sm px-2 py-1 outline-none resize-none cursor-text"
+              style={{ caretColor: '#f59e0b', color: config.textColor || '#cbd5e1' }} />
           ) : (
             <p
               onClick={e => { e.stopPropagation(); setEditingText(true) }}
-              className="h-full w-full px-2 py-1 text-slate-300 text-sm leading-relaxed cursor-text whitespace-pre-wrap overflow-hidden"
+              className="h-full w-full px-2 py-1 text-sm leading-relaxed cursor-text whitespace-pre-wrap overflow-hidden"
+              style={{ color: config.textColor || '#cbd5e1' }}
             >
               {config.content || <span className="text-slate-700 italic">Text…</span>}
             </p>
@@ -232,18 +239,22 @@ function WidgetWrapper({ widget, savedChart, savedTable, onDelete, onUpdateConfi
   }
 
   // ── Card mode: chart / table ─────────────────────────────────────────────────
+  const widgetBg = config.bgColor || DEFAULT_WIDGET_BG
+
   return (
     <div
       className={`flex flex-col h-full rounded-xl border overflow-hidden transition-colors ${
-        isSelected
-          ? 'border-amber-500/60 shadow-lg shadow-amber-500/10'
-          : 'border-slate-700/60'
-      } bg-slate-900`}
+        isSelected ? 'border-amber-500/60 shadow-lg shadow-amber-500/10' : 'border-slate-700/60'
+      }`}
+      style={{ backgroundColor: widgetBg }}
       onClick={onSelect}
     >
       {/* Title bar / drag handle */}
-      <div className="drag-handle flex items-center gap-2 px-3 py-2 bg-slate-800/70 cursor-grab active:cursor-grabbing select-none border-b border-slate-700/60 shrink-0">
-        <span className="text-slate-600 text-xs">⠿</span>
+      <div
+        className="drag-handle flex items-center gap-2 px-3 py-2.5 cursor-grab active:cursor-grabbing select-none border-b border-slate-700/60 shrink-0"
+        style={{ backgroundColor: `${widgetBg}dd` }}
+      >
+        <span className="text-slate-500 text-xs select-none">⠿</span>
         <span className="text-slate-300 text-xs font-medium truncate flex-1">
           {widget.type === 'chart' ? (savedChart?.title || 'Chart') : (savedTable?.title || 'Table')}
         </span>
@@ -253,17 +264,36 @@ function WidgetWrapper({ widget, savedChart, savedTable, onDelete, onUpdateConfi
         >×</button>
       </div>
 
-      {/* Content — overflow:hidden so chart clips instead of squishing when widget is small */}
-      <div className="flex-1 overflow-hidden" style={{ minHeight: 0 }}>
-        {widget.type === 'chart' && (
-          <ChartWidgetContent
-            savedChart={savedChart}
-            colorOverrides={config.colorOverrides}
-            showInjuries={config.showInjuries ?? true}
-          />
-        )}
-        {widget.type === 'table' && <TableWidgetContent savedTable={savedTable} />}
+      {/* Content — absolute-fills remaining height so charts/tables scale perfectly */}
+      <div className="flex-1 relative" style={{ minHeight: 0 }}>
+        <div className="absolute inset-0 overflow-hidden">
+          {widget.type === 'chart' && (
+            <ChartWidgetContent
+              savedChart={savedChart}
+              colorOverrides={config.colorOverrides}
+              showInjuries={config.showInjuries ?? true}
+            />
+          )}
+          {widget.type === 'table' && (
+            <TableWidgetContent savedTable={savedTable} config={config} />
+          )}
+        </div>
       </div>
+    </div>
+  )
+}
+
+// ─── Color swatch picker helper ───────────────────────────────────────────────
+function ColorPicker({ label, value, defaultValue, onChange }) {
+  return (
+    <div className="flex items-center gap-2">
+      <input
+        type="color"
+        value={value || defaultValue}
+        onChange={e => onChange(e.target.value)}
+        className="w-7 h-7 rounded cursor-pointer border border-slate-600 bg-transparent shrink-0"
+      />
+      <span className="text-slate-400 text-xs">{label}</span>
     </div>
   )
 }
@@ -271,55 +301,73 @@ function WidgetWrapper({ widget, savedChart, savedTable, onDelete, onUpdateConfi
 // ─── Widget settings panel ────────────────────────────────────────────────────
 function WidgetSettings({ widget, savedChart, onUpdateConfig, onClose }) {
   const { config } = widget
+  const isTextWidget = widget.type === 'heading' || widget.type === 'text'
 
   return (
-    <div className="border-t border-slate-700/60 p-4 bg-slate-900/80 shrink-0">
+    <div className="border-t border-slate-700/60 p-4 bg-slate-900/90 shrink-0">
       <div className="flex items-center justify-between mb-3">
         <p className="text-slate-300 text-sm font-medium">Widget Settings</p>
         <button onClick={onClose} className="text-slate-500 hover:text-slate-300 text-sm">✕</button>
       </div>
 
-      {widget.type === 'chart' && savedChart && (
-        <div className="flex flex-wrap items-center gap-4">
-          {/* Injury overlay toggle */}
-          <label className="flex items-center gap-2 cursor-pointer">
-            <div
-              onClick={() => onUpdateConfig({ showInjuries: !(config.showInjuries ?? true) })}
-              className={`relative w-8 h-4 rounded-full transition-colors ${
-                (config.showInjuries ?? true) ? 'bg-amber-500' : 'bg-slate-600'
-              }`}
-            >
-              <div className={`absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform ${
-                (config.showInjuries ?? true) ? 'translate-x-4' : 'translate-x-0'
-              }`} />
-            </div>
-            <span className="text-slate-400 text-xs">Injury overlay</span>
-          </label>
+      <div className="flex flex-wrap items-center gap-5">
 
-          {/* Color overrides for each line */}
-          {(savedChart.config?.lines || []).map(line => (
-            <div key={line.dataKey} className="flex items-center gap-1.5">
-              <input
-                type="color"
-                value={config.colorOverrides?.[line.dataKey] || line.color || '#3b82f6'}
-                onChange={e => onUpdateConfig({
-                  colorOverrides: { ...(config.colorOverrides || {}), [line.dataKey]: e.target.value }
+        {/* Chart-specific settings */}
+        {widget.type === 'chart' && savedChart && (
+          <>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <div
+                onClick={() => onUpdateConfig({ showInjuries: !(config.showInjuries ?? true) })}
+                className={`relative w-8 h-4 rounded-full transition-colors ${
+                  (config.showInjuries ?? true) ? 'bg-amber-500' : 'bg-slate-600'
+                }`}
+              >
+                <div className={`absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform ${
+                  (config.showInjuries ?? true) ? 'translate-x-4' : 'translate-x-0'
+                }`} />
+              </div>
+              <span className="text-slate-400 text-xs">Injury overlay</span>
+            </label>
+
+            {(savedChart.config?.lines || []).map(line => (
+              <ColorPicker
+                key={line.dataKey}
+                label={line.label}
+                value={config.colorOverrides?.[line.dataKey]}
+                defaultValue={line.color || '#3b82f6'}
+                onChange={v => onUpdateConfig({
+                  colorOverrides: { ...(config.colorOverrides || {}), [line.dataKey]: v }
                 })}
-                className="w-7 h-7 rounded cursor-pointer border border-slate-600 bg-transparent"
               />
-              <span className="text-slate-400 text-xs">{line.label}</span>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </>
+        )}
 
-      {(widget.type === 'heading' || widget.type === 'text') && (
-        <p className="text-slate-500 text-xs">Click the widget content to edit the text.</p>
-      )}
+        {/* Table-specific colors */}
+        {widget.type === 'table' && (
+          <>
+            <ColorPicker label="Header" value={config.headerColor} defaultValue={DEFAULT_HEADER_COL}
+              onChange={v => onUpdateConfig({ headerColor: v })} />
+            <ColorPicker label="Row (even)" value={config.rowEvenColor} defaultValue={DEFAULT_ROW_EVEN}
+              onChange={v => onUpdateConfig({ rowEvenColor: v })} />
+            <ColorPicker label="Row (odd)" value={config.rowOddColor} defaultValue={DEFAULT_ROW_ODD}
+              onChange={v => onUpdateConfig({ rowOddColor: v })} />
+          </>
+        )}
 
-      {widget.type === 'table' && (
-        <p className="text-slate-500 text-xs">Table data is read-only. Showing up to 50 rows.</p>
-      )}
+        {/* Background and text color for all widget types */}
+        <ColorPicker
+          label={isTextWidget ? 'Background' : 'Card background'}
+          value={config.bgColor}
+          defaultValue={isTextWidget ? 'transparent' : DEFAULT_WIDGET_BG}
+          onChange={v => onUpdateConfig({ bgColor: v })}
+        />
+        {isTextWidget && (
+          <ColorPicker label="Text color" value={config.textColor} defaultValue="#cbd5e1"
+            onChange={v => onUpdateConfig({ textColor: v })} />
+        )}
+
+      </div>
     </div>
   )
 }
@@ -331,18 +379,12 @@ function Sidebar({ saved, widgets, onAddWidget }) {
 
   return (
     <div className="w-64 shrink-0 flex flex-col border-r border-slate-700/60 bg-slate-900">
-      {/* Tabs */}
       <div className="flex border-b border-slate-700/60">
         {[['charts', 'Charts'], ['tables', 'Tables'], ['widgets', 'Text']].map(([id, label]) => (
-          <button
-            key={id}
-            onClick={() => setSideTab(id)}
+          <button key={id} onClick={() => setSideTab(id)}
             className={`flex-1 py-2 text-xs font-medium transition-colors ${
-              sideTab === id
-                ? 'text-white border-b-2 border-amber-400'
-                : 'text-slate-500 hover:text-slate-300'
-            }`}
-          >
+              sideTab === id ? 'text-white border-b-2 border-amber-400' : 'text-slate-500 hover:text-slate-300'
+            }`}>
             {label}
             {id !== 'widgets' && saved[id]?.length > 0 && (
               <span className="ml-1 text-slate-600">({saved[id].length})</span>
@@ -353,26 +395,16 @@ function Sidebar({ saved, widgets, onAddWidget }) {
 
       <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
         {sideTab === 'charts' && (
-          <>
-            {(saved.charts || []).length === 0 ? (
-              <p className="text-slate-600 text-xs text-center py-8 leading-relaxed">
-                No saved charts yet.<br/>
-                Hover over a chart and click the bookmark icon.
-              </p>
-            ) : (
-              (saved.charts || []).map(chart => {
+          (saved.charts || []).length === 0
+            ? <p className="text-slate-600 text-xs text-center py-8 leading-relaxed">No saved charts yet.<br/>Hover over a chart and click the bookmark icon.</p>
+            : (saved.charts || []).map(chart => {
                 const inDash = usedSourceIds.has(chart.id)
                 return (
-                  <button
-                    key={chart.id}
-                    onClick={() => onAddWidget('chart', chart.id)}
-                    className="w-full text-left rounded-lg border border-slate-700/60 px-2.5 py-2 hover:bg-slate-800 hover:border-slate-600 transition-colors group"
-                  >
+                  <button key={chart.id} onClick={() => onAddWidget('chart', chart.id)}
+                    className="w-full text-left rounded-lg border border-slate-700/60 px-2.5 py-2 hover:bg-slate-800 hover:border-slate-600 transition-colors group">
                     <div className="flex items-start justify-between gap-1">
                       <p className="text-slate-200 text-xs font-medium leading-tight">{chart.title}</p>
-                      {inDash && (
-                        <span className="text-green-400 text-xs shrink-0 mt-0.5">✓</span>
-                      )}
+                      {inDash && <span className="text-green-400 text-xs shrink-0 mt-0.5">✓</span>}
                     </div>
                     <p className="text-slate-600 text-xs mt-0.5">{chart.chartType}</p>
                     <p className="text-amber-500 text-xs mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -381,31 +413,19 @@ function Sidebar({ saved, widgets, onAddWidget }) {
                   </button>
                 )
               })
-            )}
-          </>
         )}
 
         {sideTab === 'tables' && (
-          <>
-            {(saved.tables || []).length === 0 ? (
-              <p className="text-slate-600 text-xs text-center py-8 leading-relaxed">
-                No saved tables yet.<br/>
-                Hover over a table and click the bookmark icon.
-              </p>
-            ) : (
-              (saved.tables || []).map(table => {
+          (saved.tables || []).length === 0
+            ? <p className="text-slate-600 text-xs text-center py-8 leading-relaxed">No saved tables yet.<br/>Hover over a table and click the bookmark icon.</p>
+            : (saved.tables || []).map(table => {
                 const inDash = usedSourceIds.has(table.id)
                 return (
-                  <button
-                    key={table.id}
-                    onClick={() => onAddWidget('table', table.id)}
-                    className="w-full text-left rounded-lg border border-slate-700/60 px-2.5 py-2 hover:bg-slate-800 hover:border-slate-600 transition-colors group"
-                  >
+                  <button key={table.id} onClick={() => onAddWidget('table', table.id)}
+                    className="w-full text-left rounded-lg border border-slate-700/60 px-2.5 py-2 hover:bg-slate-800 hover:border-slate-600 transition-colors group">
                     <div className="flex items-start justify-between gap-1">
                       <p className="text-slate-200 text-xs font-medium leading-tight">{table.title}</p>
-                      {inDash && (
-                        <span className="text-green-400 text-xs shrink-0 mt-0.5">✓</span>
-                      )}
+                      {inDash && <span className="text-green-400 text-xs shrink-0 mt-0.5">✓</span>}
                     </div>
                     <p className="text-slate-600 text-xs mt-0.5">{table.columns?.length} cols · {table.rows?.length} rows</p>
                     <p className="text-amber-500 text-xs mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -414,21 +434,16 @@ function Sidebar({ saved, widgets, onAddWidget }) {
                   </button>
                 )
               })
-            )}
-          </>
         )}
 
         {sideTab === 'widgets' && (
           <div className="space-y-1.5">
             {[
               { type: 'heading', label: 'Heading', desc: 'Large bold title' },
-              { type: 'text', label: 'Text block', desc: 'Paragraph or notes' },
+              { type: 'text',    label: 'Text block', desc: 'Paragraph or notes' },
             ].map(w => (
-              <button
-                key={w.type}
-                onClick={() => onAddWidget(w.type)}
-                className="w-full text-left rounded-lg border border-slate-700/60 px-2.5 py-2 hover:bg-slate-800 hover:border-slate-600 transition-colors group"
-              >
+              <button key={w.type} onClick={() => onAddWidget(w.type)}
+                className="w-full text-left rounded-lg border border-slate-700/60 px-2.5 py-2 hover:bg-slate-800 hover:border-slate-600 transition-colors group">
                 <p className="text-slate-200 text-xs font-medium">{w.label}</p>
                 <p className="text-slate-600 text-xs mt-0.5">{w.desc}</p>
                 <p className="text-amber-500 text-xs mt-1 opacity-0 group-hover:opacity-100 transition-opacity">+ Add to dashboard</p>
@@ -447,7 +462,6 @@ export default function DashboardBuilder() {
   const navigate = useNavigate()
   const { saved, getDashboard, updateDashboard } = useUser()
 
-  // Compute dashboard early (not a hook) so useState can use it for initial value
   const dashboard = getDashboard(id)
 
   const exportRef = useRef(null)
@@ -457,8 +471,6 @@ export default function DashboardBuilder() {
   const [nameVal, setNameVal] = useState('')
   const [exporting, setExporting] = useState(false)
 
-  // Local layout state — updated on every drag/resize move (no localStorage write)
-  // Persisted to dashboard only on drag/resize STOP
   const [localLayout, setLocalLayout] = useState(() =>
     (dashboard?.widgets ?? []).map(w => ({
       i: w.id, x: w.layout.x, y: w.layout.y, w: w.layout.w, h: w.layout.h, minW: 2, minH: 1,
@@ -476,8 +488,8 @@ export default function DashboardBuilder() {
   }, [])
 
   const widgets = dashboard?.widgets ?? []
+  const canvasBg = dashboard?.bgColor || DEFAULT_CANVAS_BG
 
-  // Add widget — also updates local layout immediately so grid shows it right away
   const addWidget = useCallback((type, sourceId) => {
     const widgetId = Date.now().toString()
     const size = DEFAULT_SIZE[type]
@@ -493,7 +505,6 @@ export default function DashboardBuilder() {
     })
   }, [id, widgets, localLayout, updateDashboard])
 
-  // Remove widget — also removes from local layout
   const removeWidget = useCallback(widgetId => {
     setLocalLayout(prev => prev.filter(l => l.i !== widgetId))
     updateDashboard(id, { widgets: widgets.filter(w => w.id !== widgetId) })
@@ -508,12 +519,10 @@ export default function DashboardBuilder() {
     })
   }, [id, widgets, updateDashboard])
 
-  // Called during drag/resize — only update local state, NO localStorage write
   const handleLayoutChange = useCallback(newLayout => {
     setLocalLayout(newLayout)
   }, [])
 
-  // Called when drag/resize ENDS — persist positions to dashboard
   const persistLayout = useCallback(newLayout => {
     const updated = widgets.map(w => {
       const l = newLayout.find(li => li.i === w.id)
@@ -535,7 +544,7 @@ export default function DashboardBuilder() {
   }
 
   const selectedWidget = widgets.find(w => w.id === selectedId)
-  const selectedChart = selectedWidget?.type === 'chart'
+  const selectedChart  = selectedWidget?.type === 'chart'
     ? saved.charts?.find(c => c.id === selectedWidget.sourceId)
     : null
 
@@ -549,7 +558,7 @@ export default function DashboardBuilder() {
     setExporting(true)
     try {
       const dataUrl = await toPng(exportRef.current, {
-        backgroundColor: '#020617',
+        backgroundColor: canvasBg,
         pixelRatio: 2,
       })
       const a = document.createElement('a')
@@ -563,56 +572,67 @@ export default function DashboardBuilder() {
 
   return (
     <div className="flex h-full">
-      {/* Inject resize-handle styles once */}
       <style>{HANDLE_CSS}</style>
-      {/* Sidebar */}
       <Sidebar saved={saved} widgets={widgets} onAddWidget={addWidget} />
 
-      {/* Right panel */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Top toolbar */}
-        <div className="flex items-center gap-3 px-4 py-2.5 border-b border-slate-700/60 bg-slate-900/80 shrink-0">
-          <button
-            onClick={() => navigate('/dashboard')}
-            className="text-slate-500 hover:text-slate-300 transition-colors text-sm"
-          >
+        {/* Toolbar */}
+        <div className="flex items-center gap-3 px-4 py-2.5 border-b border-slate-700/60 bg-slate-900/80 shrink-0 flex-wrap">
+          <button onClick={() => navigate('/dashboard')}
+            className="text-slate-500 hover:text-slate-300 transition-colors text-sm">
             ← Back
           </button>
           <div className="w-px h-4 bg-slate-700" />
+
+          {/* Dashboard name */}
           {editingName ? (
-            <input
-              autoFocus
-              value={nameVal}
+            <input autoFocus value={nameVal}
               onChange={e => setNameVal(e.target.value)}
               onBlur={commitName}
               onKeyDown={e => { if (e.key === 'Enter' || e.key === 'Escape') commitName() }}
               className="bg-slate-800 border border-slate-600 rounded-lg px-3 py-1 text-white text-sm font-semibold outline-none focus:border-amber-500/50"
             />
           ) : (
-            <h1
-              onClick={() => { setEditingName(true); setNameVal(dashboard.name) }}
-              className="text-white font-semibold text-sm cursor-text hover:text-amber-300 transition-colors"
-            >
+            <h1 onClick={() => { setEditingName(true); setNameVal(dashboard.name) }}
+              className="text-white font-semibold text-sm cursor-text hover:text-amber-300 transition-colors">
               {dashboard.name}
             </h1>
           )}
           <span className="text-slate-600 text-xs">{widgets.length} widget{widgets.length !== 1 ? 's' : ''}</span>
+
           <div className="flex-1" />
-          <button
-            onClick={handleExport}
+
+          {/* Canvas background color */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-slate-500 text-xs">Canvas</span>
+            <input
+              type="color"
+              value={canvasBg}
+              onChange={e => updateDashboard(id, { bgColor: e.target.value })}
+              title="Canvas background color"
+              className="w-7 h-7 rounded cursor-pointer border border-slate-600 bg-transparent"
+            />
+          </div>
+
+          <div className="w-px h-4 bg-slate-700" />
+
+          <button onClick={handleExport}
             disabled={exporting || widgets.length === 0}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 disabled:opacity-40 text-slate-900 font-semibold text-xs transition-colors"
-          >
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 disabled:opacity-40 text-slate-900 font-semibold text-xs transition-colors">
             {exporting ? 'Exporting…' : 'Export PNG'}
           </button>
         </div>
 
         {/* Canvas + settings */}
         <div className="flex-1 flex flex-col" style={{ minHeight: 0 }}>
-          {/* Canvas — overflow-auto so large dashboards can scroll */}
-          <div className="flex-1 overflow-auto bg-slate-950 p-4" ref={exportRef} style={{ minHeight: 0 }}>
+          <div
+            className="flex-1 overflow-auto p-4"
+            ref={exportRef}
+            style={{ minHeight: 0, backgroundColor: canvasBg }}
+            onClick={() => setSelectedId(null)}
+          >
             {widgets.length === 0 ? (
-              <div className="flex items-center justify-center h-full text-center">
+              <div className="flex items-center justify-center h-full text-center pointer-events-none">
                 <div>
                   <p className="text-slate-600 text-sm mb-2">Your dashboard is empty.</p>
                   <p className="text-slate-700 text-xs">Add charts, tables, or text elements from the left panel.</p>
@@ -641,7 +661,7 @@ export default function DashboardBuilder() {
                     ? saved.tables?.find(t => t.id === w.sourceId)
                     : null
                   return (
-                    <div key={w.id}>
+                    <div key={w.id} onClick={e => e.stopPropagation()}>
                       <WidgetWrapper
                         widget={w}
                         savedChart={savedChart}
@@ -658,7 +678,6 @@ export default function DashboardBuilder() {
             )}
           </div>
 
-          {/* Settings panel (only when a widget is selected) */}
           {selectedWidget && (
             <WidgetSettings
               widget={selectedWidget}
