@@ -131,4 +131,6 @@ export const api = {
   getAnomalySeasons: () => get('/anomalies/seasons'),
 
   getAdminAi: () => get('/admin/ai'),
+
+  getMeta: () => get('/meta'),
 }

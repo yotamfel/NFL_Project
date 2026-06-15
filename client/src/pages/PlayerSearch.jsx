@@ -1,4 +1,6 @@
 import { useNavigate } from 'react-router-dom'
+import { api } from '../api'
+import { useApi } from '../hooks/useApi'
 import AnomalyFeed from '../components/AnomalyFeed'
 
 const FEATURE_CARDS = [
@@ -40,8 +42,19 @@ const FEATURE_CARDS = [
   },
 ]
 
+function fmtPlayers(n) {
+  if (!n) return '20,000+'
+  const k = Math.floor(n / 1000) * 1000
+  return `${k.toLocaleString()}+`
+}
+
 export default function PlayerSearch() {
   const navigate = useNavigate()
+  const { data: meta } = useApi(() => api.getMeta(), [])
+
+  const playerLabel  = fmtPlayers(meta?.players)
+  const seasonLabel  = meta?.seasons ? `${meta.seasons} seasons` : '56 seasons'
+  const teamLabel    = `${meta?.teams ?? 32} teams`
 
   return (
     <div className="max-w-3xl mx-auto pt-10 pb-24">
@@ -53,7 +66,7 @@ export default function PlayerSearch() {
           <span className="text-white"> DATA</span>
         </h1>
         <p className="text-slate-400 text-sm tracking-wide">
-          20,000+ players &nbsp;·&nbsp; 56 seasons &nbsp;·&nbsp; 32 teams
+          {playerLabel} &nbsp;·&nbsp; {seasonLabel} &nbsp;·&nbsp; {teamLabel}
         </p>
         <p className="text-slate-400 text-sm mt-4 leading-relaxed max-w-md mx-auto">
           An NFL analytics platform built on a full historical database.
