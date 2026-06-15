@@ -533,6 +533,18 @@ export default function DashboardBuilder() {
   }, [id, widgets, updateDashboard])
 
   const handleLayoutChange = useCallback(l => setLocalLayout(l), [])
+  const handleResizeStop = useCallback((newLayout, oldItem, newItem) => {
+    // Size changed → clear the snapshot so it re-captures at the new dimensions
+    updateDashboard(id, {
+      widgets: widgets.map(w => {
+        const l = newLayout.find(li => li.i === w.id)
+        if (!l) return w
+        const cleared = w.id === newItem.i ? { ...w.config, snapshot: null } : w.config
+        return { ...w, layout: { x: l.x, y: l.y, w: l.w, h: l.h }, config: cleared }
+      }),
+    })
+    setLocalLayout(newLayout)
+  }, [id, widgets, updateDashboard])
   const persistLayout = useCallback(newLayout => {
     updateDashboard(id, {
       widgets: widgets.map(w => {
@@ -661,7 +673,7 @@ export default function DashboardBuilder() {
                     compactType="vertical"
                     onLayoutChange={handleLayoutChange}
                     onDragStop={persistLayout}
-                    onResizeStop={persistLayout}
+                    onResizeStop={handleResizeStop}
                     draggableHandle=".drag-handle"
                     draggableCancel="input,textarea,select"
                     resizeHandles={['n', 's', 'e', 'w', 'sw', 'nw', 'se', 'ne']}
