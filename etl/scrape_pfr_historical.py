@@ -351,6 +351,16 @@ def main():
     mode     = "[DRY RUN] " if args.dry_run else ""
     print(f"{mode}{total} files to download  (~{eta_min:.0f} min)")
 
+    # Warmup: visit PFR homepage first so Cloudflare is solved before the
+    # first real page. Without this, the first data page times out while CF
+    # is still challenging the browser (subsequent pages are fine because
+    # the cf_clearance cookie persists within the session).
+    if not args.dry_run and work:
+        print("  [warmup] solving Cloudflare...")
+        _get_driver().get(BASE_URL)
+        time.sleep(18)
+        print("  [warmup] done")
+
     errors = []
     try:
         for i, (cat, year, cfg) in enumerate(work, 1):
