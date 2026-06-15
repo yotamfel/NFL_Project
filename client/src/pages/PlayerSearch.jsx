@@ -33,10 +33,10 @@ const FEATURE_CARDS = [
     color: '#f472b6', dark: '#500724',
   },
   {
-    icon: '🔖', title: 'Saved & Notes',
-    desc: 'Bookmark players, comparisons and searches — add personal notes to each',
-    href: '/saved',
-    color: '#34d399', dark: '#064e3b',
+    icon: '📋', title: 'Dashboard',
+    desc: 'Build custom dashboards with charts, tables and text widgets — drag, resize, and export',
+    href: '/dashboard',
+    color: '#fb923c', dark: '#431407',
   },
 ]
 
