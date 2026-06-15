@@ -13,6 +13,7 @@ const LINKS = [
   { to: '/saved',      label: 'Saved' },
   { to: '/guide',      label: 'Guide' },
   { to: '/feedback',   label: 'Feedback' },
+  { to: '/admin',      label: 'Admin', adminOnly: true },
 ]
 
 export default function Nav() {
@@ -107,10 +108,12 @@ export default function Nav() {
 
         {/* Scrollable links section — overflow only here, not on parent */}
         <div className="flex items-center gap-1 overflow-x-auto flex-1 mr-3" style={{ scrollbarWidth: 'none' }}>
-          {LINKS.map(({ to, label }) => (
+          {LINKS.filter(({ adminOnly }) => !adminOnly || user?.is_admin).map(({ to, label, adminOnly }) => (
             <NavLink key={to} to={to} className={({ isActive }) =>
               `text-xs font-medium px-2.5 py-1.5 rounded-lg transition-colors whitespace-nowrap shrink-0 ${
-                isActive ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                isActive
+                  ? adminOnly ? 'bg-amber-500/20 text-amber-400' : 'bg-slate-800 text-white'
+                  : adminOnly ? 'text-amber-500 hover:text-amber-300 hover:bg-amber-500/10' : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
               }`
             }>
               {label}
