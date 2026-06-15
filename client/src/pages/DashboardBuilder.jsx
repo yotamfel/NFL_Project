@@ -149,11 +149,11 @@ function TableRenderer({ savedTable, config = {} }) {
   )
 }
 
+const TEXT_SIZES = [10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 42, 48, 56, 64, 72, 96]
+
 // ─── Widget wrapper ───────────────────────────────────────────────────────────
-// For chart/table widgets: renders live first, then captures itself as a PNG
-// and switches to <img> display — making resize trivial (just image scaling).
 function WidgetWrapper({ widget, savedItem, onDelete, onUpdateConfig, isSelected, onSelect }) {
-  const contentRef = useRef(null)
+  const cardRef = useRef(null)   // ref on the FULL card — captured PNG includes frame+title
   const [capturing, setCapturing] = useState(false)
   const [editingText, setEditingText] = useState(false)
   const [localContent, setLocalContent] = useState(widget.config.content || '')
@@ -161,17 +161,18 @@ function WidgetWrapper({ widget, savedItem, onDelete, onUpdateConfig, isSelected
 
   const commitText = () => { setEditingText(false); onUpdateConfig({ content: localContent }) }
 
-  // Capture self as PNG after the live chart/table finishes rendering
+  // Capture the full card as PNG (includes frame + title bar).
+  // When displaying, we show the PNG fullscreen with no outer wrapper,
+  // so the frame appears exactly once.
   useEffect(() => {
     if (type !== 'chart' && type !== 'table') return
-    if (config.snapshot) return   // already have snapshot
-    if (!savedItem) return        // nothing to capture
+    if (config.snapshot) return
+    if (!savedItem) return
 
     setCapturing(true)
-    // Charts (Recharts) need ~1.5s to finish SVG rendering; tables are immediate
     const delay = type === 'table' ? 400 : 1600
     const t = setTimeout(async () => {
-      const el = contentRef.current
+      const el = cardRef.current
       if (!el) { setCapturing(false); return }
       try {
         const png = await toPng(el, { pixelRatio: 2 })
@@ -185,40 +186,93 @@ function WidgetWrapper({ widget, savedItem, onDelete, onUpdateConfig, isSelected
     return () => { clearTimeout(t); setCapturing(false) }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [type, config.snapshot, savedItem?.title])
-  // ↑ re-runs only when snapshot is cleared (to refresh) or savedItem changes
+
+  // ── Snapshot display: PNG fills the slot fullscreen (frame is inside the PNG) ──
+  if ((type === 'chart' || type === 'table') && config.snapshot) {
+    return (
+      <div className="drag-handle h-full relative group" onClick={onSelect}>
+        {isSelected && (
+          <div className="absolute inset-0 ring-2 ring-amber-500/60 rounded-xl pointer-events-none z-10" />
+        )}
+        <img
+          src={config.snapshot}
+          alt={savedItem?.title || type}
+          draggable={false}
+          style={{ width: '100%', height: '100%', objectFit: 'fill', display: 'block', borderRadius: '12px' }}
+        />
+        <button
+          onClick={e => { e.stopPropagation(); onDelete() }}
+          className="absolute top-2 right-2 z-20 w-6 h-6 flex items-center justify-center rounded-full bg-slate-900/80 text-slate-400 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity text-sm"
+        >×</button>
+      </div>
+    )
+  }
 
   // ── Text / heading ────────────────────────────────────────────────────────────
   if (type === 'heading' || type === 'text') {
     const defaultFs = type === 'heading' ? 24 : 14
     const fontSize  = config.fontSize || defaultFs
+    const textColor = config.textColor || (type === 'heading' ? '#ffffff' : '#cbd5e1')
+    const bgColor   = config.bgColor || 'transparent'
+
     return (
-      <div className="drag-handle relative h-full group cursor-grab active:cursor-grabbing rounded-lg overflow-hidden"
-        style={{ backgroundColor: config.bgColor || 'transparent' }} onClick={onSelect}>
+      <div className="drag-handle relative h-full group cursor-grab active:cursor-grabbing rounded-lg overflow-visible"
+        style={{ backgroundColor: bgColor }} onClick={onSelect}>
         {isSelected && <div className="absolute inset-0 ring-2 ring-amber-500/50 rounded-lg pointer-events-none z-10" />}
-        <button onClick={e => { e.stopPropagation(); onDelete() }}
-          className="absolute top-1 right-1 z-20 w-5 h-5 flex items-center justify-center text-slate-500 hover:text-red-400 bg-slate-800/70 rounded opacity-0 group-hover:opacity-100 transition-opacity text-sm">
-          ×
-        </button>
+
+        {/* Inline formatting toolbar — visible when selected */}
+        {isSelected && (
+          <div
+            className="absolute -top-9 left-0 z-30 flex items-center gap-1.5 bg-slate-800 border border-slate-600 rounded-lg px-2 py-1 shadow-lg"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Font size */}
+            <select
+              value={fontSize}
+              onChange={e => onUpdateConfig({ fontSize: Number(e.target.value) })}
+              className="bg-slate-700 border border-slate-600 rounded px-1 py-0.5 text-slate-200 text-xs"
+            >
+              {TEXT_SIZES.map(s => <option key={s} value={s}>{s}px</option>)}
+            </select>
+            {/* Text color */}
+            <label className="flex items-center gap-1 cursor-pointer" title="Text color">
+              <span className="text-slate-400 text-xs">A</span>
+              <input type="color" value={textColor}
+                onChange={e => onUpdateConfig({ textColor: e.target.value })}
+                className="w-5 h-5 rounded cursor-pointer border border-slate-600 bg-transparent" />
+            </label>
+            {/* Background color */}
+            <label className="flex items-center gap-1 cursor-pointer" title="Background">
+              <span className="text-slate-400 text-xs">Bg</span>
+              <input type="color" value={bgColor === 'transparent' ? '#020617' : bgColor}
+                onChange={e => onUpdateConfig({ bgColor: e.target.value })}
+                className="w-5 h-5 rounded cursor-pointer border border-slate-600 bg-transparent" />
+            </label>
+            <div className="w-px h-4 bg-slate-600" />
+            <button onClick={onDelete} className="text-slate-500 hover:text-red-400 text-sm leading-none">×</button>
+          </div>
+        )}
+
+        {/* Text content */}
         {editingText ? (
           type === 'heading'
             ? <input autoFocus value={localContent} onChange={e => setLocalContent(e.target.value)}
                 onBlur={commitText} onKeyDown={e => (e.key === 'Enter' || e.key === 'Escape') && commitText()}
                 onClick={e => e.stopPropagation()}
                 className="w-full h-full bg-transparent px-2 py-1 outline-none cursor-text"
-                style={{ fontSize, fontWeight: 700, caretColor: '#f59e0b', color: config.textColor || '#fff' }} />
+                style={{ fontSize, fontWeight: 700, caretColor: '#f59e0b', color: textColor }} />
             : <textarea autoFocus value={localContent} onChange={e => setLocalContent(e.target.value)}
                 onBlur={commitText} onKeyDown={e => e.key === 'Escape' && commitText()}
                 onClick={e => e.stopPropagation()}
                 className="w-full h-full bg-transparent px-2 py-1 outline-none resize-none cursor-text"
-                style={{ fontSize, caretColor: '#f59e0b', color: config.textColor || '#cbd5e1' }} />
+                style={{ fontSize, caretColor: '#f59e0b', color: textColor }} />
         ) : (
           <div onClick={e => { e.stopPropagation(); setEditingText(true) }}
             className="h-full w-full px-2 py-1 flex items-center cursor-text overflow-hidden"
-            style={{ fontSize, fontWeight: type === 'heading' ? 700 : 400,
-              color: config.textColor || (type === 'heading' ? '#fff' : '#cbd5e1') }}>
+            style={{ fontSize, fontWeight: type === 'heading' ? 700 : 400, color: textColor }}>
             {config.content
               ? <span style={{ whiteSpace: 'pre-wrap', lineHeight: 1.4 }}>{config.content}</span>
-              : <span className="text-slate-600 italic" style={{ fontWeight: 400, fontSize: 13 }}>
+              : <span style={{ color: '#4b5563', fontStyle: 'italic', fontWeight: 400, fontSize: 13 }}>
                   {type === 'heading' ? 'Click to add heading…' : 'Click to add text…'}
                 </span>}
           </div>
@@ -227,17 +281,16 @@ function WidgetWrapper({ widget, savedItem, onDelete, onUpdateConfig, isSelected
     )
   }
 
-  // ── Chart / table card ────────────────────────────────────────────────────────
+  // ── Chart / table live card (before snapshot is ready) ────────────────────────
   const widgetBg = config.bgColor || DEFAULT_WIDGET_BG
   return (
-    <div
+    <div ref={cardRef}
       className={`flex flex-col h-full rounded-xl border overflow-hidden ${
         isSelected ? 'border-amber-500/60 shadow-lg shadow-amber-500/10' : 'border-slate-700/60'
       }`}
       style={{ backgroundColor: widgetBg }}
       onClick={onSelect}>
 
-      {/* Title bar / drag handle */}
       <div className="drag-handle flex items-center gap-2 px-3 py-2 cursor-grab active:cursor-grabbing select-none border-b border-slate-700/60 shrink-0"
         style={{ backgroundColor: `${widgetBg}ee` }}>
         <span className="text-slate-500 text-xs select-none">⠿</span>
@@ -249,22 +302,13 @@ function WidgetWrapper({ widget, savedItem, onDelete, onUpdateConfig, isSelected
           className="text-slate-600 hover:text-red-400 transition-colors text-sm leading-none ml-1 shrink-0">×</button>
       </div>
 
-      {/* Content: PNG snapshot when ready, live render while capturing.
-          contentRef targets only this area so the captured PNG excludes
-          the title bar and border (preventing the double-frame issue). */}
       <div className="flex-1 relative" style={{ minHeight: 0 }}>
-        {config.snapshot ? (
-          <img src={config.snapshot} alt={savedItem?.title || type} draggable={false}
-            style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} />
-        ) : (
-          <div ref={contentRef} className="absolute inset-0 overflow-hidden"
-            style={{ backgroundColor: widgetBg }}>
-            {type === 'chart' && (
-              <ChartRenderer savedChart={savedItem} colorOverrides={config.colorOverrides} showInjuries={config.showInjuries ?? true} />
-            )}
-            {type === 'table' && <TableRenderer savedTable={savedItem} config={config} />}
-          </div>
-        )}
+        <div className="absolute inset-0 overflow-hidden">
+          {type === 'chart' && (
+            <ChartRenderer savedChart={savedItem} colorOverrides={config.colorOverrides} showInjuries={config.showInjuries ?? true} />
+          )}
+          {type === 'table' && <TableRenderer savedTable={savedItem} config={config} />}
+        </div>
       </div>
     </div>
   )
@@ -282,7 +326,6 @@ function ColorPicker({ label, value, defaultValue, onChange }) {
 }
 
 // ─── Widget settings panel ────────────────────────────────────────────────────
-const FONT_SIZES = [10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 42, 48, 56, 64]
 
 function WidgetSettings({ widget, savedItem, onUpdateConfig, onClose }) {
   const { config, type } = widget
@@ -330,7 +373,7 @@ function WidgetSettings({ widget, savedItem, onUpdateConfig, onClose }) {
             <select value={config.fontSize || (type === 'heading' ? 24 : 14)}
               onChange={e => onUpdateConfig({ fontSize: Number(e.target.value) })}
               className="bg-slate-800 border border-slate-600 rounded px-1.5 py-0.5 text-slate-200 text-xs">
-              {FONT_SIZES.map(s => <option key={s} value={s}>{s}px</option>)}
+              {TEXT_SIZES.map(s => <option key={s} value={s}>{s}px</option>)}
             </select>
           </div>
         )}
