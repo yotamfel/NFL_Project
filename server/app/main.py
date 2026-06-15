@@ -15,6 +15,79 @@ from app.routers import (
 
 app = FastAPI(title="NFL Data Platform API")
 
+
+def _run_migrations():
+    with engine.begin() as conn:
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS users (
+                id            BIGSERIAL PRIMARY KEY,
+                username      TEXT NOT NULL,
+                email         TEXT NOT NULL,
+                password_hash TEXT NOT NULL,
+                is_admin      BOOLEAN NOT NULL DEFAULT FALSE,
+                guide_lang    TEXT NOT NULL DEFAULT 'en',
+                theme         TEXT NOT NULL DEFAULT 'dark',
+                created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+            )
+        """))
+        conn.execute(text("""
+            CREATE UNIQUE INDEX IF NOT EXISTS users_username_lower_idx
+            ON users (LOWER(username))
+        """))
+        conn.execute(text("""
+            CREATE UNIQUE INDEX IF NOT EXISTS users_email_lower_idx
+            ON users (LOWER(email))
+        """))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS refresh_tokens (
+                id         BIGSERIAL PRIMARY KEY,
+                user_id    BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                token      TEXT NOT NULL UNIQUE,
+                expires_at TIMESTAMPTZ NOT NULL,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+            )
+        """))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS user_visits (
+                id         BIGSERIAL PRIMARY KEY,
+                user_id    BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                visited_at TIMESTAMPTZ NOT NULL DEFAULT now()
+            )
+        """))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS notifications (
+                id          BIGSERIAL PRIMARY KEY,
+                user_id     BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                message     TEXT NOT NULL,
+                feedback_id BIGINT,
+                is_read     BOOLEAN NOT NULL DEFAULT FALSE,
+                created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+            )
+        """))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS saved_items (
+                id         BIGSERIAL PRIMARY KEY,
+                user_id    BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                type       TEXT NOT NULL,
+                label      TEXT NOT NULL DEFAULT '',
+                data       JSONB NOT NULL DEFAULT '{}',
+                note       TEXT NOT NULL DEFAULT '',
+                created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+            )
+        """))
+        conn.execute(text("""
+            ALTER TABLE feedback
+            ADD COLUMN IF NOT EXISTS user_id    BIGINT,
+            ADD COLUMN IF NOT EXISTS username   TEXT NOT NULL DEFAULT '',
+            ADD COLUMN IF NOT EXISTS category   TEXT NOT NULL DEFAULT 'general',
+            ADD COLUMN IF NOT EXISTS resolved   BOOLEAN NOT NULL DEFAULT FALSE,
+            ADD COLUMN IF NOT EXISTS admin_reply TEXT,
+            ADD COLUMN IF NOT EXISTS replied_at TIMESTAMPTZ
+        """))
+
+
+_run_migrations()
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
