@@ -10,6 +10,7 @@ const LINKS = [
   { to: '/search', label: 'Smart Search' },
   { to: '/trends', label: 'Trends' },
   { to: '/dashboard', label: 'Dashboard' },
+  { to: '/saved', label: 'Saved' },
   { to: '/guide', label: 'Guide' },
 ]
 
