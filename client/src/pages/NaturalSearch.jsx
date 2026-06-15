@@ -37,7 +37,7 @@ export default function NaturalSearch() {
         <p className="text-xs font-bold uppercase tracking-widest text-violet-500 mb-1">Powered by Claude</p>
         <h1 className="text-3xl font-black text-white tracking-tight">Smart Search</h1>
         <p className="text-slate-400 text-sm mt-1">
-          Ask any question about NFL data in English or Hebrew.
+          Ask any question about NFL stats in plain English.
         </p>
       </div>
 

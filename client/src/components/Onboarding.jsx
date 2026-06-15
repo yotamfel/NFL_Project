@@ -14,7 +14,7 @@ const STEPS = [
   },
   {
     title: 'Ask Questions in Plain English',
-    text: 'Use Smart Search to ask anything — "Who had the most rushing yards in 2022?" or "Top QBs by passer rating since 2015". Type in English or Hebrew.',
+    text: 'Use Smart Search to ask anything — "Who had the most rushing yards in 2022?" or "Top QBs by passer rating since 2015".',
     icon: '🤖',
   },
   {
