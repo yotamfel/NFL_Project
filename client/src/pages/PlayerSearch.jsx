@@ -43,18 +43,18 @@ const FEATURE_CARDS = [
 ]
 
 function fmtPlayers(n) {
-  if (!n) return '20,000+'
+  if (!n) return null
   const k = Math.floor(n / 1000) * 1000
   return `${k.toLocaleString()}+`
 }
 
 export default function PlayerSearch() {
   const navigate = useNavigate()
-  const { data: meta } = useApi(() => api.getMeta(), [])
+  const { data: meta, loading: metaLoading } = useApi(() => api.getMeta(), [])
 
   const playerLabel  = fmtPlayers(meta?.players)
-  const seasonLabel  = meta?.seasons ? `${meta.seasons} seasons` : '56 seasons'
-  const teamLabel    = `${meta?.teams ?? 32} teams`
+  const seasonLabel  = meta?.seasons ? `${meta.seasons} seasons` : null
+  const teamLabel    = meta?.teams ? `${meta.teams} teams` : null
 
   return (
     <div className="max-w-3xl mx-auto pt-10 pb-24">
@@ -65,9 +65,11 @@ export default function PlayerSearch() {
           <span className="bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 bg-clip-text text-transparent">NFL</span>
           <span className="text-white"> DATA</span>
         </h1>
-        <p className="text-slate-400 text-sm tracking-wide">
-          {playerLabel} &nbsp;·&nbsp; {seasonLabel} &nbsp;·&nbsp; {teamLabel}
-        </p>
+        {!metaLoading && meta && (
+          <p className="text-slate-400 text-sm tracking-wide">
+            {[playerLabel, seasonLabel, teamLabel].filter(Boolean).join('  ·  ')}
+          </p>
+        )}
         <p className="text-slate-400 text-sm mt-4 leading-relaxed max-w-md mx-auto">
           An NFL analytics platform built on a full historical database.
           Search players, compare careers, explore the draft, run AI-powered queries, track league trends, and save your work.
