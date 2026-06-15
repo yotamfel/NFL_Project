@@ -15,7 +15,7 @@ from app.auth import (
     hash_password,
     verify_password,
 )
-from app.config import ADMIN_USERNAME
+from app.config import ADMIN_EMAIL, ADMIN_USERNAME
 from app.db import engine
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -104,17 +104,21 @@ def register(body: RegisterBody):
 
     username = body.username.strip().lower()
 
+    email_lc = body.email.lower()
     with engine.begin() as conn:
         existing = conn.execute(text(
             "SELECT id FROM users WHERE LOWER(username) = :u OR LOWER(email) = :e"
-        ), {"u": username, "e": body.email.lower()}).fetchone()
+        ), {"u": username, "e": email_lc}).fetchone()
         if existing:
             raise HTTPException(status_code=409, detail="Username or email already taken")
 
-        is_admin = (username == ADMIN_USERNAME.lower()) if ADMIN_USERNAME else False
+        is_admin = (
+            (ADMIN_USERNAME and username == ADMIN_USERNAME.lower()) or
+            (ADMIN_EMAIL    and email_lc == ADMIN_EMAIL.lower())
+        )
         row = conn.execute(text(
             "INSERT INTO users (username, email, password_hash, is_admin) VALUES (:u, :e, :h, :a) RETURNING id"
-        ), {"u": username, "e": body.email.lower(), "h": hash_password(body.password), "a": is_admin}).fetchone()
+        ), {"u": username, "e": email_lc, "h": hash_password(body.password), "a": is_admin}).fetchone()
         user_id = row.id
 
         refresh = create_refresh_token()
@@ -123,7 +127,7 @@ def register(body: RegisterBody):
     return {
         "access_token":  create_access_token(user_id, username, is_admin=is_admin),
         "refresh_token": refresh,
-        "user": {"id": user_id, "username": username, "email": body.email.lower(),
+        "user": {"id": user_id, "username": username, "email": email_lc,
                  "guide_lang": "en", "theme": "dark", "is_admin": is_admin},
     }
 

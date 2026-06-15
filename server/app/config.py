@@ -31,3 +31,4 @@ ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
 
 JWT_SECRET    = os.environ.get("JWT_SECRET", "change-me-in-production")
 ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "")
+ADMIN_EMAIL    = os.environ.get("ADMIN_EMAIL", "")
