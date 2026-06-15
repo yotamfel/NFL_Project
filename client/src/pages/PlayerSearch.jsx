@@ -62,20 +62,20 @@ export default function PlayerSearch() {
       {/* Hero */}
       <div className="text-center mb-10">
         <h1 className="text-6xl font-black tracking-tighter mb-3 leading-none">
-          <span className="bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 bg-clip-text text-transparent">NFL</span>
-          <span className="text-white"> DATA</span>
+          <span className="bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 bg-clip-text text-transparent">FOURTH</span>
+          <span className="text-white"> & DATA</span>
         </h1>
         {!metaLoading && meta && (
           <p className="text-slate-400 text-sm tracking-wide">
-            {[playerLabel, seasonLabel, teamLabel].filter(Boolean).join('  ·  ')}
+            {[playerLabel, seasonLabel, teamLabel].filter(Boolean).join('  ·  ')}
           </p>
         )}
         <p className="text-slate-400 text-sm mt-4 leading-relaxed max-w-md mx-auto">
-          An NFL analytics platform built on a full historical database.
-          Search players, compare careers, explore the draft, run AI-powered queries, track league trends, and save your work.
+          An NFL analytics platform covering every player and season in league history.
+          Dig into careers, uncover trends, and let the data tell the story.
           <br />
           <span className="text-slate-500 text-xs mt-1 inline-block">
-            Full details in the <a href="/guide" className="text-amber-500/70 hover:text-amber-400 transition-colors">Guide</a>.
+            New here? Start with the <a href="/guide" className="text-amber-500/70 hover:text-amber-400 transition-colors">Guide</a>.
           </span>
         </p>
       </div>

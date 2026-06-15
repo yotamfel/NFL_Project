@@ -63,8 +63,8 @@ export default function Nav() {
           <NavLink to="/" className="flex items-center gap-2 shrink-0">
             <span className="text-xl">🏈</span>
             <span className="font-black text-base tracking-tight">
-              <span className="bg-gradient-to-r from-amber-400 to-yellow-200 bg-clip-text text-transparent">NFL</span>
-              <span className="text-white"> DATA</span>
+              <span className="bg-gradient-to-r from-amber-400 to-yellow-200 bg-clip-text text-transparent">FOURTH</span>
+              <span className="text-white"> & DATA</span>
             </span>
           </NavLink>
 
