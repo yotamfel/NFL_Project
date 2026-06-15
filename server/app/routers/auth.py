@@ -148,11 +148,8 @@ def login(body: LoginBody):
 
         _clear_fails(username)
 
-        # Grant admin if credentials match, and sync to DB if not already set
-        should_be_admin = bool(
-            ADMIN_USERNAME and username == ADMIN_USERNAME.lower() and
-            ADMIN_EMAIL    and row.email.lower() == ADMIN_EMAIL.lower()
-        )
+        # Grant admin by username alone at login (password already proves identity)
+        should_be_admin = bool(ADMIN_USERNAME and username == ADMIN_USERNAME.lower())
         if should_be_admin and not row.is_admin:
             conn.execute(text("UPDATE users SET is_admin = TRUE WHERE id = :uid"), {"uid": row.id})
         is_admin = should_be_admin or bool(row.is_admin)
