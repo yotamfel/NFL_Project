@@ -269,12 +269,16 @@ def _strip_fences(reply: str) -> str:
 
 
 def _ask_claude(question: str) -> tuple[str, int]:
-    response = _client().messages.create(
-        model=MODEL,
-        max_tokens=1024,
-        system=SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": question}],
-    )
+    try:
+        response = _client().messages.create(
+            model=MODEL,
+            max_tokens=1024,
+            system=SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": question}],
+            timeout=15,
+        )
+    except Exception as exc:
+        raise TranslationError("AI features are temporarily unavailable. Other features work normally.") from exc
     reply = _strip_fences("".join(block.text for block in response.content if block.type == "text"))
     tokens = response.usage.input_tokens + response.usage.output_tokens
     return reply, tokens

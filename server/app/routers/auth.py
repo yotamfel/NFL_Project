@@ -1,6 +1,7 @@
 """Auth endpoints: register, login, refresh, logout, me.
 Also handles visit tracking (Phase 3) — called on every token refresh.
 """
+import re
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 
@@ -87,24 +88,33 @@ def _store_refresh(conn, user_id: int, token: str):
 
 def _user_row_to_dict(row) -> dict:
     return {
-        "id":         row.id,
-        "username":   row.username,
-        "email":      row.email,
-        "guide_lang": row.guide_lang,
-        "theme":      row.theme,
-        "is_admin":   row.is_admin,
+        "id":                  row.id,
+        "username":            row.username,
+        "email":               row.email,
+        "guide_lang":          row.guide_lang,
+        "theme":               row.theme,
+        "is_admin":            row.is_admin,
+        "onboarding_complete": row.onboarding_complete,
     }
 
 
 # ── Endpoints ──────────────────────────────────────────────────────────────────
+_USERNAME_RE = re.compile(r"^[a-zA-Z0-9_]{3,20}$")
+
+
 @router.post("/register", status_code=201)
 def register(body: RegisterBody):
     if len(body.password) < 8:
         raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+    if len(body.password) > 100:
+        raise HTTPException(status_code=422, detail="Password too long")
 
-    username = body.username.strip().lower()
+    username = body.username.strip()
+    if not _USERNAME_RE.match(username):
+        raise HTTPException(status_code=422, detail="Username must be 3–20 characters, letters, numbers and underscores only")
+    username = username.lower()
 
-    email_lc = body.email.lower()
+    email_lc = body.email.strip().lower()
     with engine.begin() as conn:
         existing = conn.execute(text(
             "SELECT id FROM users WHERE LOWER(username) = :u OR LOWER(email) = :e"
@@ -128,7 +138,8 @@ def register(body: RegisterBody):
         "access_token":  create_access_token(user_id, username, is_admin=is_admin),
         "refresh_token": refresh,
         "user": {"id": user_id, "username": username, "email": email_lc,
-                 "guide_lang": "en", "theme": "dark", "is_admin": is_admin},
+                 "guide_lang": "en", "theme": "dark", "is_admin": is_admin,
+                 "onboarding_complete": False},
     }
 
 
@@ -139,7 +150,7 @@ def login(body: LoginBody):
 
     with engine.begin() as conn:
         row = conn.execute(text(
-            "SELECT id, username, email, password_hash, guide_lang, theme, is_admin FROM users WHERE LOWER(username) = :u"
+            "SELECT id, username, email, password_hash, guide_lang, theme, is_admin, onboarding_complete FROM users WHERE LOWER(username) = :u"
         ), {"u": username}).fetchone()
 
         if not row or not verify_password(body.password, row.password_hash):
@@ -179,7 +190,7 @@ def refresh_token(body: RefreshBody):
             raise HTTPException(status_code=401, detail="Refresh token expired")
 
         user = conn.execute(text(
-            "SELECT id, username, email, guide_lang, theme, is_admin FROM users WHERE id = :uid"
+            "SELECT id, username, email, guide_lang, theme, is_admin, onboarding_complete FROM users WHERE id = :uid"
         ), {"uid": tok_row.user_id}).fetchone()
 
     record_visit(user.id, user.username)
@@ -202,7 +213,7 @@ def logout(body: LogoutBody, current_user: dict = Depends(get_current_user)):
 def me(current_user: dict = Depends(get_current_user)):
     with engine.connect() as conn:
         row = conn.execute(text(
-            "SELECT id, username, email, guide_lang, theme, is_admin FROM users WHERE id = :uid"
+            "SELECT id, username, email, guide_lang, theme, is_admin, onboarding_complete FROM users WHERE id = :uid"
         ), {"uid": int(current_user["sub"])}).fetchone()
         if not row:
             raise HTTPException(status_code=404, detail="User not found")

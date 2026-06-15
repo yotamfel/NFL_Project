@@ -20,6 +20,9 @@ import DashboardBuilder from './pages/DashboardBuilder'
 import Anomalies from './pages/Anomalies'
 import Feedback from './pages/Feedback'
 import AdminPanel from './pages/AdminPanel'
+import About from './pages/About'
+import Onboarding from './components/Onboarding'
+import Footer from './components/Footer'
 
 function AppInner() {
   const { user, isLoading } = useAuth()
@@ -45,6 +48,10 @@ function AppInner() {
     return user ? <Navigate to="/" replace /> : <Auth />
   }
 
+  if (location.pathname === '/about') {
+    return <About />
+  }
+
   if (!user) {
     return <Navigate to="/login" replace state={{ from: location }} />
   }
@@ -53,6 +60,7 @@ function AppInner() {
     <UserProvider>
       <div className={`flex flex-col bg-slate-950 ${isBuilder ? 'h-screen overflow-hidden' : 'min-h-screen'}`}>
         <Nav />
+        <Onboarding />
         <main className={`flex-1 w-full mx-auto ${isBuilder ? 'min-h-0 overflow-hidden' : 'max-w-6xl px-4 py-6'}`}>
           <Routes>
             <Route path="/"                element={<PlayerSearch />} />
@@ -70,8 +78,10 @@ function AppInner() {
             <Route path="/dashboard/:id"   element={<DashboardBuilder />} />
             <Route path="/anomalies"       element={<Anomalies />} />
             <Route path="/feedback"        element={<Feedback />} />
+            <Route path="/about"           element={<About />} />
           </Routes>
         </main>
+        {!isBuilder && <Footer />}
       </div>
     </UserProvider>
   )

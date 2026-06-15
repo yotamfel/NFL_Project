@@ -15,6 +15,8 @@ from app.nl_search import TranslationError, answer_question
 
 router = APIRouter(prefix="/search", tags=["natural-language search"])
 
+_AI_UNAVAILABLE = "AI features are temporarily unavailable. Other features work normally."
+
 
 class NaturalLanguageQuery(BaseModel):
     question: str
@@ -25,8 +27,13 @@ def natural_language_search(query: NaturalLanguageQuery):
     try:
         return answer_question(query.question)
     except TranslationError as exc:
-        # Every TranslationError — "couldn't translate", "unsafe query",
+        msg = str(exc)
+        # Surface AI-unavailability errors as 503 so clients can distinguish
+        # "AI is down" from "question couldn't be answered".
+        if _AI_UNAVAILABLE in msg or "could not reach the AI service" in msg:
+            raise HTTPException(status_code=503, detail=_AI_UNAVAILABLE)
+        # Every other TranslationError — "couldn't translate", "unsafe query",
         # "query failed to run" — means the same thing to the caller: this
         # question couldn't be answered. 422 names that honestly, the same
         # way a malformed comparison does in comparison.py.
-        raise HTTPException(status_code=422, detail=str(exc))
+        raise HTTPException(status_code=422, detail=msg)

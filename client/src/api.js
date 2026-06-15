@@ -16,22 +16,34 @@ async function request(method, path, body, { skipAuth = false } = {}) {
   const headers = { 'Content-Type': 'application/json' }
   if (!skipAuth && _accessToken) headers['Authorization'] = `Bearer ${_accessToken}`
 
-  const res = await fetch(`${BASE}${path}`, {
-    method,
-    headers,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  })
+  let res
+  try {
+    res = await fetch(`${BASE}${path}`, {
+      method,
+      headers,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    })
+  } catch {
+    throw new Error('Network error. Check your connection.')
+  }
 
   if (res.status === 401 && !skipAuth) {
     // Try to refresh the access token once, then retry
     const refreshed = await _tryRefresh()
     if (refreshed) {
       const retryHeaders = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_accessToken}` }
-      const retry = await fetch(`${BASE}${path}`, {
-        method, headers: retryHeaders,
-        body: body !== undefined ? JSON.stringify(body) : undefined,
-      })
+      let retry
+      try {
+        retry = await fetch(`${BASE}${path}`, {
+          method, headers: retryHeaders,
+          body: body !== undefined ? JSON.stringify(body) : undefined,
+        })
+      } catch {
+        throw new Error('Network error. Check your connection.')
+      }
       if (retry.ok) return retry.json()
+      const rb = await retry.json().catch(() => ({}))
+      throw new Error(rb.detail ?? `${retry.status} ${retry.statusText}`)
     }
     _onUnauthorized?.()
     throw new Error('Session expired. Please log in again.')

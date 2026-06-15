@@ -38,21 +38,30 @@ def list_saved(current_user: dict = Depends(get_current_user)):
 @router.post("", status_code=201)
 def create_saved(body: SavedItemBody, current_user: dict = Depends(get_current_user)):
     uid = int(current_user["sub"])
+    label = body.label.strip()
+    note = body.note.strip()
+    if len(label) > 100:
+        raise HTTPException(status_code=422, detail="Label must be at most 100 characters")
+    if len(note) > 1000:
+        raise HTTPException(status_code=422, detail="Note must be at most 1000 characters")
     import json
     with engine.begin() as conn:
         row = conn.execute(text(
             "INSERT INTO saved_items (user_id, type, label, data, note) VALUES (:uid, :type, :label, :data::jsonb, :note) RETURNING id, created_at"
-        ), {"uid": uid, "type": body.type, "label": body.label, "data": json.dumps(body.data), "note": body.note}).fetchone()
+        ), {"uid": uid, "type": body.type, "label": label, "data": json.dumps(body.data), "note": note}).fetchone()
     return {"id": row.id, "created_at": row.created_at}
 
 
 @router.patch("/{item_id}")
 def update_note(item_id: int, body: NoteBody, current_user: dict = Depends(get_current_user)):
     uid = int(current_user["sub"])
+    note = body.note.strip()
+    if len(note) > 1000:
+        raise HTTPException(status_code=422, detail="Note must be at most 1000 characters")
     with engine.begin() as conn:
         result = conn.execute(text(
             "UPDATE saved_items SET note = :note WHERE id = :id AND user_id = :uid"
-        ), {"note": body.note, "id": item_id, "uid": uid})
+        ), {"note": note, "id": item_id, "uid": uid})
         if result.rowcount == 0:
             raise HTTPException(status_code=404, detail="Item not found")
     return {"ok": True}

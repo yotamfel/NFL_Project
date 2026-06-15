@@ -1,3 +1,5 @@
+# Last reviewed for security updates: 2026-06-15
+# Run: pip list --outdated  to check for updates
 fastapi
 uvicorn[standard]
 sqlalchemy

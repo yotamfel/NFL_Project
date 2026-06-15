@@ -1,11 +1,13 @@
 """FastAPI app — wires up the module routers (see app/routers/)."""
+import os
 from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.db import engine
 from app.routers import (
@@ -14,6 +16,26 @@ from app.routers import (
 )
 
 app = FastAPI(title="NFL Data Platform API")
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request, exc):
+    return JSONResponse(status_code=500, content={"detail": "Something went wrong. Please try again."})
+
+
+@app.exception_handler(404)
+async def not_found_handler(request, exc):
+    return JSONResponse(status_code=404, content={"detail": "Not found"})
+
+
+@app.exception_handler(422)
+async def validation_handler(request, exc):
+    return JSONResponse(status_code=422, content={"detail": "Invalid input"})
+
+
+@app.exception_handler(SQLAlchemyError)
+async def db_error_handler(request, exc):
+    return JSONResponse(status_code=503, content={"detail": "Database temporarily unavailable. Please try again in a moment."})
 
 
 def _run_migrations():
@@ -84,15 +106,22 @@ def _run_migrations():
             ADD COLUMN IF NOT EXISTS admin_reply TEXT,
             ADD COLUMN IF NOT EXISTS replied_at TIMESTAMPTZ
         """))
+        conn.execute(text("""
+            ALTER TABLE users
+            ADD COLUMN IF NOT EXISTS onboarding_complete BOOLEAN NOT NULL DEFAULT FALSE
+        """))
 
 
 _run_migrations()
 
+allowed_origins = os.getenv("ALLOWED_ORIGIN", "http://localhost:5173").split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=allowed_origins,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PATCH", "DELETE"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 app.include_router(auth_router.router, prefix="/api")
@@ -130,7 +159,12 @@ def meta():
                     UNION SELECT season FROM defense_seasons
                 ) s
             """)).scalar() or 0
-        _meta_cache.update({"players": n_players, "seasons": n_seasons, "teams": 32})
+        _meta_cache.update({
+            "players": n_players,
+            "seasons": n_seasons,
+            "teams": 32,
+            "data_last_updated": os.getenv("DATA_LAST_UPDATED", "2025-01-01"),
+        })
     return _meta_cache
 
 
