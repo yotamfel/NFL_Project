@@ -20,20 +20,12 @@ const DEFAULT_SIZE = {
   heading: { w: 6, h: 1 },
   text:    { w: 4, h: 1 },
 }
-const MIN_SIZE = {
-  chart:   { minW: 1, minH: 1 },
-  table:   { minW: 1, minH: 1 },
-  heading: { minW: 1, minH: 1 },
-  text:    { minW: 1, minH: 1 },
-}
 
 const DEFAULT_CANVAS_BG  = '#020617'
 const DEFAULT_WIDGET_BG  = '#0f172a'
 const DEFAULT_HEADER_COL = '#1e293b'
 const DEFAULT_ROW_EVEN   = '#0f172a99'
 const DEFAULT_ROW_ODD    = 'transparent'
-const SNAP_W = 900
-const SNAP_H = 420
 
 const CANVAS_PRESETS = [
   { label: 'Night',  color: '#020617' },
@@ -46,7 +38,6 @@ const CANVAS_PRESETS = [
   { label: 'White',  color: '#ffffff' },
 ]
 
-// Resize handles — large, always visible, amber on hover
 const HANDLE_CSS = `
   .react-grid-item .react-resizable-handle {
     opacity: 0.35; transition: opacity 0.15s;
@@ -61,14 +52,12 @@ const HANDLE_CSS = `
   }
   .react-resizable-handle-n { top: 0 !important; transform: none !important; }
   .react-resizable-handle-s { bottom: 0 !important; transform: none !important; }
-
   .react-resizable-handle-e, .react-resizable-handle-w {
     top: 50% !important; height: 60px !important; width: 10px !important;
     margin-top: -30px !important; background-image: none !important; padding: 0 !important;
   }
   .react-resizable-handle-e { right: 0 !important; transform: none !important; }
   .react-resizable-handle-w { left: 0 !important; transform: none !important; }
-
   .react-resizable-handle-se,.react-resizable-handle-sw,
   .react-resizable-handle-ne,.react-resizable-handle-nw {
     width: 14px !important; height: 14px !important;
@@ -76,30 +65,28 @@ const HANDLE_CSS = `
   }
 `
 
-// ─── Full-size chart renderer (used for off-screen snapshots) ─────────────────
+// ─── Chart live renderer ──────────────────────────────────────────────────────
 function ChartRenderer({ savedChart, colorOverrides = {}, showInjuries = true }) {
   if (!savedChart) return null
   const { chartType, config, data } = savedChart
   const lines = (config.lines || []).map(l => ({ ...l, color: colorOverrides[l.dataKey] || l.color }))
 
   if (chartType === 'CareerLine') {
-    return (
-      <CareerLineChart data={data} xKey={config.xKey || 'season'} lines={lines}
-        injuryMap={showInjuries ? (config.injuryMap || {}) : {}} fill hideActions />
-    )
+    return <CareerLineChart data={data} xKey={config.xKey || 'season'} lines={lines}
+      injuryMap={showInjuries ? (config.injuryMap || {}) : {}} fill hideActions />
   }
   if (chartType === 'GenericLine' && config.lines) {
     return (
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={data} margin={{ top: 12, right: 24, left: 0, bottom: 12 }}>
+        <LineChart data={data} margin={{ top: 10, right: 20, left: 0, bottom: 10 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-          <XAxis dataKey={config.xKey || 'x'} stroke="#475569" tick={{ fill: '#94a3b8', fontSize: 12 }} />
-          <YAxis stroke="#475569" tick={{ fill: '#94a3b8', fontSize: 12 }} />
+          <XAxis dataKey={config.xKey || 'x'} stroke="#475569" tick={{ fill: '#94a3b8', fontSize: 11 }} />
+          <YAxis stroke="#475569" tick={{ fill: '#94a3b8', fontSize: 11 }} />
           <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }} />
-          <Legend wrapperStyle={{ fontSize: 12, color: '#94a3b8' }} />
+          <Legend wrapperStyle={{ fontSize: 11, color: '#94a3b8' }} />
           {config.lines.map(l => (
             <Line key={l.dataKey} type="monotone" dataKey={l.dataKey} name={l.label}
-              stroke={colorOverrides[l.dataKey] || l.color || '#3b82f6'} strokeWidth={2} dot={{ r: 3 }} />
+              stroke={colorOverrides[l.dataKey] || l.color || '#3b82f6'} strokeWidth={2} dot={{ r: 2 }} />
           ))}
         </LineChart>
       </ResponsiveContainer>
@@ -108,12 +95,12 @@ function ChartRenderer({ savedChart, colorOverrides = {}, showInjuries = true })
   if (chartType === 'GenericBar' && config.bars) {
     return (
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} margin={{ top: 12, right: 24, left: 0, bottom: 12 }}>
+        <BarChart data={data} margin={{ top: 10, right: 20, left: 0, bottom: 10 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-          <XAxis dataKey={config.xKey || 'x'} stroke="#475569" tick={{ fill: '#94a3b8', fontSize: 12 }} />
-          <YAxis stroke="#475569" tick={{ fill: '#94a3b8', fontSize: 12 }} />
+          <XAxis dataKey={config.xKey || 'x'} stroke="#475569" tick={{ fill: '#94a3b8', fontSize: 11 }} />
+          <YAxis stroke="#475569" tick={{ fill: '#94a3b8', fontSize: 11 }} />
           <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }} />
-          <Legend wrapperStyle={{ fontSize: 12, color: '#94a3b8' }} />
+          <Legend wrapperStyle={{ fontSize: 11, color: '#94a3b8' }} />
           {config.bars.map(b => (
             <Bar key={b.dataKey} dataKey={b.dataKey} name={b.label}
               fill={colorOverrides[b.dataKey] || b.color || '#3b82f6'} radius={[3, 3, 0, 0]} />
@@ -122,12 +109,12 @@ function ChartRenderer({ savedChart, colorOverrides = {}, showInjuries = true })
       </ResponsiveContainer>
     )
   }
-  return <div className="text-slate-500 text-sm p-4">Chart type not supported</div>
+  return <div className="text-slate-500 text-sm p-4">Unsupported chart type</div>
 }
 
-// ─── Table renderer ───────────────────────────────────────────────────────────
+// ─── Table live renderer ──────────────────────────────────────────────────────
 function TableRenderer({ savedTable, config = {} }) {
-  if (!savedTable) return null
+  if (!savedTable?.columns?.length) return <div className="text-slate-600 text-sm p-4">Table not found</div>
   const { columns, rows } = savedTable
   const headerBg = config.headerColor || DEFAULT_HEADER_COL
   const rowEven  = config.rowEvenColor || DEFAULT_ROW_EVEN
@@ -144,7 +131,7 @@ function TableRenderer({ savedTable, config = {} }) {
           </tr>
         </thead>
         <tbody>
-          {rows.slice(0, 50).map((row, i) => (
+          {(rows || []).slice(0, 60).map((row, i) => (
             <tr key={i} style={{ backgroundColor: i % 2 === 0 ? rowEven : rowOdd }}>
               {columns.map(col => (
                 <td key={col.key} className="px-2 py-1 text-slate-300 whitespace-nowrap border-t border-slate-800">
@@ -155,50 +142,53 @@ function TableRenderer({ savedTable, config = {} }) {
           ))}
         </tbody>
       </table>
-      {rows.length > 50 && <p className="text-slate-500 text-xs p-2 text-center">+{rows.length - 50} more rows</p>}
-    </div>
-  )
-}
-
-// ─── Off-screen snapshot capture ─────────────────────────────────────────────
-// Renders the chart/table at SNAP_W×SNAP_H off-screen, captures PNG, calls onDone
-function SnapshotCapture({ job, onDone }) {
-  const ref = useRef(null)
-  const { widgetId, type, savedItem, config } = job
-  const bg = config.bgColor || DEFAULT_WIDGET_BG
-
-  useEffect(() => {
-    // Recharts renders async; wait 1.4s then capture
-    const delay = type === 'table' ? 200 : 1400
-    const t = setTimeout(async () => {
-      if (!ref.current) { onDone(widgetId, null); return }
-      try {
-        const png = await toPng(ref.current, { backgroundColor: bg, pixelRatio: 1.5 })
-        onDone(widgetId, png)
-      } catch {
-        onDone(widgetId, null)
-      }
-    }, delay)
-    return () => clearTimeout(t)
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
-  return (
-    <div ref={ref}
-      style={{ position: 'fixed', top: -9999, left: -9999, width: SNAP_W, height: SNAP_H, backgroundColor: bg, overflow: 'hidden' }}>
-      {type === 'chart' && (
-        <ChartRenderer savedChart={savedItem} colorOverrides={config.colorOverrides} showInjuries={config.showInjuries ?? true} />
+      {(rows?.length || 0) > 60 && (
+        <p className="text-slate-500 text-xs p-2 text-center">+{rows.length - 60} more rows</p>
       )}
-      {type === 'table' && <TableRenderer savedTable={savedItem} config={config} />}
     </div>
   )
 }
 
 // ─── Widget wrapper ───────────────────────────────────────────────────────────
-function WidgetWrapper({ widget, savedItem, onDelete, onUpdateConfig, isSelected, onSelect, onRefreshSnapshot }) {
+// For chart/table widgets: renders live first, then captures itself as a PNG
+// and switches to <img> display — making resize trivial (just image scaling).
+function WidgetWrapper({ widget, savedItem, onDelete, onUpdateConfig, isSelected, onSelect }) {
+  const cardRef = useRef(null)
+  const [capturing, setCapturing] = useState(false)
   const [editingText, setEditingText] = useState(false)
   const [localContent, setLocalContent] = useState(widget.config.content || '')
   const { config, type } = widget
+
   const commitText = () => { setEditingText(false); onUpdateConfig({ content: localContent }) }
+
+  // Capture self as PNG after the live chart/table finishes rendering
+  useEffect(() => {
+    if (type !== 'chart' && type !== 'table') return
+    if (config.snapshot) return   // already have snapshot
+    if (!savedItem) return        // nothing to capture
+
+    setCapturing(true)
+    // Charts (Recharts) need ~1.5s to finish SVG rendering; tables are immediate
+    const delay = type === 'table' ? 400 : 1600
+    const t = setTimeout(async () => {
+      const el = cardRef.current
+      if (!el) { setCapturing(false); return }
+      try {
+        const png = await toPng(el, {
+          pixelRatio: 2,
+          backgroundColor: config.bgColor || DEFAULT_WIDGET_BG,
+        })
+        onUpdateConfig({ snapshot: png })
+      } catch (e) {
+        console.warn('Widget snapshot failed:', e)
+      } finally {
+        setCapturing(false)
+      }
+    }, delay)
+    return () => { clearTimeout(t); setCapturing(false) }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [type, config.snapshot, savedItem?.title])
+  // ↑ re-runs only when snapshot is cleared (to refresh) or savedItem changes
 
   // ── Text / heading ────────────────────────────────────────────────────────────
   if (type === 'heading' || type === 'text') {
@@ -206,8 +196,7 @@ function WidgetWrapper({ widget, savedItem, onDelete, onUpdateConfig, isSelected
     const fontSize  = config.fontSize || defaultFs
     return (
       <div className="drag-handle relative h-full group cursor-grab active:cursor-grabbing rounded-lg overflow-hidden"
-        style={{ backgroundColor: config.bgColor || 'transparent' }}
-        onClick={onSelect}>
+        style={{ backgroundColor: config.bgColor || 'transparent' }} onClick={onSelect}>
         {isSelected && <div className="absolute inset-0 ring-2 ring-amber-500/50 rounded-lg pointer-events-none z-10" />}
         <button onClick={e => { e.stopPropagation(); onDelete() }}
           className="absolute top-1 right-1 z-20 w-5 h-5 flex items-center justify-center text-slate-500 hover:text-red-400 bg-slate-800/70 rounded opacity-0 group-hover:opacity-100 transition-opacity text-sm">
@@ -215,24 +204,21 @@ function WidgetWrapper({ widget, savedItem, onDelete, onUpdateConfig, isSelected
         </button>
         {editingText ? (
           type === 'heading'
-            ? <input autoFocus value={localContent}
-                onChange={e => setLocalContent(e.target.value)}
-                onBlur={commitText}
-                onKeyDown={e => (e.key === 'Enter' || e.key === 'Escape') && commitText()}
+            ? <input autoFocus value={localContent} onChange={e => setLocalContent(e.target.value)}
+                onBlur={commitText} onKeyDown={e => (e.key === 'Enter' || e.key === 'Escape') && commitText()}
                 onClick={e => e.stopPropagation()}
                 className="w-full h-full bg-transparent px-2 py-1 outline-none cursor-text"
                 style={{ fontSize, fontWeight: 700, caretColor: '#f59e0b', color: config.textColor || '#fff' }} />
-            : <textarea autoFocus value={localContent}
-                onChange={e => setLocalContent(e.target.value)}
-                onBlur={commitText}
-                onKeyDown={e => e.key === 'Escape' && commitText()}
+            : <textarea autoFocus value={localContent} onChange={e => setLocalContent(e.target.value)}
+                onBlur={commitText} onKeyDown={e => e.key === 'Escape' && commitText()}
                 onClick={e => e.stopPropagation()}
                 className="w-full h-full bg-transparent px-2 py-1 outline-none resize-none cursor-text"
                 style={{ fontSize, caretColor: '#f59e0b', color: config.textColor || '#cbd5e1' }} />
         ) : (
           <div onClick={e => { e.stopPropagation(); setEditingText(true) }}
             className="h-full w-full px-2 py-1 flex items-center cursor-text overflow-hidden"
-            style={{ fontSize, fontWeight: type === 'heading' ? 700 : 400, color: config.textColor || (type === 'heading' ? '#fff' : '#cbd5e1') }}>
+            style={{ fontSize, fontWeight: type === 'heading' ? 700 : 400,
+              color: config.textColor || (type === 'heading' ? '#fff' : '#cbd5e1') }}>
             {config.content
               ? <span style={{ whiteSpace: 'pre-wrap', lineHeight: 1.4 }}>{config.content}</span>
               : <span className="text-slate-600 italic" style={{ fontWeight: 400, fontSize: 13 }}>
@@ -246,37 +232,32 @@ function WidgetWrapper({ widget, savedItem, onDelete, onUpdateConfig, isSelected
 
   // ── Chart / table card ────────────────────────────────────────────────────────
   const widgetBg = config.bgColor || DEFAULT_WIDGET_BG
-  const isCapturing = !config.snapshot
-
   return (
-    <div className={`flex flex-col h-full rounded-xl border overflow-hidden ${
-      isSelected ? 'border-amber-500/60 shadow-lg shadow-amber-500/10' : 'border-slate-700/60'
-    }`} style={{ backgroundColor: widgetBg }} onClick={onSelect}>
-      {/* Title bar */}
+    <div ref={cardRef}
+      className={`flex flex-col h-full rounded-xl border overflow-hidden ${
+        isSelected ? 'border-amber-500/60 shadow-lg shadow-amber-500/10' : 'border-slate-700/60'
+      }`}
+      style={{ backgroundColor: widgetBg }}
+      onClick={onSelect}>
+
+      {/* Title bar / drag handle */}
       <div className="drag-handle flex items-center gap-2 px-3 py-2 cursor-grab active:cursor-grabbing select-none border-b border-slate-700/60 shrink-0"
         style={{ backgroundColor: `${widgetBg}ee` }}>
         <span className="text-slate-500 text-xs select-none">⠿</span>
         <span className="text-slate-300 text-xs font-medium truncate flex-1">
           {savedItem?.title || (type === 'chart' ? 'Chart' : 'Table')}
         </span>
-        {isCapturing && (
-          <span className="text-amber-400 text-xs animate-pulse">capturing…</span>
-        )}
+        {capturing && <span className="text-amber-400 text-xs animate-pulse shrink-0">saving…</span>}
         <button onClick={e => { e.stopPropagation(); onDelete() }}
           className="text-slate-600 hover:text-red-400 transition-colors text-sm leading-none ml-1 shrink-0">×</button>
       </div>
 
-      {/* Content: PNG snapshot (if ready) or live fallback */}
+      {/* Content: PNG snapshot when ready, live render while capturing */}
       <div className="flex-1 relative" style={{ minHeight: 0 }}>
         {config.snapshot ? (
-          <img
-            src={config.snapshot}
-            alt={savedItem?.title || type}
-            style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
-            draggable={false}
-          />
+          <img src={config.snapshot} alt={savedItem?.title || type} draggable={false}
+            style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} />
         ) : (
-          /* Live render while snapshot is being taken */
           <div className="absolute inset-0 overflow-hidden">
             {type === 'chart' && (
               <ChartRenderer savedChart={savedItem} colorOverrides={config.colorOverrides} showInjuries={config.showInjuries ?? true} />
@@ -303,7 +284,7 @@ function ColorPicker({ label, value, defaultValue, onChange }) {
 // ─── Widget settings panel ────────────────────────────────────────────────────
 const FONT_SIZES = [10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 42, 48, 56, 64]
 
-function WidgetSettings({ widget, savedItem, onUpdateConfig, onRefreshSnapshot, onClose }) {
+function WidgetSettings({ widget, savedItem, onUpdateConfig, onClose }) {
   const { config, type } = widget
   const isText = type === 'heading' || type === 'text'
 
@@ -315,7 +296,6 @@ function WidgetSettings({ widget, savedItem, onUpdateConfig, onRefreshSnapshot, 
       </div>
       <div className="flex flex-wrap items-center gap-5">
 
-        {/* Chart line colors + injury toggle */}
         {type === 'chart' && savedItem && (
           <>
             <label className="flex items-center gap-2 cursor-pointer">
@@ -333,7 +313,6 @@ function WidgetSettings({ widget, savedItem, onUpdateConfig, onRefreshSnapshot, 
           </>
         )}
 
-        {/* Table colors */}
         {type === 'table' && (
           <>
             <ColorPicker label="Header" value={config.headerColor} defaultValue={DEFAULT_HEADER_COL}
@@ -345,7 +324,6 @@ function WidgetSettings({ widget, savedItem, onUpdateConfig, onRefreshSnapshot, 
           </>
         )}
 
-        {/* Font size for text/heading */}
         {isText && (
           <div className="flex items-center gap-2">
             <span className="text-slate-400 text-xs">Size</span>
@@ -357,12 +335,9 @@ function WidgetSettings({ widget, savedItem, onUpdateConfig, onRefreshSnapshot, 
           </div>
         )}
 
-        {/* Background color */}
-        <ColorPicker
-          label={isText ? 'Background' : 'Card background'}
-          value={config.bgColor}
-          defaultValue={isText ? 'transparent' : DEFAULT_WIDGET_BG}
-          onChange={v => onUpdateConfig({ bgColor: v, snapshot: null })} />
+        <ColorPicker label={isText ? 'Background' : 'Card background'}
+          value={config.bgColor} defaultValue={isText ? 'transparent' : DEFAULT_WIDGET_BG}
+          onChange={v => onUpdateConfig({ bgColor: v, ...(isText ? {} : { snapshot: null }) })} />
 
         {isText && (
           <ColorPicker label="Text color" value={config.textColor}
@@ -370,9 +345,8 @@ function WidgetSettings({ widget, savedItem, onUpdateConfig, onRefreshSnapshot, 
             onChange={v => onUpdateConfig({ textColor: v })} />
         )}
 
-        {/* Refresh snapshot button for chart/table */}
         {(type === 'chart' || type === 'table') && (
-          <button onClick={onRefreshSnapshot}
+          <button onClick={() => onUpdateConfig({ snapshot: null })}
             className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-slate-600 text-slate-400 hover:text-white hover:border-slate-400 text-xs transition-colors">
             ↺ Refresh image
           </button>
@@ -451,18 +425,15 @@ export default function DashboardBuilder() {
 
   const dashboard = getDashboard(id)
 
-  const canvasRef = useRef(null)   // scrollable container — width measurement
-  const gridRef   = useRef(null)   // grid content div — PNG export
+  const canvasRef = useRef(null)
+  const gridRef   = useRef(null)
 
   const [gridWidth, setGridWidth]     = useState(900)
   const [selectedId, setSelectedId]   = useState(null)
   const [editingName, setEditingName] = useState(false)
   const [nameVal, setNameVal]         = useState('')
   const [exporting, setExporting]     = useState(false)
-  // zoom: number 0.3–1.0, stored only in UI state (not persisted)
   const [zoom, setZoom]               = useState(1.0)
-  // snapJobs: list of pending off-screen snapshot captures
-  const [snapJobs, setSnapJobs]       = useState([])
 
   const [localLayout, setLocalLayout] = useState(() =>
     (dashboard?.widgets ?? []).map(w => ({
@@ -470,7 +441,6 @@ export default function DashboardBuilder() {
     }))
   )
 
-  // Measure canvas width for GridLayout
   useEffect(() => {
     const el = canvasRef.current
     if (!el) return
@@ -491,51 +461,22 @@ export default function DashboardBuilder() {
   const widgets  = dashboard.widgets ?? []
   const canvasBg = dashboard.bgColor || DEFAULT_CANVAS_BG
 
-  // ── Snapshot helpers ──────────────────────────────────────────────────────────
-  const queueSnapshot = useCallback((widgetId, type, savedItem, config) => {
-    if (!savedItem) return
-    setSnapJobs(prev => [...prev.filter(j => j.widgetId !== widgetId), { widgetId, type, savedItem, config }])
-  }, [])
-
-  const onSnapshotDone = useCallback((widgetId, png) => {
-    setSnapJobs(prev => prev.filter(j => j.widgetId !== widgetId))
-    if (png) {
-      // updateDashboard reads stale closure — use functional form via direct dispatch
-      updateDashboard(id, {
-        widgets: (getDashboard(id)?.widgets ?? []).map(w =>
-          w.id === widgetId ? { ...w, config: { ...w.config, snapshot: png } } : w
-        ),
-      })
-    }
-  }, [id, getDashboard, updateDashboard])
-
-  // ── CRUD ──────────────────────────────────────────────────────────────────────
   const addWidget = useCallback((type, sourceId) => {
     const widgetId = Date.now().toString()
     const size = DEFAULT_SIZE[type]
     const maxY = localLayout.reduce((max, l) => Math.max(max, l.y + l.h), 0)
     setLocalLayout(prev => [...prev, { i: widgetId, x: 0, y: maxY, ...size, minW: 1, minH: 1 }])
-    const newWidgets = [...widgets, {
-      id: widgetId, type, sourceId: sourceId || null,
-      layout: { x: 0, y: maxY, w: size.w, h: size.h },
-      config: { showInjuries: true, colorOverrides: {}, content: '' },
-    }]
-    updateDashboard(id, { widgets: newWidgets })
-
-    // Queue snapshot for chart/table
-    if (type === 'chart' || type === 'table') {
-      const savedItem = type === 'chart'
-        ? saved.charts?.find(c => c.id === sourceId)
-        : saved.tables?.find(t => t.id === sourceId)
-      if (savedItem) {
-        setTimeout(() => queueSnapshot(widgetId, type, savedItem, { showInjuries: true, colorOverrides: {} }), 200)
-      }
-    }
-  }, [id, widgets, localLayout, updateDashboard, saved, queueSnapshot])
+    updateDashboard(id, {
+      widgets: [...widgets, {
+        id: widgetId, type, sourceId: sourceId || null,
+        layout: { x: 0, y: maxY, w: size.w, h: size.h },
+        config: { showInjuries: true, colorOverrides: {}, content: '' },
+      }],
+    })
+  }, [id, widgets, localLayout, updateDashboard])
 
   const removeWidget = useCallback(widgetId => {
     setLocalLayout(prev => prev.filter(l => l.i !== widgetId))
-    setSnapJobs(prev => prev.filter(j => j.widgetId !== widgetId))
     updateDashboard(id, { widgets: widgets.filter(w => w.id !== widgetId) })
     if (selectedId === widgetId) setSelectedId(null)
   }, [id, widgets, updateDashboard, selectedId])
@@ -548,16 +489,6 @@ export default function DashboardBuilder() {
     })
   }, [id, widgets, updateDashboard])
 
-  const refreshSnapshot = useCallback(widgetId => {
-    const w = widgets.find(x => x.id === widgetId)
-    if (!w || (w.type !== 'chart' && w.type !== 'table')) return
-    const savedItem = w.type === 'chart'
-      ? saved.charts?.find(c => c.id === w.sourceId)
-      : saved.tables?.find(t => t.id === w.sourceId)
-    updateWidgetConfig(widgetId, { snapshot: null })
-    if (savedItem) setTimeout(() => queueSnapshot(widgetId, w.type, savedItem, w.config), 100)
-  }, [widgets, saved, updateWidgetConfig, queueSnapshot])
-
   const handleLayoutChange = useCallback(l => setLocalLayout(l), [])
   const persistLayout = useCallback(newLayout => {
     updateDashboard(id, {
@@ -568,7 +499,6 @@ export default function DashboardBuilder() {
     })
   }, [id, widgets, updateDashboard])
 
-  // ── Export ────────────────────────────────────────────────────────────────────
   const handleExport = async () => {
     if (!gridRef.current || exporting) return
     setExporting(true)
@@ -578,43 +508,31 @@ export default function DashboardBuilder() {
       a.href = png
       a.download = `${dashboard.name.replace(/[^a-z0-9 \-]/gi, '').replace(/\s+/g, '_')}.png`
       a.click()
-    } finally {
-      setExporting(false)
-    }
+    } finally { setExporting(false) }
   }
 
   const selectedWidget = widgets.find(w => w.id === selectedId)
   const selectedSavedItem = selectedWidget
-    ? (selectedWidget.type === 'chart'
-        ? saved.charts?.find(c => c.id === selectedWidget.sourceId)
-        : saved.tables?.find(t => t.id === selectedWidget.sourceId))
+    ? (selectedWidget.type === 'chart' ? saved.charts?.find(c => c.id === selectedWidget.sourceId)
+       : selectedWidget.type === 'table' ? saved.tables?.find(t => t.id === selectedWidget.sourceId)
+       : null)
     : null
 
   const commitName = () => { if (nameVal.trim()) updateDashboard(id, { name: nameVal.trim() }); setEditingName(false) }
 
-  // Zoom: CSS transform on the grid wrapper for true visual zoom
-  // The outer div is set to the scaled height so the scroll container reflects the real content size
   const gw = Math.max(600, gridWidth - 32)
   const maxGridRow = localLayout.reduce((m, l) => Math.max(m, l.y + l.h), 0)
   const naturalGridH = maxGridRow * ROW_HEIGHT + Math.max(0, maxGridRow - 1) * 8
-  const scaledH = naturalGridH * zoom
 
   const fitZoom = () => {
-    if (!canvasRef.current) return
-    const availH = canvasRef.current.clientHeight - 32
-    const idealZoom = naturalGridH > 0 ? availH / naturalGridH : 1
-    setZoom(Math.min(1.0, Math.max(0.3, Math.round(idealZoom * 20) / 20)))
+    if (!canvasRef.current || naturalGridH === 0) return
+    const available = canvasRef.current.clientHeight - 32
+    setZoom(Math.min(1.0, Math.max(0.3, Math.round((available / naturalGridH) * 10) / 10)))
   }
 
   return (
     <div className="flex h-full">
       <style>{HANDLE_CSS}</style>
-
-      {/* Off-screen snapshot renderers */}
-      {snapJobs.map(job => (
-        <SnapshotCapture key={job.widgetId} job={job} onDone={onSnapshotDone} />
-      ))}
-
       <Sidebar saved={saved} widgets={widgets} onAddWidget={addWidget} />
 
       <div className="flex-1 flex flex-col min-w-0">
@@ -623,7 +541,6 @@ export default function DashboardBuilder() {
           <button onClick={() => navigate('/dashboard')} className="text-slate-500 hover:text-slate-300 text-sm">← Back</button>
           <div className="w-px h-4 bg-slate-700" />
 
-          {/* Name */}
           {editingName
             ? <input autoFocus value={nameVal} onChange={e => setNameVal(e.target.value)}
                 onBlur={commitName} onKeyDown={e => (e.key === 'Enter' || e.key === 'Escape') && commitName()}
@@ -633,7 +550,6 @@ export default function DashboardBuilder() {
                 {dashboard.name}
               </h1>
           }
-
           <div className="flex-1" />
 
           {/* Canvas color presets */}
@@ -650,16 +566,16 @@ export default function DashboardBuilder() {
 
           <div className="w-px h-4 bg-slate-700" />
 
-          {/* Zoom */}
+          {/* Zoom controls */}
           <div className="flex items-center gap-1">
             <button onClick={() => setZoom(z => Math.max(0.3, Math.round((z - 0.1) * 10) / 10))}
-              className="w-6 h-6 flex items-center justify-center rounded text-slate-400 hover:text-white hover:bg-slate-700 text-base">−</button>
-            <button onClick={fitZoom} title="Fit to screen"
+              className="w-6 h-6 flex items-center justify-center rounded text-slate-400 hover:text-white hover:bg-slate-700 text-base leading-none">−</button>
+            <button onClick={fitZoom} title="Click to fit all content on screen"
               className="px-1.5 py-0.5 rounded text-slate-400 hover:text-white hover:bg-slate-700 text-xs min-w-[3rem] text-center">
               {Math.round(zoom * 100)}%
             </button>
             <button onClick={() => setZoom(z => Math.min(1.0, Math.round((z + 0.1) * 10) / 10))}
-              className="w-6 h-6 flex items-center justify-center rounded text-slate-400 hover:text-white hover:bg-slate-700 text-base">+</button>
+              className="w-6 h-6 flex items-center justify-center rounded text-slate-400 hover:text-white hover:bg-slate-700 text-base leading-none">+</button>
           </div>
 
           <div className="w-px h-4 bg-slate-700" />
@@ -683,21 +599,13 @@ export default function DashboardBuilder() {
                 </div>
               </div>
             ) : (
-              /*
-               * Zoom via CSS transform. The inner wrapper is set to scaledH so the
-               * scroll container knows the true content height after scaling.
-               * gridRef points to the pre-scale div so toPng captures full resolution.
-               */
-              <div style={{ height: scaledH, position: 'relative' }}>
+              <div style={{ height: naturalGridH * zoom + 16, position: 'relative' }}>
                 <div ref={gridRef}
                   style={{
                     transform: `scale(${zoom})`,
                     transformOrigin: 'top left',
-                    // compensate width so grid fills available space at any zoom
                     width: zoom < 1 ? `${gw / zoom}px` : `${gw}px`,
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
+                    position: 'absolute', top: 0, left: 0,
                     backgroundColor: canvasBg,
                   }}>
                   <GridLayout
@@ -716,11 +624,9 @@ export default function DashboardBuilder() {
                     resizeHandles={['n', 's', 'e', 'w', 'sw', 'nw', 'se', 'ne']}
                   >
                     {widgets.map(w => {
-                      const si = w.type === 'chart'
-                        ? saved.charts?.find(c => c.id === w.sourceId)
-                        : w.type === 'table'
-                          ? saved.tables?.find(t => t.id === w.sourceId)
-                          : null
+                      const si = w.type === 'chart' ? saved.charts?.find(c => c.id === w.sourceId)
+                        : w.type === 'table' ? saved.tables?.find(t => t.id === w.sourceId)
+                        : null
                       return (
                         <div key={w.id} onClick={e => e.stopPropagation()}>
                           <WidgetWrapper
@@ -729,7 +635,6 @@ export default function DashboardBuilder() {
                             onUpdateConfig={changes => updateWidgetConfig(w.id, changes)}
                             isSelected={selectedId === w.id}
                             onSelect={() => setSelectedId(prev => prev === w.id ? null : w.id)}
-                            onRefreshSnapshot={() => refreshSnapshot(w.id)}
                           />
                         </div>
                       )
@@ -742,10 +647,8 @@ export default function DashboardBuilder() {
 
           {selectedWidget && (
             <WidgetSettings
-              widget={selectedWidget}
-              savedItem={selectedSavedItem}
+              widget={selectedWidget} savedItem={selectedSavedItem}
               onUpdateConfig={changes => updateWidgetConfig(selectedId, changes)}
-              onRefreshSnapshot={() => refreshSnapshot(selectedId)}
               onClose={() => setSelectedId(null)}
             />
           )}
