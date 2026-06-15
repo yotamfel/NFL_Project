@@ -63,10 +63,17 @@ CREATE TABLE IF NOT EXISTS anomaly_alerts (
     career_high  NUMERIC,
     alert_type   TEXT NOT NULL,
     description  TEXT,
-    severity     SMALLINT DEFAULT 1
+    severity     SMALLINT DEFAULT 1,
+    week         INT,
+    opponent     TEXT
 );
 CREATE INDEX IF NOT EXISTS anomaly_alerts_season ON anomaly_alerts (season DESC);
 CREATE INDEX IF NOT EXISTS anomaly_alerts_detected ON anomaly_alerts (detected_at DESC);
+"""
+
+ALTER_TABLE = """
+ALTER TABLE anomaly_alerts ADD COLUMN IF NOT EXISTS week     INT;
+ALTER TABLE anomaly_alerts ADD COLUMN IF NOT EXISTS opponent TEXT;
 """
 
 
@@ -80,12 +87,14 @@ def _v(value, decimals=0):
 
 
 def _row(season, player_id, player_name, pos, category, metric,
-         value, career_avg, career_high, alert_type, description, severity):
+         value, career_avg, career_high, alert_type, description, severity,
+         week=None, opponent=None):
     return {
         "season": season, "player_id": player_id, "player_name": player_name,
         "pos": pos, "category": category, "metric": metric,
         "value": value, "career_avg": career_avg, "career_high": career_high,
         "alert_type": alert_type, "description": description, "severity": severity,
+        "week": week, "opponent": opponent,
     }
 
 
@@ -310,19 +319,134 @@ def detect_versatile(target: int, conn) -> list[dict]:
 
 # ── main ──────────────────────────────────────────────────────────────────────
 
+# ── 5. Game-level career highs ───────────────────────────────────────────────
+
+GAME_HIGH_METRICS = [
+    # (col, label, min_val)  — min_val keeps garbage backup snaps out
+    ("pass_yds", "passing yards",   200),
+    ("pass_td",  "passing TDs",       3),
+    ("rush_yds", "rushing yards",    80),
+    ("rush_td",  "rushing TDs",       2),
+    ("rec_yds",  "receiving yards",  80),
+    ("rec_td",   "receiving TDs",     2),
+]
+
+
+def detect_game_highs(target: int, conn) -> list[dict]:
+    """Flag current-season games where a player exceeded their career single-game best."""
+    try:
+        conn.execute(text("SELECT 1 FROM weekly_stats LIMIT 1"))
+    except Exception:
+        print("  weekly_stats table missing — skipping game highs (run load_weekly_stats.py first)")
+        return []
+
+    rows = []
+    for metric, label, min_val in GAME_HIGH_METRICS:
+        results = conn.execute(text(f"""
+            WITH career_best AS (
+                SELECT player_id, MAX({metric}) AS prev_best
+                FROM weekly_stats
+                WHERE season < :tgt AND game_type = 'REG' AND {metric} >= :min_val
+                GROUP BY player_id
+                HAVING COUNT(*) >= 3
+            ),
+            this_season AS (
+                SELECT w.player_id, w.week, w.opponent, w.{metric} AS value,
+                       p.player_name, p.pos
+                FROM weekly_stats w
+                JOIN players p USING (player_id)
+                WHERE w.season = :tgt AND w.game_type = 'REG'
+                  AND w.{metric} >= :min_val
+            )
+            SELECT ts.player_id, ts.player_name, ts.pos,
+                   ts.week, ts.opponent, ts.value,
+                   cb.prev_best
+            FROM this_season ts
+            LEFT JOIN career_best cb USING (player_id)
+            WHERE ts.value > COALESCE(cb.prev_best, :min_val - 1)
+            ORDER BY ts.week DESC, ts.value DESC
+            LIMIT 30
+        """), {"tgt": target, "min_val": min_val}).fetchall()
+
+        for r in results:
+            v  = int(r.value)
+            pb = int(r.prev_best) if r.prev_best else None
+            if pb:
+                pct_above = (v - pb) / pb
+                sev = 3 if pct_above >= 0.25 else 2 if pct_above >= 0.10 else 1
+                desc = (f"{r.player_name} posted {_v(v)} {label} in Week {r.week} "
+                        f"vs {r.opponent} — career single-game high (prev. best: {_v(pb)})")
+            else:
+                sev = 2
+                desc = (f"{r.player_name} posted {_v(v)} {label} in Week {r.week} "
+                        f"vs {r.opponent} — first career game at this level")
+            rows.append(_row(target, r.player_id, r.player_name, r.pos,
+                             "game", metric, v, None, pb,
+                             "game_high", desc, sev,
+                             week=r.week, opponent=r.opponent))
+    return rows
+
+
+# ── 6. Single-game milestones ─────────────────────────────────────────────────
+
+MILESTONES = [
+    # (col, threshold, label)
+    ("pass_yds", 300, "passing yards in a game"),
+    ("pass_td",    4, "TD passes in a game"),
+    ("rush_yds", 100, "rushing yards in a game"),
+    ("rec_yds",  100, "receiving yards in a game"),
+    ("rush_td",    3, "rushing TDs in a game"),
+    ("rec_td",     3, "receiving TDs in a game"),
+]
+
+
+def detect_game_milestones(target: int, conn) -> list[dict]:
+    """Flag any game this season that crossed a round-number milestone threshold."""
+    try:
+        conn.execute(text("SELECT 1 FROM weekly_stats LIMIT 1"))
+    except Exception:
+        return []
+
+    rows = []
+    for metric, threshold, label in MILESTONES:
+        results = conn.execute(text(f"""
+            SELECT w.player_id, w.week, w.opponent, w.{metric} AS value,
+                   p.player_name, p.pos
+            FROM weekly_stats w
+            JOIN players p USING (player_id)
+            WHERE w.season = :tgt AND w.game_type = 'REG'
+              AND w.{metric} >= :thr
+            ORDER BY w.week DESC, w.{metric} DESC
+            LIMIT 20
+        """), {"tgt": target, "thr": threshold}).fetchall()
+
+        for r in results:
+            v   = int(r.value)
+            sev = 3 if v >= threshold * 1.5 else 2 if v >= threshold * 1.2 else 1
+            desc = (f"{r.player_name} had {_v(v)} {label} in Week {r.week} vs {r.opponent}")
+            rows.append(_row(target, r.player_id, r.player_name, r.pos,
+                             "game", metric, v, None, None,
+                             "game_milestone", desc, sev,
+                             week=r.week, opponent=r.opponent))
+    return rows
+
+
 INSERT_SQL = """
     INSERT INTO anomaly_alerts
         (season, player_id, player_name, pos, category, metric,
-         value, career_avg, career_high, alert_type, description, severity)
+         value, career_avg, career_high, alert_type, description, severity,
+         week, opponent)
     VALUES
         (:season, :player_id, :player_name, :pos, :category, :metric,
-         :value, :career_avg, :career_high, :alert_type, :description, :severity)
+         :value, :career_avg, :career_high, :alert_type, :description, :severity,
+         :week, :opponent)
 """
 
 if __name__ == "__main__":
     engine = get_engine()
     with engine.begin() as conn:
         conn.execute(text(CREATE_TABLE))
+        conn.execute(text(ALTER_TABLE))
 
         row = conn.execute(text(
             "SELECT MAX(season) AS s FROM passing_seasons WHERE att >= 100"
@@ -340,6 +464,8 @@ if __name__ == "__main__":
         all_alerts += detect_yoy_surge(target, conn)
         all_alerts += detect_efficiency(target, conn)
         all_alerts += detect_versatile(target, conn)
+        all_alerts += detect_game_highs(target, conn)
+        all_alerts += detect_game_milestones(target, conn)
 
         if all_alerts:
             conn.execute(text(INSERT_SQL), all_alerts)

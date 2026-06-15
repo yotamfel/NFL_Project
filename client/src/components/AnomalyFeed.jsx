@@ -5,7 +5,9 @@ import { Link } from 'react-router-dom'
 
 const FILTERS = [
   { key: null,              label: 'All' },
-  { key: 'career_high',    label: 'Career Highs' },
+  { key: 'game_high',      label: 'Game Highs' },
+  { key: 'game_milestone', label: 'Milestones' },
+  { key: 'career_high',    label: 'Season Highs' },
   { key: 'yoy_surge',      label: 'YoY Surge' },
   { key: 'efficiency_peak',label: 'Efficiency' },
   { key: 'versatile',      label: 'Versatile' },
@@ -14,6 +16,8 @@ const FILTERS = [
 ]
 
 const TYPE_STYLE = {
+  game_high:       { bg: '#7c2d1222', border: '#7c2d1244', dot: '#fb923c' },
+  game_milestone:  { bg: '#17255222', border: '#17255244', dot: '#38bdf8' },
   career_high:     { bg: '#4c1d9522', border: '#4c1d9544', dot: '#a78bfa' },
   above_avg:       { bg: '#14532d22', border: '#14532d44', dot: '#4ade80' },
   below_avg:       { bg: '#7f1d1d22', border: '#7f1d1d44', dot: '#f87171' },
@@ -23,7 +27,9 @@ const TYPE_STYLE = {
 }
 
 const TYPE_LABEL = {
-  career_high:     'Career High',
+  game_high:       'Game High',
+  game_milestone:  'Milestone',
+  career_high:     'Season High',
   above_avg:       'Above Avg',
   below_avg:       'Decline',
   yoy_surge:       'YoY Surge',
@@ -36,6 +42,7 @@ const SEV_STARS = { 2: '★★', 3: '★★★' }
 function AlertCard({ alert }) {
   const style = TYPE_STYLE[alert.alert_type] ?? TYPE_STYLE.career_high
   const label = TYPE_LABEL[alert.alert_type] ?? alert.alert_type
+  const isGame = alert.week != null
   return (
     <div className="rounded-xl p-4 space-y-1.5"
       style={{ background: style.bg, border: `1px solid ${style.border}` }}>
@@ -48,7 +55,15 @@ function AlertCard({ alert }) {
             <span className="text-xs" style={{ color: style.dot }}>{SEV_STARS[alert.severity]}</span>
           )}
         </div>
-        <span className="text-xs text-slate-600">{alert.season}</span>
+        <div className="flex items-center gap-2">
+          {isGame && (
+            <span className="text-xs font-medium px-1.5 py-0.5 rounded"
+              style={{ background: style.border, color: style.dot }}>
+              Wk {alert.week}{alert.opponent ? ` vs ${alert.opponent}` : ''}
+            </span>
+          )}
+          <span className="text-xs text-slate-600">{alert.season}</span>
+        </div>
       </div>
       <p className="text-sm text-slate-200 leading-snug">
         {alert.player_id

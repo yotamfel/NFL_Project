@@ -26,7 +26,8 @@ def get_anomalies(
     sql = text(f"""
         SELECT id, detected_at, season, player_id, player_name, pos,
                category, metric, value, career_avg, career_high,
-               alert_type, description, severity
+               alert_type, description, severity,
+               week, opponent
         FROM anomaly_alerts
         {where}
         ORDER BY severity DESC, detected_at DESC
