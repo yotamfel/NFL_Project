@@ -7,7 +7,7 @@ const FEATURE_CARDS = [
   {
     icon: '📊', title: 'Career Stats',
     desc: 'Season-by-season breakdowns with trend charts, advanced metrics, NGS and snap counts',
-    href: '/player/MahoPa00',
+    href: '/players',
     color: '#3b82f6', dark: '#1e3a5f',
   },
   {
