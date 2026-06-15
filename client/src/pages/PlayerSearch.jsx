@@ -57,7 +57,7 @@ export default function PlayerSearch() {
   const teamLabel    = meta?.teams ? `${meta.teams} teams` : null
 
   return (
-    <div className="max-w-3xl mx-auto pt-10 pb-24">
+    <div className="max-w-3xl mx-auto pt-2 pb-24">
 
       {/* Hero */}
       <div className="text-center mb-10">
