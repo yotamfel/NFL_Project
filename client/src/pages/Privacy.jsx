@@ -71,7 +71,12 @@ export default function Privacy() {
 
         <Section title="Contact">
           <p className="text-slate-400 text-sm leading-relaxed">
-            Questions or concerns about your data or this policy? Contact us through the <strong className="text-slate-300">Feedback page</strong> inside the platform — that is the only way we can be reached.
+            Questions or concerns about your data or this policy? Use the <strong className="text-slate-300">Feedback page</strong> inside the platform.
+          </p>
+          <p className="text-slate-400 text-sm leading-relaxed">
+            The platform admin may contact you only through two channels: via a notification inside the platform, or via the email address you registered with. We will never contact you through any other means.
+          </p>
+          <p className="text-slate-400 text-sm leading-relaxed">
             This platform is independently operated and not affiliated with the NFL or any of its teams.
           </p>
         </Section>
