@@ -203,11 +203,10 @@ export default function Nav() {
                   ))}
                 </div>
               </div>
-              <div className="px-4 py-2 border-b border-slate-700/60 flex gap-3">
+              <SharePanel />
+              <div className="px-4 py-2 border-b border-slate-700/60">
                 <Link to="/about" onClick={() => setSettingsOpen(false)}
                   className="text-slate-400 hover:text-white text-xs transition-colors">About</Link>
-                <Link to="/share" onClick={() => setSettingsOpen(false)}
-                  className="text-slate-400 hover:text-white text-xs transition-colors">Share</Link>
               </div>
               <div className="px-4 py-3">
                 <button onClick={handleLogout}
@@ -221,5 +220,45 @@ export default function Nav() {
 
       </div>
     </nav>
+  )
+}
+
+const PLATFORM_URL = 'https://fourth-and-data.up.railway.app'
+
+function SharePanel() {
+  const [copied, setCopied] = useState(false)
+  const copy = () => {
+    navigator.clipboard.writeText(PLATFORM_URL).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
+  return (
+    <div className="px-4 py-3 border-b border-slate-700/60 space-y-2">
+      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Share</p>
+      <div className="flex gap-2">
+        <span className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-400 text-xs font-mono truncate">
+          {PLATFORM_URL}
+        </span>
+        <button onClick={copy}
+          className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+            copied ? 'bg-green-500/20 text-green-400' : 'bg-amber-500 hover:bg-amber-400 text-slate-950'
+          }`}>
+          {copied ? '✓' : 'Copy'}
+        </button>
+      </div>
+      <div className="flex gap-2">
+        <a href={`https://wa.me/?text=Check out this NFL stats platform: ${PLATFORM_URL}`}
+          target="_blank" rel="noopener noreferrer"
+          className="flex-1 text-center py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition-colors border border-slate-700">
+          WhatsApp
+        </a>
+        <a href={`https://twitter.com/intent/tweet?text=Check out this NFL stats platform&url=${PLATFORM_URL}`}
+          target="_blank" rel="noopener noreferrer"
+          className="flex-1 text-center py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition-colors border border-slate-700">
+          X / Twitter
+        </a>
+      </div>
+    </div>
   )
 }
