@@ -23,7 +23,7 @@ const DEFAULT_ROW_EVEN   = '#0f172a'
 const DEFAULT_ROW_ODD    = '#020617'
 
 function fmt(iso) {
-  return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
 // ─── Generic chart renderer (GenericLine / GenericBar) ────────────────────────
