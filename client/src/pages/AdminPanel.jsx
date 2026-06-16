@@ -26,7 +26,7 @@ export default function AdminPanel() {
 
       {/* Tabs */}
       <div className="flex gap-1 bg-slate-900 border border-slate-800 rounded-xl p-1 mb-6 w-fit">
-        {['overview', 'visits', 'users', 'feedback'].map(t => (
+        {['overview', 'visits', 'users', 'feedback', 'sources'].map(t => (
           <button key={t} onClick={() => setTab(t)}
             className={`px-4 py-1.5 rounded-lg text-sm font-medium capitalize transition-colors ${
               tab === t ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'
@@ -40,6 +40,7 @@ export default function AdminPanel() {
       {tab === 'visits'   && <VisitsTab />}
       {tab === 'users'    && <UsersTab />}
       {tab === 'feedback' && <FeedbackTab />}
+      {tab === 'sources'  && <SourcesTab />}
     </div>
   )
 }
@@ -376,6 +377,151 @@ function ChatBubble({ msg, username, isAdmin }) {
       <span className="text-[10px] text-slate-600 mt-0.5 px-1">
         {new Date(msg.created_at).toLocaleString()}
       </span>
+    </div>
+  )
+}
+
+// ── Data Sources ───────────────────────────────────────────────────────────────
+const SOURCES = [
+  {
+    name: 'Pro Football Reference (PFR)',
+    url: 'pro-football-reference.com',
+    badge: 'Primary',
+    badgeColor: 'bg-amber-500/20 text-amber-400',
+    icon: '🏈',
+    coverage: '1970 – present',
+    sections: [
+      {
+        title: 'What it is',
+        body: 'Pro Football Reference is widely regarded as the most comprehensive and authoritative NFL statistics database available to the public. It is part of the Sports Reference family of sites (which also covers MLB, NBA, NHL, and college sports) and has been the go-to resource for journalists, analysts, front-office staff, and researchers for over two decades.',
+      },
+      {
+        title: 'History & credibility',
+        body: 'Launched in 2000, PFR has accumulated a reputation as the gold standard of NFL data. It is frequently cited in mainstream sports media, academic research, and by NFL teams themselves. Sports Reference has data-sharing relationships with major outlets including ESPN and the Associated Press. The site\'s "Approximate Value" (AV) metric — a position-neutral career quality score — was created by PFR founder Doug Drinen and is now one of the most widely used career evaluation tools in the sport.',
+      },
+      {
+        title: 'Data depth',
+        body: 'PFR\'s depth is unmatched among public sources. It covers every season back to 1920, every player who ever appeared in an NFL game, every draft pick going back decades, combine measurements, game logs, play-by-play for recent seasons, coaching records, team histories, and stadium information. For this platform, we use PFR as the backbone for all regular-season and playoff statistics from 1970 (the AFL–NFL merger) through the most recently completed season.',
+      },
+      {
+        title: 'How we use it',
+        body: 'The bulk of the historical database was built from PFR data files. This covers all passing, rushing, receiving, defense, kicking, punting, and return statistics by season; draft pick records including round, pick, position, college, and Career AV; combine measurements (height, weight, 40-yard dash, vertical jump, broad jump, bench press, 3-cone, shuttle); injury history drawn from weekly official injury reports; and playoff statistics separately tracked from regular-season totals.',
+      },
+    ],
+  },
+  {
+    name: 'nflverse / nflreadpy',
+    url: 'nflverse.nflreadr.com',
+    badge: 'Supplemental',
+    badgeColor: 'bg-blue-500/20 text-blue-400',
+    icon: '📦',
+    coverage: '1999 – present',
+    sections: [
+      {
+        title: 'What it is',
+        body: 'nflverse is an open-source ecosystem of NFL data maintained by a community of independent developers and data scientists — not affiliated with the NFL or any team. It is the most widely used free NFL data resource in the data science and analytics community. The Python client is called nflreadpy; the R client is nflreadr. Both connect to the same underlying datasets hosted on GitHub.',
+      },
+      {
+        title: 'Who builds it',
+        body: 'nflverse is maintained by a small team of volunteer contributors who have built pipelines that pull data from the official NFL API, ESPN feeds, and other public sources, then clean, structure, and publish it as machine-readable datasets updated weekly during the season. Key contributors include Ben Baldwin, Sebastian Carl, and Lee Sharpe, all of whom are well known in the NFL analytics community. The project started around 2019 and grew rapidly as interest in NFL analytics expanded.',
+      },
+      {
+        title: 'Why we need it alongside PFR',
+        body: 'PFR is excellent for historical breadth but its data is accessed through web scraping, which is time-consuming and requires significant cleanup. nflverse provides clean, structured, rapidly-updated datasets that are especially strong for recent seasons (2019 onward) and for data types that PFR does not expose in machine-readable form — such as snap counts, week-by-week game logs, and detailed tracking-based metrics. For seasons from 2021 onward in particular, nflverse is the primary mechanism for keeping the platform current without requiring a full re-scrape of PFR each year.',
+      },
+      {
+        title: 'Data it provides to this platform',
+        body: 'Through nflreadpy we ingest recent season statistics that supplement the PFR historical base; per-game player logs going back to 1999; snap count percentages by week (how much of each team\'s offensive, defensive, or special teams snaps a player was on the field for); official NFL injury report filings by week and body part; advanced receiving metrics such as average depth of target, yards after catch, broken tackles, and drop rate; and the Career AV values for recent draft picks that PFR publishes but which nflverse aggregates more conveniently.',
+      },
+    ],
+  },
+  {
+    name: 'NFL Next Gen Stats (NGS)',
+    url: 'nextgenstats.nfl.com',
+    badge: 'Tracking',
+    badgeColor: 'bg-purple-500/20 text-purple-400',
+    icon: '📡',
+    coverage: '2016 – present',
+    sections: [
+      {
+        title: 'What it is',
+        body: 'Next Gen Stats is the NFL\'s official player tracking system, operated in partnership with AWS (Amazon Web Services). It uses a network of RFID chips embedded in each player\'s shoulder pads and in the game ball, along with a receiver grid installed in every NFL stadium, to capture player position and movement data 10 times per second during every play of every game.',
+      },
+      {
+        title: 'What makes it unique',
+        body: 'Unlike traditional box-score stats, which only measure outcomes (yards gained, touchdowns scored), NGS measures the context and process behind those outcomes. It can tell you how much separation a receiver had from the nearest defender at the exact moment the ball was thrown, how quickly a running back accelerates through the hole, or what percentage of a quarterback\'s passes were thrown into tight windows. This kind of data was previously only available to NFL teams through proprietary systems.',
+      },
+      {
+        title: 'History',
+        body: 'The NFL began collecting tracking data in 2016 and started releasing aggregated season-level NGS metrics to the public in 2018. The data became more widely accessible to developers through the nflverse ecosystem, which publishes clean versions of the public NGS datasets. Full granular tracking data (every player\'s exact position on every frame of every play) remains proprietary and is only available to NFL teams and official broadcast partners.',
+      },
+      {
+        title: 'Metrics on this platform',
+        body: 'We incorporate NGS data for quarterbacks (time to throw, intended and completed air yards, aggressiveness rate, completion percentage over expectation), running backs (rushing efficiency score, time to reach the line of scrimmage, rush yards over expectation), and wide receivers and tight ends (average separation from the nearest defender, cushion from the corner at the snap, and yards after catch above expectation). All NGS metrics on this platform are available from the 2016 season onward.',
+      },
+      {
+        title: 'AWS partnership',
+        body: 'Since 2017 the NFL has partnered with AWS to power NGS infrastructure and to build public-facing analytics products. AWS processes roughly 3TB of data per game from the tracking system. The partnership also funds research into injury prevention, officiating support tools, and broadcast enhancements — making NGS one of the most technologically advanced tracking systems in professional sports.',
+      },
+    ],
+  },
+]
+
+function SourcesTab() {
+  const [open, setOpen] = useState({})
+  const toggle = (sourceIdx, sectionIdx) => {
+    const key = `${sourceIdx}-${sectionIdx}`
+    setOpen(prev => ({ ...prev, [key]: !prev[key] }))
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-white font-semibold text-lg">Data Sources</h2>
+        <p className="text-slate-400 text-sm mt-0.5">
+          The platform combines three distinct data sources, each covering different aspects of NFL history and analytics.
+        </p>
+      </div>
+
+      {SOURCES.map((src, si) => (
+        <div key={si} className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
+          {/* Source header */}
+          <div className="px-6 py-5 border-b border-slate-800 flex items-start gap-4">
+            <span className="text-3xl mt-0.5">{src.icon}</span>
+            <div className="flex-1 min-w-0">
+              <div className="flex flex-wrap items-center gap-2 mb-1">
+                <h3 className="text-white font-bold text-lg">{src.name}</h3>
+                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${src.badgeColor}`}>{src.badge}</span>
+              </div>
+              <p className="text-slate-500 text-xs font-mono">{src.url}</p>
+              <p className="text-slate-400 text-sm mt-1">Coverage: <span className="text-slate-300 font-medium">{src.coverage}</span></p>
+            </div>
+          </div>
+
+          {/* Expandable sections */}
+          <div className="divide-y divide-slate-800">
+            {src.sections.map((sec, idx) => {
+              const key = `${si}-${idx}`
+              const isOpen = open[key]
+              return (
+                <div key={idx}>
+                  <button
+                    onClick={() => toggle(si, idx)}
+                    className="w-full px-6 py-3.5 flex items-center justify-between text-left hover:bg-slate-800/40 transition-colors">
+                    <span className="text-slate-200 text-sm font-medium">{sec.title}</span>
+                    <span className="text-slate-500 text-xs ml-4 shrink-0">{isOpen ? '▲' : '▼'}</span>
+                  </button>
+                  {isOpen && (
+                    <div className="px-6 pb-5 pt-1">
+                      <p className="text-slate-400 text-sm leading-relaxed">{sec.body}</p>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      ))}
     </div>
   )
 }
