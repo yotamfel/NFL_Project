@@ -95,7 +95,7 @@ export default function AnomalyFeed({ limit = 12, compact = false, season, sort 
     [activeFilter, limit, season, sort]
   )
 
-  const dataSeason = data?.[0]?.season
+  const dataSeason = data?.length ? Math.max(...data.map(d => d.season)) : null
 
   return (
     <div className="space-y-4">
