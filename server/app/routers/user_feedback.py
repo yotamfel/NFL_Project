@@ -31,9 +31,9 @@ def submit_feedback(body: FeedbackBody, current_user: dict = Depends(get_current
         raise HTTPException(status_code=400, detail=f"category must be one of {VALID_CATEGORIES}")
     message = body.message.strip()
     if len(message) < 10:
-        raise HTTPException(status_code=422, detail="Message must be at least 10 characters")
+        raise HTTPException(status_code=400, detail="Message must be at least 10 characters")
     if len(message) > 2000:
-        raise HTTPException(status_code=422, detail="Message must be at most 2000 characters")
+        raise HTTPException(status_code=400, detail="Message must be at most 2000 characters")
     uid = int(current_user["sub"])
     with engine.begin() as conn:
         row = conn.execute(text(
