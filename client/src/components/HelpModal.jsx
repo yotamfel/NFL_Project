@@ -123,8 +123,8 @@ export default function HelpModal({ onClose }) {
 
           <p className="text-center text-slate-600 text-xs pt-1 pb-2">
             {isHe
-              ? 'מקור נתונים: Pro Football Reference · 1970–2025 · 20,000+ שחקנים'
-              : 'Data: Pro Football Reference · 1970–2025 · 20,000+ players'}
+              ? 'מקור נתונים: Pro Football Reference · 1970–2025 · 19,000+ שחקנים'
+              : 'Data: Pro Football Reference · 1970–2025 · 19,000+ players'}
           </p>
         </div>
       </div>

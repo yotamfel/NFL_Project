@@ -986,8 +986,8 @@ export default function Guide() {
 
       <p className="text-center text-slate-600 text-xs pb-4">
         {isHe
-          ? 'מקור נתונים: Pro Football Reference · Next Gen Stats · 1970–2025 · 20,000+ שחקנים'
-          : 'Data: Pro Football Reference · Next Gen Stats · 1970–2025 · 18,000+ players'}
+          ? 'מקור נתונים: Pro Football Reference · Next Gen Stats · 1970–2025 · 19,000+ שחקנים'
+          : 'Data: Pro Football Reference · Next Gen Stats · 1970–2025 · 19,000+ players'}
       </p>
     </div>
   )

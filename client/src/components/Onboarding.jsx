@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext'
 const STEPS = [
   {
     title: 'Welcome to Fourth & Data',
-    text: 'Explore stats for 18,000+ NFL players from 1970 to 2025. Here\'s a quick tour.',
+    text: 'Explore stats for 19,000+ NFL players from 1970 to 2025. Here\'s a quick tour.',
     icon: '🏈',
   },
   {
