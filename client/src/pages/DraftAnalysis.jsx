@@ -18,7 +18,7 @@ const DRAFT_COLS = [
   { key: 'player_name', label: 'Player' },
   { key: 'pos',         label: 'Pos' },
   { key: 'team',        label: 'Team' },
-  { key: 'career_av',   label: 'Career AV' },
+  { key: 'fdv',         label: 'FDV' },
 ]
 
 const POSITIONS  = ['QB', 'RB', 'WR', 'TE', 'OL', 'DL', 'LB', 'CB', 'S', 'K', 'P']
@@ -109,21 +109,22 @@ const STAT_OPTIONS = {
   ],
 }
 
-const STAT_CATEGORIES = ['career_av', 'passing', 'offense', 'defense', 'kicking', 'punting', 'returns']
+const STAT_CATEGORIES = ['fdv', 'passing', 'offense', 'defense', 'kicking', 'punting', 'returns']
 
-const AV_SCALE = [
-  { range: '0–10',   label: 'Minimal NFL impact',    color: '#475569' },
-  { range: '10–30',  label: 'Backup / role player',  color: '#64748b' },
-  { range: '30–60',  label: 'Solid starter',         color: '#3b82f6' },
-  { range: '60–100', label: 'Star (multi-Pro Bowl)', color: '#f59e0b' },
-  { range: '100+',   label: 'All-time elite',        color: '#a78bfa' },
+const FDV_SCALE = [
+  { range: '0–20',    label: 'Minimal NFL impact',           color: '#475569' },
+  { range: '20–50',   label: 'Backup / role player',         color: '#64748b' },
+  { range: '50–90',   label: 'Solid multi-year starter',     color: '#3b82f6' },
+  { range: '90–130',  label: 'Star (probable Pro Bowls)',     color: '#f59e0b' },
+  { range: '130–180', label: 'Elite (borderline HOF)',        color: '#f97316' },
+  { range: '180+',    label: 'Hall of Fame level',           color: '#a78bfa' },
 ]
 
-const LS_STEAL_CRITERIA = 'draft_steal_criteria_v2'
-const LS_BUST_CRITERIA  = 'draft_bust_criteria_v2'
+const LS_STEAL_CRITERIA = 'draft_steal_criteria_v3'
+const LS_BUST_CRITERIA  = 'draft_bust_criteria_v3'
 
 const DEFAULT_CRITERION = {
-  roundVal: 4, pos: '', category: 'career_av',
+  roundVal: 4, pos: '', category: 'fdv',
   stat: '', scope: 'career', statVal: '',
 }
 
@@ -137,7 +138,7 @@ function posColor(pos) { return POS_COLORS[pos?.toUpperCase()] ?? '#64748b' }
 function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1) }
 
 function statLabel(def) {
-  if (def.category === 'career_av') return 'Career AV'
+  if (def.category === 'fdv') return 'FDV'
   const opts = STAT_OPTIONS[def.category] ?? []
   const name = opts.find(s => s.key === def.stat)?.label ?? def.stat
   return def.scope === 'season' ? `${name} (best season)` : `${name} (career)`
@@ -146,7 +147,7 @@ function statLabel(def) {
 function isCriterionComplete(c) {
   if (!c.pos) return false
   if (isNaN(parseFloat(c.statVal))) return false
-  if (c.category !== 'career_av' && !c.stat) return false
+  if (c.category !== 'fdv' && !c.stat) return false
   return true
 }
 
@@ -202,18 +203,18 @@ function CriterionBuilder({ value, onChange, onAdd, mode }) {
           <select value={value.category}
             onChange={e => {
               const newCat = e.target.value
-              const firstStat = newCat !== 'career_av' ? (STAT_OPTIONS[newCat]?.[0]?.key ?? '') : ''
+              const firstStat = newCat !== 'fdv' ? (STAT_OPTIONS[newCat]?.[0]?.key ?? '') : ''
               onChange({ ...value, category: newCat, stat: firstStat, statVal: '' })
             }}
             className={`w-full ${inputCls}`}>
             {STAT_CATEGORIES.map(c => (
-              <option key={c} value={c}>{c === 'career_av' ? 'Career AV' : cap(c)}</option>
+              <option key={c} value={c}>{c === 'fdv' ? 'FDV' : cap(c)}</option>
             ))}
           </select>
         </div>
 
         {/* Stat */}
-        {value.category !== 'career_av' && (
+        {value.category !== 'fdv' && (
           <div className="sm:col-span-2">
             <p className={labelCls}>Stat</p>
             <select value={value.stat}
@@ -228,7 +229,7 @@ function CriterionBuilder({ value, onChange, onAdd, mode }) {
         )}
 
         {/* Scope */}
-        {value.category !== 'career_av' && (
+        {value.category !== 'fdv' && (
           <div>
             <p className={labelCls}>Scope</p>
             <select value={value.scope}
@@ -277,7 +278,7 @@ function SystemRecommendation({ def, mode, onApply }) {
   const [loading, setLoading] = useState(false)
   const timer = useRef()
 
-  const hasValidStat = def.category === 'career_av' || !!def.stat
+  const hasValidStat = def.category === 'fdv' || !!def.stat
 
   useEffect(() => {
     if (!hasValidStat) { setStats(null); return }
@@ -289,7 +290,7 @@ function SystemRecommendation({ def, mode, onApply }) {
         roundVal:      def.roundVal,
         roundOp:       mode === 'steal' ? 'gte' : 'lte',
         category:      def.category,
-        stat:          def.category !== 'career_av' ? def.stat : undefined,
+        stat:          def.category !== 'fdv' ? def.stat : undefined,
         scope:         def.scope,
         pos:           def.pos || undefined,
         draftYearFrom: def.yearFrom || undefined,
@@ -314,7 +315,7 @@ function SystemRecommendation({ def, mode, onApply }) {
   const roundLabel    = isSteal ? `Round ${def.roundVal}+` : `Rounds 1–${def.roundVal}`
   const posLabel      = def.pos ? ` ${def.pos}` : ''
   const statName      = statLabel(def)
-  const isCareerNonAv = def.category !== 'career_av' && def.scope !== 'season'
+  const isCareerNonAv = def.category !== 'fdv' && def.scope !== 'season'
   const filterNote    = isCareerNonAv
     ? 'Players with ≥16 career games and non-zero production only.'
     : def.scope === 'season' ? 'Players with non-zero best season only.' : ''
@@ -392,7 +393,7 @@ function SystemRecommendation({ def, mode, onApply }) {
 }
 
 // ── Scatter chart ─────────────────────────────────────────────────────────────
-function DraftScatter({ results, yKey = 'career_av', statLabel: yLabel }) {
+function DraftScatter({ results, yKey = 'fdv', statLabel: yLabel }) {
   const navigate = useNavigate()
   if (!results || results.length < 3) return null
   const dots = results
@@ -450,16 +451,16 @@ function DraftScatter({ results, yKey = 'career_av', statLabel: yLabel }) {
 }
 
 // ── Composite ranking ─────────────────────────────────────────────────────────
-// For each player, compute a z-score across all stat columns (career_av + extra criteria).
+// For each player, compute a z-score across all stat columns (fdv + extra criteria).
 // For steals: high z-score = big over-performer. For busts: invert so big under-performer
 // floats to the top. Normalise the composite to 0-100 for display.
 function computeRanking(results, selectedCriteria, isSteal) {
   if (!results.length) return []
 
   const scoreCols = [
-    'career_av',
+    'fdv',
     ...selectedCriteria
-      .map((c, i) => c.category !== 'career_av' ? `crit_${i}_value` : null)
+      .map((c, i) => c.category !== 'fdv' ? `crit_${i}_value` : null)
       .filter(Boolean),
   ]
 
@@ -533,7 +534,7 @@ function RankingChart({ ranked, isSteal, selectedCriteria }) {
             Finally, the composite z-scores are <span className="text-white">normalised to 0–100</span> within this result set, so the {isSteal ? 'best steal' : 'biggest bust'} always shows 100 and the lowest-ranked player always shows 0. The score is <span className="text-white">relative to this specific query</span> — not an all-time absolute ranking.
           </p>
           <p className="text-slate-600">
-            All criteria are weighted equally. Career AV is always included as one component even if you didn't add it as an explicit criterion, since it is the best position-neutral proxy for overall career quality.
+            All criteria are weighted equally. FDV is always included as one component even if you didn't add it as an explicit criterion, since it is our position-neutral proxy for overall career quality.
           </p>
         </div>
       )}
@@ -560,10 +561,10 @@ function RankingChart({ ranked, isSteal, selectedCriteria }) {
                     {p.pos} · Rd {p.round}, Pick {p.pick} · {p.draft_year} · {p.team}
                   </p>
                   <p className="text-slate-400">
-                    Career AV: <span className="text-white font-semibold">{p.career_av}</span>
+                    FDV: <span className="text-white font-semibold">{p.fdv != null ? Math.round(p.fdv) : '—'}</span>
                   </p>
                   {selectedCriteria.map((c, i) => {
-                    if (c.category === 'career_av') return null
+                    if (c.category === 'fdv') return null
                     const val = p[`crit_${i}_value`]
                     return (
                       <p key={i} className="text-slate-400">
@@ -673,7 +674,7 @@ function StealBustPanel({ mode }) {
         const data = await api.getCombinedDraft({
           criteria: selectedCriteria.map(c => ({
             category: c.category,
-            stat:     c.category !== 'career_av' ? c.stat : undefined,
+            stat:     c.category !== 'fdv' ? c.stat : undefined,
             scope:    c.scope,
             stat_val: parseFloat(c.statVal),
             stat_op:  isSteal ? 'gte' : 'lte',
@@ -695,7 +696,7 @@ function StealBustPanel({ mode }) {
   // Build result columns dynamically (ranked: add # and Score columns)
   const extraCols = selectedCriteria
     .map((c, i) => ({ ...c, idx: i }))
-    .filter(c => c.category !== 'career_av')
+    .filter(c => c.category !== 'fdv')
     .map(c => ({
       key:    `crit_${c.idx}_value`,
       label:  statLabel(c),
@@ -873,7 +874,7 @@ function StealBustPanel({ mode }) {
       {ranked && (
         <>
           <RankingChart ranked={ranked} isSteal={isSteal} selectedCriteria={selectedCriteria} />
-          <DraftScatter results={ranked} yKey="career_av" statLabel="Career AV" />
+          <DraftScatter results={ranked} yKey="fdv" statLabel="FDV" />
           <div className={`bg-slate-800/70 border rounded-2xl p-5 ${C.resBorder}`}>
             <p className="text-xs text-slate-600 mb-3">
               {ranked.length} players found — sorted by {isSteal ? 'Steal' : 'Bust'} Score
@@ -914,30 +915,34 @@ export default function DraftAnalysis() {
             avInfo ? 'border-violet-500/40 text-violet-300 bg-violet-500/10'
                    : 'border-slate-700 text-slate-500 hover:text-slate-300'
           }`}>
-          {avInfo ? '▲' : '▼'} What is Career AV?
+          {avInfo ? '▲' : '▼'} What is FDV?
         </button>
       </div>
 
-      {/* Career AV explainer */}
+      {/* FDV explainer */}
       {avInfo && (
         <div className="rounded-2xl border border-slate-700/60 p-5 space-y-4"
           style={{ background: 'linear-gradient(160deg, #0f172a 0%, #1e1b2e 100%)' }}>
           <div>
-            <h2 className="text-white font-bold mb-1">Career Approximate Value (AV)</h2>
+            <h2 className="text-white font-bold mb-1">FDV — Fourth & Data Value</h2>
             <p className="text-slate-400 text-sm leading-relaxed">
-              AV is Pro Football Reference's position-neutral metric for career quality.
-              It aggregates season-by-season contributions into a single number comparable
-              across all positions — a career AV of 50 means roughly the same thing for
-              a QB, a DE, or a kicker.
+              FDV is our proprietary, position-neutral career value metric built entirely
+              from the statistics in this platform. It uses era-adjusted z-scores so a
+              great season in 1978 counts the same as a great season in 2018 — an FDV
+              of 90 means roughly the same thing for a QB, a DE, or a kicker.
             </p>
-            <p className="text-slate-600 text-xs mt-2">Source: <a href="https://www.pro-football-reference.com" target="_blank" rel="noopener noreferrer" className="hover:text-slate-400 transition-colors">Pro Football Reference</a></p>
+            <p className="text-violet-400 text-xs mt-2">
+              <a href="/methodology" className="hover:text-violet-300 transition-colors underline underline-offset-2">
+                Full methodology →
+              </a>
+            </p>
           </div>
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Scale</p>
             <div className="flex flex-col gap-1.5">
-              {AV_SCALE.map(({ range, label, color }) => (
+              {FDV_SCALE.map(({ range, label, color }) => (
                 <div key={range} className="flex items-center gap-3">
-                  <span className="text-xs font-mono font-bold w-14 shrink-0" style={{ color }}>{range}</span>
+                  <span className="text-xs font-mono font-bold w-20 shrink-0" style={{ color }}>{range}</span>
                   <div className="flex-1 h-px" style={{ background: `${color}40` }} />
                   <span className="text-xs text-slate-400">{label}</span>
                 </div>
@@ -945,20 +950,21 @@ export default function DraftAnalysis() {
             </div>
           </div>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Reference points</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Approximate reference points</p>
             <div className="flex flex-wrap gap-2">
-              {[['Tom Brady', 273], ['Peyton Manning', 234], ['Jerry Rice', 197],
-                ['Ray Lewis', 167], ['Average starter', '~45 career'], ['Typical rookie', '2–4/season']
-              ].map(([name, av]) => (
+              {[['Tom Brady', '~280'], ['Peyton Manning', '~240'], ['Jerry Rice', '~220'],
+                ['Lawrence Taylor', '~190'], ['Quality 10-yr starter', '~100'], ['Average rookie season', '4–7/season']
+              ].map(([name, fdv]) => (
                 <div key={name} className="rounded-lg px-3 py-1.5 border border-slate-700/60 bg-slate-800/40">
                   <span className="text-slate-400 text-xs">{name}: </span>
-                  <span className="text-white text-xs font-semibold">{av}</span>
+                  <span className="text-white text-xs font-semibold">{fdv}</span>
                 </div>
               ))}
             </div>
           </div>
           <p className="text-slate-600 text-xs">
-            AV is best used for comparing career trajectories and draft outcomes — not for fine-grained single-season comparisons.
+            FDV is best used for comparing career trajectories and draft outcomes.
+            Run <code className="text-slate-500">python etl/build_fdv.py</code> to compute it for all players in the database.
           </p>
         </div>
       )}

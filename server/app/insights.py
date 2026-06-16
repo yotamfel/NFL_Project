@@ -72,12 +72,13 @@ def _build_prompt(profile) -> str:
             if line:
                 lines.append(line)
 
+    if profile.player.fdv is not None:
+        lines.append(f"FDV (Fourth & Data Value): {int(profile.player.fdv)}")
+
     if profile.draft:
         d = profile.draft
         round_pick = f"Round {d.get('round')}, Pick {d.get('pick')}" if d.get("round") else "undrafted"
         lines.append(f"Draft: {d.get('draft_year')} {round_pick} by {d.get('team')} from {d.get('college')}")
-        if d.get("career_av"):
-            lines.append(f"Career AV (PFR): {d['career_av']}")
 
     return "\n".join(lines)
 

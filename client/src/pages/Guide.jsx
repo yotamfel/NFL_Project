@@ -33,7 +33,7 @@ const CONTENT = {
         subsections: [
           {
             title: 'Header card',
-            body: 'Shows position, active years, and number of seasons. If the player was drafted, you\'ll see round, pick, year, team, college, and Career AV. Combine measurements (height, weight, 40-yard dash, vertical, broad jump, bench, 3-cone, shuttle) are shown if available. Use the ★ button to save the player to your Saved list.',
+            body: 'Shows position, active years, and number of seasons. FDV (Fourth & Data Value), our proprietary career quality metric, is displayed in the header. If the player was drafted, you\'ll see round, pick, year, team, and college. Combine measurements (height, weight, 40-yard dash, vertical, broad jump, bench, 3-cone, shuttle) are shown if available. Use the ★ button to save the player to your Saved list.',
           },
           {
             title: 'Stats tables — Basic / Advanced',
@@ -147,22 +147,22 @@ const CONTENT = {
         subsections: [
           {
             title: 'Browse draft picks',
-            body: 'The default view shows all draft picks with their round, pick number, position, college, team, draft year, and Career AV. Filter by team, draft year, and position using the controls at the top. Click any player\'s name to open their full profile.',
+            body: 'The default view shows all draft picks with their round, pick number, position, college, team, draft year, and FDV (Fourth & Data Value). Filter by team, draft year, and position using the controls at the top. Click any player\'s name to open their full profile.',
           },
           {
-            title: 'Career AV',
-            body: 'Career Approximate Value is Pro Football Reference\'s position-neutral career quality metric. It accounts for games started, Pro Bowls, All-Pro selections, and position-specific production. It is not perfect, but it is the best single number for comparing career value across positions.',
+            title: 'FDV — Fourth & Data Value',
+            body: 'FDV is our proprietary, position-neutral career value metric. It uses era-adjusted z-scores per category (passing, offense, defense, kicking, punting, returns) so a great 1978 season counts the same as a great 2018 season. An FDV of 90 means roughly the same thing for a QB, a DE, or a kicker. See /methodology for the full formula.',
           },
           {
             title: 'Custom Query',
-            body: 'Switch to the "Custom" tab to build your own filter. Set a round threshold (e.g., "Round ≤ 3"), a stat threshold (e.g., "Career AV ≥ 60"), and optionally filter by position. You can also pick a specific stat from Passing, Offense, or Defense categories instead of Career AV, and choose Career totals or Single Season scope.',
+            body: 'Switch to the "Custom" tab to build your own filter. Set a round threshold (e.g., "Round ≤ 3"), a stat threshold (e.g., "FDV ≥ 60"), and optionally filter by position. You can also pick a specific stat from Passing, Offense, or Defense categories instead of FDV, and choose Career totals or Single Season scope.',
           },
           {
             title: 'Steals & Busts',
             body: [
-              'Steals: Players drafted in round 4 or later who achieved a Career AV of 50 or more. These are players who were significantly undervalued on draft day.',
-              'Busts: Players drafted in rounds 1–2 who achieved a Career AV of 15 or less. High draft capital with very little return.',
-              'The steal/bust thresholds apply to the currently selected stat category and stat when you switch away from Career AV — so you can find, for example, late-round QBs with high passing yardage totals.',
+              'Steals: Players drafted in round 4 or later who achieved an FDV of 40 or more. These are players who were significantly undervalued on draft day.',
+              'Busts: Players drafted in rounds 1–2 who achieved an FDV of 20 or less. High draft capital with very little return.',
+              'The steal/bust thresholds apply to the currently selected stat category and stat when you switch away from FDV — so you can find, for example, late-round QBs with high passing yardage totals.',
             ],
           },
           {
@@ -171,7 +171,7 @@ const CONTENT = {
           },
           {
             title: 'Round Stats',
-            body: 'The "Round Stats" tab shows the average and median Career AV (or selected stat) for each draft round. This gives context for what you should realistically expect from picks at each round.',
+            body: 'The "Round Stats" tab shows the average and median FDV (or selected stat) for each draft round. This gives context for what you should realistically expect from picks at each round.',
           },
         ],
       },
@@ -219,7 +219,7 @@ const CONTENT = {
               'Who has the most passing yards since 2015?',
               'Top 10 WRs by receiving touchdowns in 2022',
               'Which QBs had a passer rating above 110 in a single season?',
-              'Best Career AV for undrafted players',
+              'Best FDV for undrafted players',
               'All players drafted by the Patriots in round 1',
             ],
           },
@@ -366,7 +366,7 @@ const CONTENT = {
             title: 'General',
             body: [
               'G — Games played',
-              'Career AV — Career Approximate Value (Pro Football Reference composite career quality score)',
+              'FDV — Fourth & Data Value (our proprietary position-neutral career quality metric; see /methodology for the full formula)',
             ],
           },
           {
@@ -488,7 +488,7 @@ const CONTENT = {
         subsections: [
           {
             title: 'כרטיס כותרת',
-            body: 'מציג Position, שנות פעילות ומספר עונות. אם השחקן נבחר בדראפט — מוצגים Round, Pick, שנה, קבוצה, מכללה ו-Career AV. מדדי Combine (גובה, משקל, 40-yard dash, Vertical, Broad Jump, Bench, 3-Cone, Shuttle) מוצגים אם קיימים. כפתור ★ שומר את השחקן ברשימת Saved.',
+            body: 'מציג Position, שנות פעילות ומספר עונות. FDV (Fourth & Data Value), מדד ערך הקריירה הקנייני שלנו, מוצג בכרטיס הכותרת. אם השחקן נבחר בדראפט — מוצגים Round, Pick, שנה, קבוצה ומכללה. מדדי Combine (גובה, משקל, 40-yard dash, Vertical, Broad Jump, Bench, 3-Cone, Shuttle) מוצגים אם קיימים. כפתור ★ שומר את השחקן ברשימת Saved.',
           },
           {
             title: 'טבלאות סטטיסטיקה — Basic / Advanced',
@@ -602,22 +602,22 @@ const CONTENT = {
         subsections: [
           {
             title: 'גלישת בחירות Draft',
-            body: 'התצוגה הראשונית מציגה את כל בחירות ה-Draft עם Round, Pick, Position, College, Team, שנה ו-Career AV. סנן לפי קבוצה, שנת Draft ו-Position. לחץ על שם שחקן לפתיחת הפרופיל.',
+            body: 'התצוגה הראשונית מציגה את כל בחירות ה-Draft עם Round, Pick, Position, College, Team, שנה ו-FDV (מדד ערך הקריירה הקנייני שלנו). סנן לפי קבוצה, שנת Draft ו-Position. לחץ על שם שחקן לפתיחת הפרופיל.',
           },
           {
-            title: 'Career AV',
-            body: 'Career Approximate Value הוא מדד איכות קריירה ניטרלי-עמדה של Pro Football Reference. הוא מביא בחשבון משחקים כפותח, Pro Bowls, All-Pro ועוד. הוא לא מושלם, אך הוא המדד הטוב ביותר להשוואת ערך קריירה בין עמדות שונות.',
+            title: 'FDV — Fourth & Data Value',
+            body: 'FDV הוא מדד ערך קריירה ניטרלי-עמדה קנייני שפיתחנו כאן ב-Fourth & Data. הוא מבוסס על נוסחאות משקל לפי קטגוריה (Passing, Offense, Defense, Kicking, Punting, Returns), מנורמל לפי עידן (z-score לפי שנה) כדי שהשוואה בין שנות 70 ל-2020 תהיה הוגנת, וכולל בונוס Peak על שלושת העונות הטובות ביותר. ראה את הנוסחה המלאה ב-/methodology.',
           },
           {
             title: 'Custom Query',
-            body: 'עבור ל-Tab "Custom" לבניית פילטר מותאם אישית. הגדר סף Round (למשל "Round ≤ 3"), סף Stat (למשל "Career AV ≥ 60"), ואופציונלית Position. ניתן גם לבחור Stat ספציפי מקטגוריות Passing, Offense או Defense במקום Career AV, ולבחור Career totals או Single Season.',
+            body: 'עבור ל-Tab "Custom" לבניית פילטר מותאם אישית. הגדר סף Round (למשל "Round ≤ 3"), סף FDV (למשל "FDV ≥ 60"), ואופציונלית Position. ניתן גם לבחור Stat ספציפי מקטגוריות Passing, Offense או Defense במקום FDV, ולבחור Career totals או Single Season.',
           },
           {
             title: 'Steals & Busts',
             body: [
-              'Steals ("גנבות"): לדוגמה: שחקנים שנבחרו בדראפט בסיבוב 4 ומעלה והשיגו Career AV של 50 ומעלה. אלה שחקנים שהוערכו נמוך מאוד ביום ה-Draft.',
-              'Busts ("כישלונות"): לדוגמה: שחקנים שנבחרו בדראפט בסיבובים 1–2 והשיגו Career AV של 15 ומטה. השקעת Draft גבוהה עם תשואה נמוכה מאוד.',
-              'ההגדרות חלות גם על ה-Stat שנבחר אם עברת מ-Career AV לסטטיסטיקה אחרת.',
+              'Steals ("גנבות"): לדוגמה: שחקנים שנבחרו בדראפט בסיבוב 4 ומעלה והשיגו FDV של 40 ומעלה. אלה שחקנים שהוערכו נמוך מאוד ביום ה-Draft.',
+              'Busts ("כישלונות"): לדוגמה: שחקנים שנבחרו בדראפט בסיבובים 1–2 והשיגו FDV של 20 ומטה. השקעת Draft גבוהה עם תשואה נמוכה מאוד.',
+              'ההגדרות חלות גם על ה-Stat שנבחר אם עברת מ-FDV לסטטיסטיקה אחרת.',
             ],
           },
           {
@@ -626,7 +626,7 @@ const CONTENT = {
           },
           {
             title: 'Round Stats',
-            body: 'Tab "Round Stats" מציג את הממוצע והחציון של Career AV (או הסטטיסטיקה שנבחרה) לפי כל סיבוב Draft. מספק הקשר לציפיות ריאליות מבחירות בכל סיבוב.',
+            body: 'Tab "Round Stats" מציג את הממוצע והחציון של FDV (או הסטטיסטיקה שנבחרה) לפי כל סיבוב Draft. מספק הקשר לציפיות ריאליות מבחירות בכל סיבוב.',
           },
         ],
       },
@@ -674,7 +674,7 @@ const CONTENT = {
               'מי צבר הכי הרבה Passing Yards מאז 2015?',
               '10 WRs המובילים ב-Receiving Touchdowns ב-2022',
               'אילו QBs השיגו Passer Rating מעל 110 בעונה אחת?',
-              'הטוב ביותר Career AV לשחקנים שלא נדרפטו',
+              'הטוב ביותר FDV לשחקנים שלא נדרפטו',
               'כל השחקנים שנדרפטו ע"י ה-Patriots בסיבוב 1',
             ],
           },
@@ -821,7 +821,7 @@ const CONTENT = {
             title: 'כללי',
             body: [
               'G — Games: משחקים שהשחקן שיחק בהם',
-              'Career AV — Career Approximate Value: מדד ניטרלי-עמדה של Pro Football Reference לאיכות קריירה',
+              'FDV — Fourth & Data Value: מדד ניטרלי-עמדה קנייני שלנו לאיכות קריירה (ראה /methodology לנוסחה המלאה)',
             ],
           },
           {

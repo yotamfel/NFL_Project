@@ -1,4 +1,9 @@
-"""Data-layer functions for module 3 (draft analysis)."""
+"""Data-layer functions for module 3 (draft analysis).
+
+FDV (Fourth & Data Value) is our proprietary career-value metric stored in
+players.fdv.  Every query that previously used draft.career_av now JOINs
+the players table and uses p.fdv instead.
+"""
 from sqlalchemy import text
 
 from app.db import engine
@@ -36,12 +41,6 @@ _STAT_WHITELIST: dict[str, frozenset[str]] = {
     }),
 }
 
-# A "steal"/"bust" verdict needs the player to have had enough time to prove
-# (or disprove) themselves. Stage 2's exploration found that a naive query
-# for low-career_av round-1 picks returned almost entirely 2024-2025 rookies
-# — their career_av is low because they've barely played, not because they
-# failed. Default to four years (a typical rookie-contract span) before a
-# draft class is judged at all. See server/docs/exploration_findings.md.
 DEFAULT_MIN_SEASONING_YEARS = 4
 DEFAULT_MIN_GAMES_CAREER    = 16   # one full NFL season — filters "cup of coffee" careers
 
@@ -55,22 +54,23 @@ def get_draft_picks(team: str | None = None, draft_year: int | None = None,
     """Draft picks with optional filters — any combination of team/year/position."""
     clauses, params = [], {"limit": limit}
     if team is not None:
-        clauses.append("team = :team")
+        clauses.append("d.team = :team")
         params["team"] = team
     if draft_year is not None:
-        clauses.append("draft_year = :draft_year")
+        clauses.append("d.draft_year = :draft_year")
         params["draft_year"] = draft_year
     if pos is not None:
-        clauses.append("pos = :pos")
+        clauses.append("d.pos = :pos")
         params["pos"] = pos
     where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
 
     sql = text(f"""
-        SELECT draft_year, round, pick, team, player_name, pos, college,
-               career_av, g, player_id
-        FROM draft
+        SELECT d.draft_year, d.round, d.pick, d.team, d.player_name, d.pos, d.college,
+               p.fdv, d.g, d.player_id
+        FROM draft d
+        LEFT JOIN players p ON p.player_id = d.player_id
         {where}
-        ORDER BY draft_year DESC, pick
+        ORDER BY d.draft_year DESC, d.pick
         LIMIT :limit
     """)
     with engine.connect() as conn:
@@ -83,7 +83,7 @@ def get_custom_draft_rank(
     round_op: str,          # "gte" (round >=) or "lte" (round <=)
     stat_val: float,
     stat_op: str,           # "gte" (stat >=) or "lte" (stat <=)
-    category: str = "career_av",
+    category: str = "fdv",
     stat: str | None = None,
     scope: str = "career",  # "career" or "season" (best single season)
     pos: str | None = None,
@@ -109,14 +109,15 @@ def get_custom_draft_rank(
     with engine.connect() as conn:
         params["cutoff"] = _latest_draft_year(conn) - min_seasoning_years
 
-        if category == "career_av":
+        if category == "fdv":
             sql = text(f"""
                 SELECT d.draft_year, d.round, d.pick, d.player_name, d.pos, d.team,
-                       d.career_av, d.career_av AS stat_value
+                       p.fdv, p.fdv AS stat_value
                 FROM draft d
+                LEFT JOIN players p ON p.player_id = d.player_id
                 WHERE d.round {round_sql} :round_val
-                  AND d.career_av IS NOT NULL
-                  AND d.career_av {stat_sql} :stat_val
+                  AND p.fdv IS NOT NULL
+                  AND p.fdv {stat_sql} :stat_val
                   AND d.draft_year <= :cutoff
                   AND (:pos IS NULL OR UPPER(d.pos) = UPPER(:pos))
                   AND (:year_from IS NULL OR d.draft_year >= :year_from)
@@ -132,8 +133,9 @@ def get_custom_draft_rank(
             if scope == "career":
                 sql = text(f"""
                     SELECT d.draft_year, d.round, d.pick, d.player_name, d.pos, d.team,
-                           d.career_av, c.{stat} AS stat_value
+                           p.fdv, c.{stat} AS stat_value
                     FROM draft d
+                    LEFT JOIN players p ON p.player_id = d.player_id
                     JOIN {category}_career c ON c.player_id = d.player_id
                     WHERE d.round {round_sql} :round_val
                       AND c.{stat} IS NOT NULL
@@ -146,14 +148,15 @@ def get_custom_draft_rank(
             else:
                 sql = text(f"""
                     SELECT d.draft_year, d.round, d.pick, d.player_name, d.pos, d.team,
-                           d.career_av, MAX(s.{stat}) AS stat_value
+                           p.fdv, MAX(s.{stat}) AS stat_value
                     FROM draft d
+                    LEFT JOIN players p ON p.player_id = d.player_id
                     JOIN {category}_seasons s ON s.player_id = d.player_id
                     WHERE d.round {round_sql} :round_val
                       AND d.draft_year <= :cutoff
                       AND (:pos IS NULL OR UPPER(d.pos) = UPPER(:pos))
                     GROUP BY d.draft_year, d.round, d.pick, d.player_name,
-                             d.pos, d.team, d.career_av
+                             d.pos, d.team, p.fdv
                     HAVING MAX(s.{stat}) IS NOT NULL
                        AND MAX(s.{stat}) {stat_sql} :stat_val
                     ORDER BY stat_value {order}
@@ -167,7 +170,7 @@ def get_custom_draft_rank(
 def get_draft_round_stats(
     round_val: int,
     round_op: str,            # "gte" or "lte"
-    category: str = "career_av",
+    category: str = "fdv",
     stat: str | None = None,
     scope: str = "career",    # "career" | "season"
     pos: str | None = None,
@@ -175,16 +178,7 @@ def get_draft_round_stats(
     draft_year_from: int | None = None,
     draft_year_to: int | None = None,
 ) -> dict:
-    """Percentile distribution of a stat for a round/position cohort.
-
-    For career-scope non-career_av stats:
-    - Only players with >= DEFAULT_MIN_GAMES_CAREER games (filters backup "cups of coffee")
-    - Only players with stat > 0 (filters positions that never touch that stat)
-    - Returns both raw-total percentiles AND per-game percentiles (p*_pg columns)
-
-    For season-scope stats: best single season per player, stat > 0 only.
-    For career_av: raw percentiles, career_av > 0 only.
-    """
+    """Percentile distribution of a stat for a round/position cohort."""
     if round_op not in ("gte", "lte"):
         raise ValueError("round_op must be 'gte' or 'lte'")
     if scope not in ("career", "season"):
@@ -196,22 +190,23 @@ def get_draft_round_stats(
     with engine.connect() as conn:
         params["cutoff"] = _latest_draft_year(conn) - min_seasoning_years
 
-        if category == "career_av":
+        if category == "fdv":
             sql = text(f"""
                 SELECT
                     COUNT(*) AS count,
-                    ROUND(AVG(career_av)::numeric, 1) AS avg,
-                    ROUND(PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY career_av)::numeric, 0) AS p25,
-                    ROUND(PERCENTILE_CONT(0.50) WITHIN GROUP (ORDER BY career_av)::numeric, 0) AS p50,
-                    ROUND(PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY career_av)::numeric, 0) AS p75,
-                    ROUND(PERCENTILE_CONT(0.90) WITHIN GROUP (ORDER BY career_av)::numeric, 0) AS p90
-                FROM draft
-                WHERE round {round_sql} :round_val
-                  AND career_av IS NOT NULL AND career_av > 0
-                  AND draft_year <= :cutoff
-                  AND (:pos IS NULL OR UPPER(pos) = UPPER(:pos))
-                  AND (:year_from IS NULL OR draft_year >= :year_from)
-                  AND (:year_to   IS NULL OR draft_year <= :year_to)
+                    ROUND(AVG(p.fdv)::numeric, 1) AS avg,
+                    ROUND(PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY p.fdv)::numeric, 0) AS p25,
+                    ROUND(PERCENTILE_CONT(0.50) WITHIN GROUP (ORDER BY p.fdv)::numeric, 0) AS p50,
+                    ROUND(PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY p.fdv)::numeric, 0) AS p75,
+                    ROUND(PERCENTILE_CONT(0.90) WITHIN GROUP (ORDER BY p.fdv)::numeric, 0) AS p90
+                FROM draft d
+                LEFT JOIN players p ON p.player_id = d.player_id
+                WHERE d.round {round_sql} :round_val
+                  AND p.fdv IS NOT NULL AND p.fdv > 0
+                  AND d.draft_year <= :cutoff
+                  AND (:pos IS NULL OR UPPER(d.pos) = UPPER(:pos))
+                  AND (:year_from IS NULL OR d.draft_year >= :year_from)
+                  AND (:year_to   IS NULL OR d.draft_year <= :year_to)
             """)
         else:
             valid = _STAT_WHITELIST.get(category, frozenset())
@@ -273,7 +268,7 @@ def get_draft_round_stats(
     return dict(row._mapping)
 
 
-_VALID_CATEGORIES = frozenset(["career_av", "passing", "offense", "defense", "kicking", "punting", "returns"])
+_VALID_CATEGORIES = frozenset(["fdv", "passing", "offense", "defense", "kicking", "punting", "returns"])
 
 
 def get_combined_draft(
@@ -306,9 +301,9 @@ def get_combined_draft(
     extra_where:  list[str] = []
 
     for i, crit in enumerate(criteria):
-        cat     = crit["category"]
-        stat    = crit.get("stat")
-        scope   = crit.get("scope", "career")
+        cat      = crit["category"]
+        stat     = crit.get("stat")
+        scope    = crit.get("scope", "career")
         stat_val = crit["stat_val"]
         stat_op_sql = ">=" if crit.get("stat_op", "gte") == "gte" else "<="
 
@@ -318,8 +313,8 @@ def get_combined_draft(
         val_key = f"crit_{i}_val"
         params[val_key] = stat_val
 
-        if cat == "career_av":
-            extra_where.append(f"AND d.career_av {stat_op_sql} :{val_key}")
+        if cat == "fdv":
+            extra_where.append(f"AND p.fdv {stat_op_sql} :{val_key}")
         else:
             valid_stats = _STAT_WHITELIST.get(cat, frozenset())
             if not stat or stat not in valid_stats:
@@ -336,17 +331,18 @@ def get_combined_draft(
 
     sql = text(f"""
         SELECT d.draft_year, d.round, d.pick, d.player_name, d.pos, d.team,
-               d.career_av, d.player_id
+               p.fdv, d.player_id
                {select_extra}
         FROM draft d
+        LEFT JOIN players p ON p.player_id = d.player_id
         WHERE d.round {round_sql} :round_val
           AND UPPER(d.pos) = UPPER(:pos)
-          AND d.career_av IS NOT NULL
+          AND p.fdv IS NOT NULL
           AND d.draft_year <= :cutoff
           AND (:year_from IS NULL OR d.draft_year >= :year_from)
           AND (:year_to   IS NULL OR d.draft_year <= :year_to)
           {where_extra}
-        ORDER BY d.career_av {order}
+        ORDER BY p.fdv {order}
         LIMIT :limit
     """)
 
@@ -357,39 +353,41 @@ def get_combined_draft(
     return [dict(r._mapping) for r in rows]
 
 
-def find_steals(min_round: int = 4, min_career_av: int = 50,
+def find_steals(min_round: int = 4, min_fdv: float = 40,
                 min_seasoning_years: int = DEFAULT_MIN_SEASONING_YEARS,
                 limit: int = 20) -> list[dict]:
-    """Picks from round `min_round` or later whose career_av beat their slot."""
+    """Picks from round `min_round` or later whose FDV beat their draft slot."""
     with engine.connect() as conn:
         cutoff = _latest_draft_year(conn) - min_seasoning_years
         sql = text("""
-            SELECT draft_year, round, pick, team, player_name, pos, college,
-                   career_av, g, player_id
-            FROM draft
-            WHERE round >= :min_round AND career_av >= :min_av AND draft_year <= :cutoff
-            ORDER BY career_av DESC
+            SELECT d.draft_year, d.round, d.pick, d.team, d.player_name, d.pos, d.college,
+                   p.fdv, d.g, d.player_id
+            FROM draft d
+            LEFT JOIN players p ON p.player_id = d.player_id
+            WHERE d.round >= :min_round AND p.fdv >= :min_fdv AND d.draft_year <= :cutoff
+            ORDER BY p.fdv DESC
             LIMIT :limit
         """)
-        rows = conn.execute(sql, {"min_round": min_round, "min_av": min_career_av,
+        rows = conn.execute(sql, {"min_round": min_round, "min_fdv": min_fdv,
                                   "cutoff": cutoff, "limit": limit}).fetchall()
     return [dict(r._mapping) for r in rows]
 
 
-def find_busts(max_round: int = 1, max_career_av: int = 15,
+def find_busts(max_round: int = 1, max_fdv: float = 20,
                min_seasoning_years: int = DEFAULT_MIN_SEASONING_YEARS,
                limit: int = 20) -> list[dict]:
-    """Picks from round `max_round` or earlier whose career_av fell short of their slot."""
+    """Picks from round `max_round` or earlier whose FDV fell short of their slot."""
     with engine.connect() as conn:
         cutoff = _latest_draft_year(conn) - min_seasoning_years
         sql = text("""
-            SELECT draft_year, round, pick, team, player_name, pos, college,
-                   career_av, g, player_id
-            FROM draft
-            WHERE round <= :max_round AND career_av <= :max_av AND draft_year <= :cutoff
-            ORDER BY pick, draft_year DESC
+            SELECT d.draft_year, d.round, d.pick, d.team, d.player_name, d.pos, d.college,
+                   p.fdv, d.g, d.player_id
+            FROM draft d
+            LEFT JOIN players p ON p.player_id = d.player_id
+            WHERE d.round <= :max_round AND p.fdv <= :max_fdv AND d.draft_year <= :cutoff
+            ORDER BY d.pick, d.draft_year DESC
             LIMIT :limit
         """)
-        rows = conn.execute(sql, {"max_round": max_round, "max_av": max_career_av,
+        rows = conn.execute(sql, {"max_round": max_round, "max_fdv": max_fdv,
                                   "cutoff": cutoff, "limit": limit}).fetchall()
     return [dict(r._mapping) for r in rows]

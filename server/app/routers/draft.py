@@ -55,9 +55,9 @@ def picks(team: str | None = Query(None, description="Three-letter team code, e.
 def custom_rank(
     round_val:       int   = Query(4, ge=1, le=7),
     round_op:        str   = Query("gte"),
-    stat_val:        float = Query(50.0, ge=0),
+    stat_val:        float = Query(40.0, ge=0),
     stat_op:         str   = Query("gte"),
-    category:        str   = Query("career_av"),
+    category:        str   = Query("fdv"),
     stat:            str | None = Query(None),
     scope:           str   = Query("career"),
     pos:             str | None = Query(None),
@@ -82,7 +82,7 @@ def custom_rank(
 def round_stats(
     round_val:       int       = Query(4, ge=1, le=7),
     round_op:        str       = Query("gte"),
-    category:        str       = Query("career_av"),
+    category:        str       = Query("fdv"),
     stat:            str | None = Query(None),
     scope:           str       = Query("career"),
     pos:             str | None = Query(None),
@@ -101,19 +101,19 @@ def round_stats(
 
 @router.get("/steals")
 def steals(min_round: int = Query(4, ge=1, le=7),
-           min_career_av: int = Query(50, ge=0),
+           min_fdv: float = Query(40.0, ge=0),
            min_seasoning_years: int = Query(DEFAULT_MIN_SEASONING_YEARS, ge=0,
                                             description="Exclude classes too recent to judge fairly"),
            limit: int = Query(20, ge=1, le=100)):
-    return find_steals(min_round=min_round, min_career_av=min_career_av,
+    return find_steals(min_round=min_round, min_fdv=min_fdv,
                        min_seasoning_years=min_seasoning_years, limit=limit)
 
 
 @router.get("/busts")
 def busts(max_round: int = Query(1, ge=1, le=7),
-          max_career_av: int = Query(15, ge=0),
+          max_fdv: float = Query(20.0, ge=0),
           min_seasoning_years: int = Query(DEFAULT_MIN_SEASONING_YEARS, ge=0,
                                            description="Exclude classes too recent to judge fairly"),
           limit: int = Query(20, ge=1, le=100)):
-    return find_busts(max_round=max_round, max_career_av=max_career_av,
+    return find_busts(max_round=max_round, max_fdv=max_fdv,
                       min_seasoning_years=min_seasoning_years, limit=limit)

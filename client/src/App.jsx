@@ -20,6 +20,7 @@ import Feedback from './pages/Feedback'
 import AdminPanel from './pages/AdminPanel'
 import About from './pages/About'
 import Privacy from './pages/Privacy'
+import FdvPage from './pages/FdvPage'
 import Onboarding from './components/Onboarding'
 import Footer from './components/Footer'
 
@@ -45,9 +46,10 @@ function AppInner() {
     return user ? <Navigate to="/" replace /> : <Auth />
   }
 
-  if (['/about', '/privacy'].includes(location.pathname)) {
-    if (location.pathname === '/about')   return <About />
-    if (location.pathname === '/privacy') return <Privacy />
+  if (['/about', '/privacy', '/methodology'].includes(location.pathname)) {
+    if (location.pathname === '/about')       return <About />
+    if (location.pathname === '/privacy')     return <Privacy />
+    if (location.pathname === '/methodology') return <FdvPage />
   }
 
   if (!user) {
@@ -76,6 +78,7 @@ function AppInner() {
             <Route path="/feedback"        element={<Feedback />} />
             <Route path="/about"           element={<About />} />
             <Route path="/privacy"         element={<Privacy />} />
+            <Route path="/methodology"     element={<FdvPage />} />
           </Routes>
         </main>
         <Footer />

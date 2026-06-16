@@ -23,6 +23,7 @@ class Player(BaseModel):
     first_season: Optional[int] = None
     last_season: Optional[int] = None
     n_seasons: Optional[int] = None
+    fdv: Optional[float] = None
 
 
 class CategoryStats(BaseModel):

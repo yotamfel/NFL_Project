@@ -31,10 +31,12 @@ or English — into a single read-only PostgreSQL query.
 ## Schema (PostgreSQL, all in `public`)
 
 ### Core identity
-players(player_id PK, player_name, pos, first_season, last_season, n_seasons)
+players(player_id PK, player_name, pos, first_season, last_season, n_seasons, fdv)
   Canonical player identity. first_season and last_season accurately reflect
   the player's actual NFL debut and final season (coverage 1970-2025 for most
   categories). Everything else links to it via player_id.
+  fdv = Fourth & Data Value, our proprietary position-neutral career quality score
+  (higher is better; ~6 per average starter season; HOF careers score 180+).
 
 ### Box-score stats
 Six categories, each with a `*_seasons` table (one row per player-season)
@@ -77,9 +79,10 @@ and a `*_career` view (lifetime totals per player):
 draft(draft_year, round, pick, team, player_name, pos, age, college,
       career_av, g, pass_yds, pass_td, rush_yds, rush_td, rec_yds, rec_td,
       solo_tkl, def_int, sk, player_id)
-  One row per pick, 1970-2025. career_av = PFR Approximate Value (best
-  cross-position career-quality metric). player_id null for ~30% of picks.
+  One row per pick, 1970-2025. career_av = PFR Approximate Value (legacy column).
+  player_id null for ~30% of picks.
   Note: solo_tkl is NULL for picks from 1970-1979 (not tracked by source).
+  For career quality comparisons prefer players.fdv (our FDV metric) via JOIN.
 
 combine_seasons(season, player_id, player_name, pos, school, ht, wt,
                 "_40yd", vertical, bench, broad_jump, "_3cone", shuttle,
@@ -131,8 +134,8 @@ injuries(player_id, season, week, game_type, team,
    To compute a career rate, derive it from summed counts:
    e.g. 100.0 * sum(cmp) / NULLIF(sum(att), 0).
 2. For career totals use players -> *_career (live aggregation), not draft's
-   own pass_*/rush_*/g columns (snapshot that drifts). career_av is the
-   one exception — it only exists on draft.
+   own pass_*/rush_*/g columns (snapshot that drifts). For career quality use
+   players.fdv (our FDV metric); career_av on draft is a legacy column.
 3. A null player_id does NOT mean "no career" — many real players (OL, etc.)
    have no tracked box-score stats. Never treat null player_id as a bust.
 4. Always quote underscore-prefixed columns: "_40yd", "_3cone", "_1d", "_4qc".

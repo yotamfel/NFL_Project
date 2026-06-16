@@ -145,6 +145,9 @@ def _run_migrations():
                 SELECT DISTINCT feedback_id FROM feedback_messages WHERE sender = 'admin'
               )
         """))
+        conn.execute(text(
+            "ALTER TABLE players ADD COLUMN IF NOT EXISTS fdv NUMERIC(6,1)"
+        ))
 
 
 _run_migrations()

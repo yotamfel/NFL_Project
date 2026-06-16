@@ -118,16 +118,13 @@ _ALLOWED_STATS: dict[str, frozenset[str]] = {
 
 
 def popular_players(pos: str | None = None, limit: int = 10) -> list[dict]:
-    """Top players by career Approximate Value — used for landing-page suggestions."""
+    """Top players by FDV — used for landing-page suggestions."""
     sql = text("""
-        SELECT p.player_id, p.player_name, p.pos, p.first_season, p.last_season,
-               MAX(d.career_av) AS career_av
-        FROM players p
-        JOIN draft d ON d.player_id = p.player_id
-        WHERE (:pos IS NULL OR UPPER(p.pos) = ANY(:pos_variants))
-          AND d.career_av IS NOT NULL
-        GROUP BY p.player_id, p.player_name, p.pos, p.first_season, p.last_season
-        ORDER BY career_av DESC
+        SELECT player_id, player_name, pos, first_season, last_season, fdv
+        FROM players
+        WHERE (:pos IS NULL OR UPPER(pos) = ANY(:pos_variants))
+          AND fdv IS NOT NULL
+        ORDER BY fdv DESC
         LIMIT :limit
     """)
     with engine.connect() as conn:
@@ -257,7 +254,7 @@ def get_player_profile(player_id: str) -> PlayerProfile | None:
     """
     with engine.connect() as conn:
         player_row = conn.execute(
-            text("SELECT player_id, player_name, pos, first_season, last_season, n_seasons "
+            text("SELECT player_id, player_name, pos, first_season, last_season, n_seasons, fdv "
                  "FROM players WHERE player_id = :pid"),
             {"pid": player_id},
         ).fetchone()

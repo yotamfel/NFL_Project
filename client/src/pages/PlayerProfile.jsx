@@ -927,21 +927,28 @@ export default function PlayerProfile() {
               {saved ? '★' : '☆'}
             </button>
 
-            {draft && (
-              <div className="sm:text-right shrink-0 bg-black/20 rounded-xl px-4 py-3">
-                <p className="text-slate-400 text-xs uppercase tracking-wider mb-1">Draft</p>
-                <p className="text-white font-semibold text-sm">
-                  Round {draft.round}, Pick {draft.pick} &middot; {draft.draft_year}
-                </p>
-                <p className="text-slate-400 text-sm">{draft.team}{draft.college ? ` · ${draft.college}` : ''}</p>
-                {draft.career_av != null && (
-                  <p className="font-bold mt-1" style={{ color: c.hex }}>
-                    Career AV: {draft.career_av}
-                    <span className="text-slate-500 font-normal text-xs ml-1">(via PFR)</span>
+            <div className="sm:text-right shrink-0 bg-black/20 rounded-xl px-4 py-3">
+              {draft ? (
+                <>
+                  <p className="text-slate-400 text-xs uppercase tracking-wider mb-1">Draft</p>
+                  <p className="text-white font-semibold text-sm">
+                    Round {draft.round}, Pick {draft.pick} &middot; {draft.draft_year}
                   </p>
-                )}
-              </div>
-            )}
+                  <p className="text-slate-400 text-sm">{draft.team}{draft.college ? ` · ${draft.college}` : ''}</p>
+                </>
+              ) : (
+                <p className="text-slate-500 text-xs uppercase tracking-wider">Undrafted</p>
+              )}
+              {player.fdv != null && (
+                <p className="font-bold mt-1" style={{ color: c.hex }}>
+                  FDV: {Math.round(player.fdv)}
+                  <a href="/methodology"
+                    className="text-slate-500 font-normal text-xs ml-1 hover:text-slate-300 transition-colors">
+                    (what is FDV?)
+                  </a>
+                </p>
+              )}
+            </div>
           </div>
 
           {/* Combine measurements */}

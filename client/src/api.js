@@ -149,7 +149,7 @@ export const api = {
     p.set('limit', limit)
     return get(`/draft?${p}`)
   },
-  getCustomDraft: ({ roundVal, roundOp, statVal, statOp, category = 'career_av', stat, scope = 'career', pos, draftYearFrom, draftYearTo, limit = 50 } = {}) => {
+  getCustomDraft: ({ roundVal, roundOp, statVal, statOp, category = 'fdv', stat, scope = 'career', pos, draftYearFrom, draftYearTo, limit = 50 } = {}) => {
     const p = new URLSearchParams({ round_val: roundVal, round_op: roundOp, stat_val: statVal, stat_op: statOp, category, scope, limit })
     if (pos)           p.set('pos', pos)
     if (stat)          p.set('stat', stat)
@@ -167,7 +167,7 @@ export const api = {
 
   getCombinedDraft: (body) => post('/draft/combined', body),
 
-  getDraftRoundStats: ({ roundVal, roundOp, category = 'career_av', stat, scope = 'career', pos, draftYearFrom, draftYearTo } = {}) => {
+  getDraftRoundStats: ({ roundVal, roundOp, category = 'fdv', stat, scope = 'career', pos, draftYearFrom, draftYearTo } = {}) => {
     const p = new URLSearchParams({ round_val: roundVal, round_op: roundOp, category, scope })
     if (stat)          p.set('stat', stat)
     if (pos)           p.set('pos', pos)

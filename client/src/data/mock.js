@@ -17,6 +17,7 @@ export const MOCK_PLAYER_PROFILE = {
     first_season: 2017,
     last_season: 2024,
     n_seasons: 8,
+    fdv: 175.0,
   },
   categories: [
     {
@@ -33,7 +34,7 @@ export const MOCK_PLAYER_PROFILE = {
       career: { g: 116, cmp: 2743, att: 4133, yds: 32419, td: 245, int: 70 },
     },
   ],
-  draft: { draft_year: 2017, round: 1, pick: 10, team: 'KAN', college: 'Texas Tech', career_av: 140 },
+  draft: { draft_year: 2017, round: 1, pick: 10, team: 'KAN', college: 'Texas Tech' },
   combine: { pos: 'QB', ht: '6_2', wt: 230, _40yd: 4.80, vertical: 32.0 },
 }
 
@@ -49,23 +50,23 @@ export const MOCK_COMPARISON = {
 }
 
 export const MOCK_STEALS = [
-  { player_name: 'Tom Brady', draft_year: 2000, round: 6, pick: 199, pos: 'QB', team: 'NWE', career_av: 184 },
-  { player_name: 'Russell Wilson', draft_year: 2012, round: 3, pick: 75, pos: 'QB', team: 'SEA', career_av: 139 },
-  { player_name: 'Travis Kelce', draft_year: 2013, round: 3, pick: 63, pos: 'TE', team: 'KAN', career_av: 90 },
-  { player_name: 'Dak Prescott', draft_year: 2016, round: 4, pick: 135, pos: 'QB', team: 'DAL', career_av: 94 },
+  { player_name: 'Tom Brady', draft_year: 2000, round: 6, pick: 199, pos: 'QB', team: 'NWE', fdv: 280 },
+  { player_name: 'Russell Wilson', draft_year: 2012, round: 3, pick: 75, pos: 'QB', team: 'SEA', fdv: 185 },
+  { player_name: 'Travis Kelce', draft_year: 2013, round: 3, pick: 63, pos: 'TE', team: 'KAN', fdv: 130 },
+  { player_name: 'Dak Prescott', draft_year: 2016, round: 4, pick: 135, pos: 'QB', team: 'DAL', fdv: 120 },
 ]
 
 export const MOCK_BUSTS = [
-  { player_name: 'JaMarcus Russell', draft_year: 2007, round: 1, pick: 1, pos: 'QB', team: 'OAK', career_av: 6 },
-  { player_name: 'Trey Lance', draft_year: 2021, round: 1, pick: 3, pos: 'QB', team: 'SFO', career_av: 5 },
-  { player_name: 'Josh Rosen', draft_year: 2018, round: 1, pick: 10, pos: 'QB', team: 'ARI', career_av: 3 },
-  { player_name: 'Dwayne Haskins', draft_year: 2019, round: 1, pick: 15, pos: 'QB', team: 'WAS', career_av: 4 },
+  { player_name: 'JaMarcus Russell', draft_year: 2007, round: 1, pick: 1, pos: 'QB', team: 'OAK', fdv: 8 },
+  { player_name: 'Trey Lance', draft_year: 2021, round: 1, pick: 3, pos: 'QB', team: 'SFO', fdv: 6 },
+  { player_name: 'Josh Rosen', draft_year: 2018, round: 1, pick: 10, pos: 'QB', team: 'ARI', fdv: 4 },
+  { player_name: 'Dwayne Haskins', draft_year: 2019, round: 1, pick: 15, pos: 'QB', team: 'WAS', fdv: 5 },
 ]
 
 export const MOCK_DRAFT_PICKS = [
-  { draft_year: 2017, round: 1, pick: 10, player_name: 'Patrick Mahomes', pos: 'QB', team: 'KAN', career_av: 140 },
-  { draft_year: 2017, round: 1, pick: 27, player_name: 'Derek Barnett', pos: 'DE', team: 'PHI', career_av: 37 },
-  { draft_year: 2017, round: 2, pick: 38, player_name: 'Deshaun Watson', pos: 'QB', team: 'HOU', career_av: 75 },
-  { draft_year: 2017, round: 3, pick: 83, player_name: 'JuJu Smith-Schuster', pos: 'WR', team: 'PIT', career_av: 50 },
-  { draft_year: 2017, round: 4, pick: 105, player_name: 'Kareem Hunt', pos: 'RB', team: 'KAN', career_av: 56 },
+  { draft_year: 2017, round: 1, pick: 10, player_name: 'Patrick Mahomes', pos: 'QB', team: 'KAN', fdv: 175 },
+  { draft_year: 2017, round: 1, pick: 27, player_name: 'Derek Barnett', pos: 'DE', team: 'PHI', fdv: 45 },
+  { draft_year: 2017, round: 2, pick: 38, player_name: 'Deshaun Watson', pos: 'QB', team: 'HOU', fdv: 95 },
+  { draft_year: 2017, round: 3, pick: 83, player_name: 'JuJu Smith-Schuster', pos: 'WR', team: 'PIT', fdv: 65 },
+  { draft_year: 2017, round: 4, pick: 105, player_name: 'Kareem Hunt', pos: 'RB', team: 'KAN', fdv: 70 },
 ]
