@@ -6,6 +6,9 @@ pgpass.conf
 # DB backups (large binary dumps, kept locally only)
 db_backups/
 
+# Personal notes and reference docs
+personal/
+
 # Dependencies
 node_modules/
 client/dist/
