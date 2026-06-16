@@ -1,9 +1,16 @@
+import { useNavigate } from 'react-router-dom'
+
 export default function Privacy() {
+  const navigate = useNavigate()
   return (
     <div className="min-h-screen bg-slate-950 px-4 py-12">
       <div className="max-w-2xl mx-auto space-y-8">
 
         <div>
+          <button onClick={() => navigate('/')}
+            className="text-xs text-slate-500 hover:text-slate-300 transition-colors mb-4 flex items-center gap-1">
+            ← Back to homepage
+          </button>
           <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-0.5">FOURTH & DATA</p>
           <h1 className="text-3xl font-black text-white tracking-tight">Privacy Policy</h1>
           <p className="text-slate-500 text-sm mt-1">Last updated: June 2026</p>
@@ -64,9 +71,15 @@ export default function Privacy() {
 
         <Section title="Contact">
           <p className="text-slate-400 text-sm leading-relaxed">
-            Questions or concerns? Use the Feedback page inside the platform. This platform is independently operated and not affiliated with the NFL or any of its teams.
+            Questions or concerns about your data or this policy? Contact us through the <strong className="text-slate-300">Feedback page</strong> inside the platform — that is the only way we can be reached.
+            This platform is independently operated and not affiliated with the NFL or any of its teams.
           </p>
         </Section>
+
+        <button onClick={() => navigate('/')}
+          className="text-xs text-slate-500 hover:text-slate-300 transition-colors flex items-center gap-1">
+          ← Back to homepage
+        </button>
 
       </div>
     </div>
