@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink, Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { api } from '../api'
 
@@ -13,8 +13,6 @@ const LINKS = [
   { to: '/saved',      label: 'Saved' },
   { to: '/guide',      label: 'Guide' },
   { to: '/feedback',   label: 'Feedback' },
-  { to: '/share',      label: 'Share' },
-  { to: '/about',      label: 'About' },
   { to: '/admin',      label: 'Admin', adminOnly: true },
 ]
 
@@ -204,6 +202,12 @@ export default function Nav() {
                     </button>
                   ))}
                 </div>
+              </div>
+              <div className="px-4 py-2 border-b border-slate-700/60 flex gap-3">
+                <Link to="/about" onClick={() => setSettingsOpen(false)}
+                  className="text-slate-400 hover:text-white text-xs transition-colors">About</Link>
+                <Link to="/share" onClick={() => setSettingsOpen(false)}
+                  className="text-slate-400 hover:text-white text-xs transition-colors">Share</Link>
               </div>
               <div className="px-4 py-3">
                 <button onClick={handleLogout}
