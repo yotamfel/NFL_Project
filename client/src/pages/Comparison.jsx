@@ -460,6 +460,12 @@ export default function Comparison() {
               <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: BAR_COLORS[i] }} />
               <span className="text-white font-semibold">{p.player_name}</span>
               {p.pos && <span className="text-xs" style={{ color: BAR_COLORS[i], opacity: 0.8 }}>{p.pos}</span>}
+              {(p.team || p.teams) && (
+                <span className="text-xs font-mono px-1.5 py-0.5 rounded"
+                  style={{ background: `${BAR_COLORS[i]}20`, color: BAR_COLORS[i] }}>
+                  {p.team || p.teams}
+                </span>
+              )}
               <button onClick={() => removePlayer(p.player_id)}
                 className="ml-1 text-slate-600 hover:text-red-400 transition-colors text-base leading-none">×</button>
             </div>

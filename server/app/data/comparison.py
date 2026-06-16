@@ -60,6 +60,10 @@ def compare_season(player_ids: list[str], category: str, season: int) -> dict:
         ).fetchall()
 
     by_id = {r.player_id: dict(r._mapping) for r in rows}
+    for p in players:
+        row = by_id.get(p["player_id"])
+        if row and row.get("team"):
+            p["team"] = row["team"]
     seasons_data = [by_id[p["player_id"]] for p in players if p["player_id"] in by_id]
     return {"players": players, "career": seasons_data}
 
@@ -70,7 +74,7 @@ def compare_career_range(player_ids: list[str], category: str, season_from: int,
         raise ValueError(f"unknown category {category!r}; must be one of {CATEGORIES}")
 
     _MAX_COLS = {"lng", "punt_ret_lng", "kick_ret_lng"}
-    _SKIP = {"player_id", "season", "player_name", "pos", "team", "age"}
+    _SKIP = {"player_id", "season", "player_name", "pos", "age"}
 
     with engine.connect() as conn:
         players = _player_info(conn, player_ids)
@@ -86,19 +90,28 @@ def compare_career_range(player_ids: list[str], category: str, season_from: int,
         ).fetchall()
 
     agg: dict[str, dict] = {}
+    teams: dict[str, set] = {}
     for r in rows:
         rd = dict(r._mapping)
         pid = rd["player_id"]
         if pid not in agg:
             agg[pid] = {"player_id": pid, "player_name": rd.get("player_name"), "pos": rd.get("pos")}
+            teams[pid] = set()
+        if rd.get("team"):
+            teams[pid].add(rd["team"].upper())
         for k, v in rd.items():
-            if k in _SKIP or v is None:
+            if k in _SKIP or k == "team" or v is None:
                 continue
             if isinstance(v, (int, float)):
                 if k in _MAX_COLS:
                     agg[pid][k] = max(agg[pid].get(k) or 0, v)
                 else:
                     agg[pid][k] = (agg[pid].get(k) or 0) + v
+
+    for p in players:
+        pid = p["player_id"]
+        if pid in teams and teams[pid]:
+            p["teams"] = "/".join(sorted(teams[pid]))
 
     career = [agg[p["player_id"]] for p in players if p["player_id"] in agg]
     return {"players": players, "career": career}
