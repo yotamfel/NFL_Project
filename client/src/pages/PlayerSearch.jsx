@@ -45,7 +45,7 @@ const FEATURE_CARDS = [
 function fmtPlayers(n) {
   if (!n) return null
   const k = Math.floor(n / 1000) * 1000
-  return `${k.toLocaleString()}+`
+  return `${k.toLocaleString()}+ players`
 }
 
 export default function PlayerSearch() {
