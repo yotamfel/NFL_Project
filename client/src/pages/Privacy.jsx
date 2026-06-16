@@ -74,7 +74,7 @@ export default function Privacy() {
             Questions or concerns about your data or this policy? Use the <strong className="text-slate-300">Feedback page</strong> inside the platform.
           </p>
           <p className="text-slate-400 text-sm leading-relaxed">
-            The platform admin may contact you only through two channels: via a notification inside the platform, or via the email address you registered with. We will never contact you through any other means.
+            If needed, the platform admin will contact you only through a notification inside the platform. We will never contact you through any other means.
           </p>
           <p className="text-slate-400 text-sm leading-relaxed">
             This platform is independently operated and not affiliated with the NFL or any of its teams.
