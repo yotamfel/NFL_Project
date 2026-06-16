@@ -142,6 +142,7 @@ function UsersTab() {
                 <th className="px-4 py-3 text-slate-400 font-medium">Username</th>
                 <th className="px-4 py-3 text-slate-400 font-medium">Email</th>
                 <th className="px-4 py-3 text-slate-400 font-medium">Role</th>
+                <th className="px-4 py-3 text-slate-400 font-medium">Visits</th>
                 <th className="px-4 py-3 text-slate-400 font-medium">Joined</th>
                 <th className="px-4 py-3"></th>
               </tr>
@@ -156,6 +157,7 @@ function UsersTab() {
                       ? <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 font-semibold">admin</span>
                       : <span className="text-xs px-2 py-0.5 rounded-full bg-slate-700 text-slate-400">user</span>}
                   </td>
+                  <td className="px-4 py-3 text-slate-300 text-sm font-medium">{u.visit_count ?? 0}</td>
                   <td className="px-4 py-3 text-slate-500 text-xs">{new Date(u.created_at).toLocaleDateString()}</td>
                   <td className="px-4 py-3 text-right">
                     {u.id !== me?.id && (

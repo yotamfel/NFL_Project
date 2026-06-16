@@ -169,9 +169,14 @@ def admin_delete_feedback(feedback_id: int, admin: dict = Depends(_require_admin
 @router.get("/admin/users")
 def admin_list_users(admin: dict = Depends(_require_admin)):
     with engine.connect() as conn:
-        rows = conn.execute(text(
-            "SELECT id, username, email, is_admin, created_at FROM users ORDER BY created_at DESC"
-        )).fetchall()
+        rows = conn.execute(text("""
+            SELECT u.id, u.username, u.email, u.is_admin, u.created_at,
+                   COUNT(v.id) AS visit_count
+            FROM users u
+            LEFT JOIN user_visits v ON v.user_id = u.id
+            GROUP BY u.id, u.username, u.email, u.is_admin, u.created_at
+            ORDER BY u.created_at DESC
+        """)).fetchall()
     return [dict(r._mapping) for r in rows]
 
 
