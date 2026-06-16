@@ -7,7 +7,7 @@ from app.data.players import _ALLOWED_STATS, _team_codes
 _AGG_MAP = {
     "sum":     lambda s: f"ROUND(SUM(s.{s})::numeric, 1)",
     "avg":     lambda s: f"ROUND(AVG(s.{s})::numeric, 2)",
-    "per_game": lambda s: f"ROUND((SUM(s.{s})::numeric / NULLIF(SUM(s.g), 0)), 2)",
+    "per_game": lambda s: f"ROUND((SUM(s.{s})::numeric / NULLIF(SUM(COALESCE(s.g, CASE WHEN s.season >= 2021 THEN 17 WHEN s.season >= 1978 THEN 16 ELSE 14 END)), 0)), 2)",
 }
 
 
