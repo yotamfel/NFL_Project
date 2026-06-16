@@ -109,8 +109,13 @@ const AGG_OPTIONS = [
 ]
 
 const NOTABLE = [
-  { season: 2020, label: 'COVID',    color: '#f59e0b', desc: 'COVID-19 pandemic — no fans in most stadiums, compressed offseason, modified protocols' },
-  { season: 2021, label: '17 games', color: '#6366f1', desc: 'NFL expanded from 16 to 17 regular-season games per team' },
+  { season: 1970, label: 'AFL-NFL merger',       color: '#64748b', desc: 'AFL and NFL officially merged into one league — the data begins here.', noLine: true },
+  { season: 1978, label: '16 games + pass rules', color: '#22d3ee', desc: 'Schedule expanded from 14 to 16 games and the 5-yard contact rule was introduced — the biggest single-era jump in passing stats.' },
+  { season: 1982, label: 'Strike (9 games)',      color: '#ef4444', desc: 'Players\' strike shortened the season to just 9 games — all counting stats are roughly half a normal season.' },
+  { season: 1987, label: 'Strike (15 games)',     color: '#fb923c', desc: 'Players\' strike — 3 weeks played by replacement players, 15 games total instead of 16.' },
+  { season: 2004, label: 'Pass rule emphasis',    color: '#a78bfa', desc: 'NFL strictly enforced illegal contact rules — passing yards and TDs spiked league-wide before settling into the new normal.' },
+  { season: 2020, label: 'COVID',                 color: '#f59e0b', desc: 'COVID-19 pandemic — no fans in most stadiums, compressed offseason, modified protocols.' },
+  { season: 2021, label: '17 games',              color: '#6366f1', desc: 'NFL expanded from 16 to 17 regular-season games per team.' },
 ]
 
 const LINE_COLORS = ['#3b82f6', '#f97316']
@@ -586,7 +591,7 @@ export default function LeagueTrends() {
                     />
                   )}
                   {NOTABLE.map(n =>
-                    chartData.some(d => d.season === n.season) && (
+                    !n.noLine && chartData.some(d => d.season === n.season) && (
                       <ReferenceLine key={n.season} x={n.season} stroke={n.color}
                         strokeDasharray="4 3" strokeOpacity={0.6}>
                         <Label value={n.label} position="top"
@@ -614,8 +619,13 @@ export default function LeagueTrends() {
                 {NOTABLE.map(n =>
                   chartData.some(d => d.season === n.season) && (
                     <div key={n.season} className="flex items-start gap-2">
-                      <div className="mt-1.5 w-5 flex-shrink-0 border-t-2 border-dashed"
-                        style={{ borderColor: n.color }} />
+                      {n.noLine
+                        ? <span className="mt-1 w-5 flex-shrink-0 flex items-center justify-center">
+                            <span className="w-2 h-2 rounded-full" style={{ background: n.color }} />
+                          </span>
+                        : <div className="mt-1.5 w-5 flex-shrink-0 border-t-2 border-dashed"
+                            style={{ borderColor: n.color }} />
+                      }
                       <p className="text-xs text-slate-400 leading-relaxed">
                         <span className="font-semibold" style={{ color: n.color }}>{n.season} — {n.label}:</span>
                         {' '}{n.desc}
