@@ -5,7 +5,6 @@ from sqlalchemy import text
 from typing import Optional
 
 from app.auth import get_current_user
-from app.config import ADMIN_USERNAME
 from app.db import engine
 
 router = APIRouter(tags=["user-feedback"])
@@ -34,12 +33,8 @@ def _require_admin(current_user: dict = Depends(get_current_user)):
 
 
 def _notify_admin(conn, message: str, feedback_id: int):
-    if not ADMIN_USERNAME:
-        return
-    admin = conn.execute(text(
-        "SELECT id FROM users WHERE LOWER(username) = :u"
-    ), {"u": ADMIN_USERNAME.lower()}).fetchone()
-    if admin:
+    admins = conn.execute(text("SELECT id FROM users WHERE is_admin = TRUE")).fetchall()
+    for admin in admins:
         conn.execute(text(
             "INSERT INTO notifications (user_id, message, feedback_id) VALUES (:uid, :msg, :fid)"
         ), {"uid": admin.id, "msg": message, "fid": feedback_id})

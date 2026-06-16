@@ -76,10 +76,10 @@ export function AuthProvider({ children }) {
     } catch { /* ignore */ }
   }, [])
 
-  // Poll every 30s while logged in to keep counts live
+  // Poll every 10s while logged in to keep counts live
   useEffect(() => {
     if (!user) return
-    const id = setInterval(refreshUnread, 30_000)
+    const id = setInterval(refreshUnread, 10_000)
     return () => clearInterval(id)
   }, [user?.id, refreshUnread])
 

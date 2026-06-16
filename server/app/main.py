@@ -115,6 +115,10 @@ def _run_migrations():
             ADD COLUMN IF NOT EXISTS team TEXT
         """))
         conn.execute(text("""
+            ALTER TABLE notifications
+            ADD COLUMN IF NOT EXISTS feedback_id BIGINT
+        """))
+        conn.execute(text("""
             CREATE TABLE IF NOT EXISTS feedback_messages (
                 id          BIGSERIAL PRIMARY KEY,
                 feedback_id BIGINT NOT NULL,
