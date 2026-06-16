@@ -347,7 +347,7 @@ export default function Comparison() {
 
   // Load comparison data (career or specific season)
   useEffect(() => {
-    if (playerIds.length === 0) { setData(null); return }
+    if (playerIds.length === 0) { setData(null); setError(null); setAddPanelOpen(true); return }
     let cancelled = false
     setLoading(true); setError(null)
     const req = compSeason
