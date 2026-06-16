@@ -114,6 +114,33 @@ def _run_migrations():
             ALTER TABLE anomaly_alerts
             ADD COLUMN IF NOT EXISTS team TEXT
         """))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS feedback_messages (
+                id          BIGSERIAL PRIMARY KEY,
+                feedback_id BIGINT NOT NULL,
+                sender      TEXT NOT NULL,
+                message     TEXT NOT NULL,
+                created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+            )
+        """))
+        # Migrate existing feedback initial messages
+        conn.execute(text("""
+            INSERT INTO feedback_messages (feedback_id, sender, message, created_at)
+            SELECT id, 'user', message, created_at FROM feedback
+            WHERE message IS NOT NULL AND message != ''
+              AND id NOT IN (
+                SELECT DISTINCT feedback_id FROM feedback_messages WHERE sender = 'user'
+              )
+        """))
+        # Migrate existing admin replies
+        conn.execute(text("""
+            INSERT INTO feedback_messages (feedback_id, sender, message, created_at)
+            SELECT id, 'admin', admin_reply, COALESCE(replied_at, created_at) FROM feedback
+            WHERE admin_reply IS NOT NULL AND admin_reply != ''
+              AND id NOT IN (
+                SELECT DISTINCT feedback_id FROM feedback_messages WHERE sender = 'admin'
+              )
+        """))
 
 
 _run_migrations()

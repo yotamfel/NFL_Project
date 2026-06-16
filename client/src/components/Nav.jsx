@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { NavLink, Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { api } from '../api'
@@ -248,26 +248,98 @@ export default function Nav() {
 const TRUNCATE_LEN = 120
 
 function NotifRow({ n, onDelete }) {
-  const [expanded, setExpanded] = useState(false)
+  const [expanded,   setExpanded]   = useState(false)
+  const [thread,     setThread]     = useState(null)
+  const [replyText,  setReplyText]  = useState('')
+  const [sending,    setSending]    = useState(false)
+
   const long = n.message.length > TRUNCATE_LEN
+  const hasFeedback = !!n.feedback_id
+
+  const openThread = useCallback(async () => {
+    if (thread) { setExpanded(v => !v); return }
+    setExpanded(true)
+    try {
+      const msgs = await api.getFeedbackMessages(n.feedback_id)
+      setThread(msgs)
+    } catch { setThread([]) }
+  }, [n.feedback_id, thread])
+
+  const sendReply = async () => {
+    const msg = replyText.trim()
+    if (!msg || sending) return
+    setSending(true)
+    try {
+      await api.replyToFeedback(n.feedback_id, msg)
+      const msgs = await api.getFeedbackMessages(n.feedback_id)
+      setThread(msgs)
+      setReplyText('')
+    } catch { /* ignore */ }
+    finally { setSending(false) }
+  }
+
   return (
-    <div className="px-4 py-3 border-b border-slate-700/60 last:border-0 flex items-start gap-2 group">
-      <div className="flex-1 min-w-0">
-        <p className="text-slate-200 text-sm leading-relaxed">
-          {long && !expanded ? n.message.slice(0, TRUNCATE_LEN) + '…' : n.message}
-        </p>
-        {long && (
-          <button onClick={() => setExpanded(v => !v)}
-            className="text-xs text-amber-400 hover:text-amber-300 mt-0.5 transition-colors">
-            {expanded ? 'Show less' : 'Read more'}
-          </button>
-        )}
-        <p className="text-slate-500 text-xs mt-1">{new Date(n.created_at).toLocaleDateString()}</p>
+    <div className="border-b border-slate-700/60 last:border-0">
+      {/* Notification row */}
+      <div className="px-4 py-3 flex items-start gap-2 group">
+        <div className="flex-1 min-w-0">
+          <p className="text-slate-200 text-sm leading-relaxed">
+            {long && !expanded && !hasFeedback ? n.message.slice(0, TRUNCATE_LEN) + '…' : n.message}
+          </p>
+          <div className="flex items-center gap-3 mt-0.5">
+            {long && !hasFeedback && (
+              <button onClick={() => setExpanded(v => !v)}
+                className="text-xs text-amber-400 hover:text-amber-300 transition-colors">
+                {expanded ? 'Show less' : 'Read more'}
+              </button>
+            )}
+            {hasFeedback && (
+              <button onClick={openThread}
+                className="text-xs text-amber-400 hover:text-amber-300 transition-colors">
+                {expanded ? 'Hide thread' : 'View thread & reply'}
+              </button>
+            )}
+            <p className="text-slate-500 text-xs">{new Date(n.created_at).toLocaleDateString()}</p>
+          </div>
+        </div>
+        <button onClick={() => onDelete(n.id)}
+          className="shrink-0 text-slate-600 hover:text-red-400 text-xs opacity-0 group-hover:opacity-100 transition-all pt-0.5">
+          ✕
+        </button>
       </div>
-      <button onClick={() => onDelete(n.id)}
-        className="shrink-0 text-slate-600 hover:text-red-400 text-xs opacity-0 group-hover:opacity-100 transition-all pt-0.5">
-        ✕
-      </button>
+
+      {/* Thread panel */}
+      {expanded && hasFeedback && (
+        <div className="px-3 pb-3 border-t border-slate-700/40 bg-slate-900/40">
+          <div className="py-2 space-y-2 max-h-48 overflow-y-auto">
+            {thread === null && <p className="text-slate-500 text-xs text-center py-2">Loading…</p>}
+            {(thread ?? []).map(msg => (
+              <div key={msg.id} className={`flex flex-col ${msg.sender === 'admin' ? 'items-start' : 'items-end'}`}>
+                <div className={`max-w-[85%] px-3 py-1.5 rounded-xl text-xs leading-relaxed ${
+                  msg.sender === 'admin'
+                    ? 'bg-amber-500/20 text-amber-100 rounded-tl-none'
+                    : 'bg-slate-700 text-slate-200 rounded-tr-none'
+                }`}>
+                  {msg.message}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-2 mt-2">
+            <input
+              value={replyText}
+              onChange={e => setReplyText(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendReply() } }}
+              placeholder="Reply…"
+              className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-200 text-xs placeholder-slate-600 focus:outline-none focus:border-amber-500/50"
+            />
+            <button onClick={sendReply} disabled={sending || !replyText.trim()}
+              className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 disabled:opacity-40 text-slate-950 text-xs font-bold rounded-lg transition-colors shrink-0">
+              {sending ? '…' : 'Send'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

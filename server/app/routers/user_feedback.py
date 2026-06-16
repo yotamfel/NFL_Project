@@ -1,6 +1,4 @@
 """User feedback & admin feedback management endpoints."""
-from datetime import datetime, timezone
-
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import text
@@ -20,9 +18,39 @@ class FeedbackBody(BaseModel):
     message:  str
 
 
+class ReplyBody(BaseModel):
+    message: str
+
+
 class AdminFeedbackPatch(BaseModel):
-    admin_reply: Optional[str] = None
-    resolved:    Optional[bool] = None
+    resolved: Optional[bool] = None
+
+
+# ── Helpers ────────────────────────────────────────────────────────────────────
+def _require_admin(current_user: dict = Depends(get_current_user)):
+    if not current_user.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admin only")
+    return current_user
+
+
+def _notify_admin(conn, message: str, feedback_id: int):
+    if not ADMIN_USERNAME:
+        return
+    admin = conn.execute(text(
+        "SELECT id FROM users WHERE LOWER(username) = :u"
+    ), {"u": ADMIN_USERNAME.lower()}).fetchone()
+    if admin:
+        conn.execute(text(
+            "INSERT INTO notifications (user_id, message, feedback_id) VALUES (:uid, :msg, :fid)"
+        ), {"uid": admin.id, "msg": message, "fid": feedback_id})
+
+
+def _notify_user(conn, user_id: int, message: str, feedback_id: int):
+    if not user_id:
+        return
+    conn.execute(text(
+        "INSERT INTO notifications (user_id, message, feedback_id) VALUES (:uid, :msg, :fid)"
+    ), {"uid": user_id, "msg": message, "fid": feedback_id})
 
 
 # ── User endpoints ─────────────────────────────────────────────────────────────
@@ -40,64 +68,98 @@ def submit_feedback(body: FeedbackBody, current_user: dict = Depends(get_current
         row = conn.execute(text(
             "INSERT INTO feedback (user_id, username, category, message) VALUES (:uid, :uname, :cat, :msg) RETURNING id"
         ), {"uid": uid, "uname": current_user["username"], "cat": body.category, "msg": message}).fetchone()
-        # Notify admin
-        if ADMIN_USERNAME:
-            admin = conn.execute(text(
-                "SELECT id FROM users WHERE LOWER(username) = :u"
-            ), {"u": ADMIN_USERNAME.lower()}).fetchone()
-            if admin:
-                preview = message[:80] + ('…' if len(message) > 80 else '')
-                conn.execute(text(
-                    "INSERT INTO notifications (user_id, message, feedback_id) VALUES (:uid, :msg, :fid)"
-                ), {"uid": admin.id, "msg": f"New {body.category} feedback from {current_user['username']}: {preview}", "fid": row.id})
+        conn.execute(text(
+            "INSERT INTO feedback_messages (feedback_id, sender, message) VALUES (:fid, 'user', :msg)"
+        ), {"fid": row.id, "msg": message})
+        preview = message[:80] + ('…' if len(message) > 80 else '')
+        _notify_admin(conn, f"New {body.category} feedback from {current_user['username']}: {preview}", row.id)
     return {"id": row.id}
 
 
+@router.get("/feedback/{feedback_id}/messages")
+def get_feedback_messages(feedback_id: int, current_user: dict = Depends(get_current_user)):
+    uid = int(current_user["sub"])
+    is_admin = bool(current_user.get("is_admin"))
+    with engine.connect() as conn:
+        fb = conn.execute(text(
+            "SELECT user_id FROM feedback WHERE id = :id"
+        ), {"id": feedback_id}).fetchone()
+        if not fb:
+            raise HTTPException(status_code=404, detail="Feedback not found")
+        if not is_admin and fb.user_id != uid:
+            raise HTTPException(status_code=403, detail="Forbidden")
+        rows = conn.execute(text(
+            "SELECT id, sender, message, created_at FROM feedback_messages WHERE feedback_id = :fid ORDER BY created_at ASC"
+        ), {"fid": feedback_id}).fetchall()
+    return [dict(r._mapping) for r in rows]
+
+
+@router.post("/feedback/{feedback_id}/reply", status_code=201)
+def user_reply_feedback(feedback_id: int, body: ReplyBody, current_user: dict = Depends(get_current_user)):
+    message = body.message.strip()
+    if len(message) < 1:
+        raise HTTPException(status_code=400, detail="Message cannot be empty")
+    if len(message) > 2000:
+        raise HTTPException(status_code=400, detail="Message must be at most 2000 characters")
+    uid = int(current_user["sub"])
+    with engine.begin() as conn:
+        fb = conn.execute(text(
+            "SELECT id, user_id FROM feedback WHERE id = :id"
+        ), {"id": feedback_id}).fetchone()
+        if not fb:
+            raise HTTPException(status_code=404, detail="Feedback not found")
+        if fb.user_id != uid:
+            raise HTTPException(status_code=403, detail="Forbidden")
+        conn.execute(text(
+            "INSERT INTO feedback_messages (feedback_id, sender, message) VALUES (:fid, 'user', :msg)"
+        ), {"fid": feedback_id, "msg": message})
+        preview = message[:80] + ('…' if len(message) > 80 else '')
+        _notify_admin(conn, f"Reply from {current_user['username']}: {preview}", feedback_id)
+    return {"ok": True}
+
+
 # ── Admin endpoints ────────────────────────────────────────────────────────────
-def _require_admin(current_user: dict = Depends(get_current_user)):
-    if not current_user.get("is_admin"):
-        raise HTTPException(status_code=403, detail="Admin only")
-    return current_user
-
-
 @router.get("/admin/feedback")
 def admin_list_feedback(admin: dict = Depends(_require_admin)):
     with engine.connect() as conn:
         rows = conn.execute(text(
-            "SELECT id, username, category, message, resolved, admin_reply, created_at, replied_at FROM feedback ORDER BY created_at DESC"
+            "SELECT id, username, category, message, resolved, created_at FROM feedback ORDER BY created_at DESC"
         )).fetchall()
     return [dict(r._mapping) for r in rows]
 
 
-@router.patch("/admin/feedback/{feedback_id}")
-def admin_patch_feedback(feedback_id: int, body: AdminFeedbackPatch, admin: dict = Depends(_require_admin)):
+@router.post("/admin/feedback/{feedback_id}/reply", status_code=201)
+def admin_reply_feedback(feedback_id: int, body: ReplyBody, admin: dict = Depends(_require_admin)):
+    message = body.message.strip()
+    if not message:
+        raise HTTPException(status_code=400, detail="Message cannot be empty")
     with engine.begin() as conn:
         fb = conn.execute(text(
-            "SELECT id, user_id, admin_reply FROM feedback WHERE id = :id"
+            "SELECT id, user_id, username FROM feedback WHERE id = :id"
         ), {"id": feedback_id}).fetchone()
         if not fb:
             raise HTTPException(status_code=404, detail="Feedback not found")
+        conn.execute(text(
+            "INSERT INTO feedback_messages (feedback_id, sender, message) VALUES (:fid, 'admin', :msg)"
+        ), {"fid": feedback_id, "msg": message})
+        conn.execute(text(
+            "UPDATE feedback SET replied_at = now() WHERE id = :id"
+        ), {"id": feedback_id})
+        preview = message[:80] + ('…' if len(message) > 80 else '')
+        _notify_user(conn, fb.user_id, f"Admin replied: {preview}", feedback_id)
+    return {"ok": True}
 
-        sets = []
-        params: dict = {"id": feedback_id}
 
-        if body.resolved is not None:
-            sets.append("resolved = :resolved")
-            params["resolved"] = body.resolved
-
-        if body.admin_reply is not None:
-            sets.append("admin_reply = :reply")
-            params["reply"] = body.admin_reply
-            first_reply = fb.admin_reply is None
-            if first_reply:
-                sets.append("replied_at = now()")
-                if fb.user_id:
-                    conn.execute(text(
-                        "INSERT INTO notifications (user_id, message, feedback_id) VALUES (:uid, :msg, :fid)"
-                    ), {"uid": fb.user_id, "msg": body.admin_reply, "fid": feedback_id})
-
-        if sets:
-            conn.execute(text(f"UPDATE feedback SET {', '.join(sets)} WHERE id = :id"), params)
+@router.patch("/admin/feedback/{feedback_id}")
+def admin_patch_feedback(feedback_id: int, body: AdminFeedbackPatch, admin: dict = Depends(_require_admin)):
+    if body.resolved is None:
+        return {"ok": True}
+    with engine.begin() as conn:
+        result = conn.execute(text(
+            "UPDATE feedback SET resolved = :resolved WHERE id = :id"
+        ), {"resolved": body.resolved, "id": feedback_id})
+        if result.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Feedback not found")
     return {"ok": True}
 
 

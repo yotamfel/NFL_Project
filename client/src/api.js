@@ -97,6 +97,8 @@ export const api = {
 
   // ── User feedback ─────────────────────────────────────────────────────────
   submitUserFeedback: (category, message) => post('/feedback', { category, message }),
+  getFeedbackMessages: (feedbackId) => get(`/feedback/${feedbackId}/messages`),
+  replyToFeedback: (feedbackId, message) => post(`/feedback/${feedbackId}/reply`, { message }),
 
   // ── Notifications ─────────────────────────────────────────────────────────
   getNotifications:      ()   => get('/notifications'),
@@ -108,6 +110,7 @@ export const api = {
   getAdminFeedback: ()              => get('/admin/feedback'),
   patchAdminFeedback: (id, body)    => patch(`/admin/feedback/${id}`, body),
   deleteAdminFeedback: (id)         => del(`/admin/feedback/${id}`),
+  adminReplyToFeedback: (id, message) => post(`/admin/feedback/${id}/reply`, { message }),
   getAdminVisits: ()                => get('/admin/visits'),
   getAdminStats: ()                 => get('/admin/stats'),
   getAdminAi: ()                    => get('/admin/ai'),
