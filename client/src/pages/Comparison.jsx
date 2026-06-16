@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { api } from '../api'
 import { Loading, ErrorMsg } from '../components/Status'
 import StatTable, { CsvDownloadButton } from '../components/StatTable'
@@ -293,8 +294,13 @@ function shortName(full = '') {
 }
 
 export default function Comparison() {
-  const [category,      setCategory]      = useState('passing')
-  const [playerIds,     setPlayerIds]     = useState([])
+  const [searchParams] = useSearchParams()
+
+  const [category,      setCategory]      = useState(() => searchParams.get('category') || 'passing')
+  const [playerIds,     setPlayerIds]     = useState(() => {
+    const p = searchParams.get('players')
+    return p ? p.split(',').filter(Boolean) : []
+  })
   const [searchQuery,   setSearchQuery]   = useState('')
   const [searchResults, setSearchResults] = useState([])
   const [data,          setData]          = useState(null)
@@ -303,7 +309,7 @@ export default function Comparison() {
   const [saved,         setSaved]         = useState(false)
   const [filtersOpen,   setFiltersOpen]   = useState(false)
   const [showAllStats,  setShowAllStats]  = useState(false)
-  const [addPanelOpen,  setAddPanelOpen]  = useState(true)
+  const [addPanelOpen,  setAddPanelOpen]  = useState(() => !searchParams.get('players'))
   const [compSeason,    setCompSeason]    = useState('')
   const [seasonFrom,    setSeasonFrom]    = useState('')
   const [seasonTo,      setSeasonTo]      = useState('')
