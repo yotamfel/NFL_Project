@@ -35,11 +35,22 @@ def get_anomalies(
     where = ("WHERE " + " AND ".join(filters)) if filters else ""
     order = "season DESC, week DESC NULLS LAST, severity DESC" if sort == "latest" else "severity DESC, detected_at DESC"
     sql = text(f"""
-        SELECT id, detected_at, season, player_id, player_name, pos, team,
+        SELECT id, detected_at, season, player_id, player_name, pos,
+               COALESCE(
+                   team,
+                   (SELECT ps.team FROM passing_seasons ps
+                    WHERE ps.player_id = a.player_id AND ps.season = a.season LIMIT 1),
+                   (SELECT os.team FROM offense_seasons os
+                    WHERE os.player_id = a.player_id AND os.season = a.season LIMIT 1),
+                   (SELECT ds.team FROM defense_seasons ds
+                    WHERE ds.player_id = a.player_id AND ds.season = a.season LIMIT 1),
+                   (SELECT ws.team FROM weekly_stats ws
+                    WHERE ws.player_id = a.player_id AND ws.season = a.season LIMIT 1)
+               ) AS team,
                category, metric, value, career_avg, career_high,
                alert_type, description, severity,
                week, opponent
-        FROM anomaly_alerts
+        FROM anomaly_alerts a
         {where}
         ORDER BY {order}
         LIMIT :limit
