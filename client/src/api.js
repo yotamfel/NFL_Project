@@ -105,6 +105,7 @@ export const api = {
   // ── Admin ─────────────────────────────────────────────────────────────────
   getAdminFeedback: ()              => get('/admin/feedback'),
   patchAdminFeedback: (id, body)    => patch(`/admin/feedback/${id}`, body),
+  deleteAdminFeedback: (id)         => del(`/admin/feedback/${id}`),
   getAdminVisits: ()                => get('/admin/visits'),
   getAdminStats: ()                 => get('/admin/stats'),
   getAdminAi: ()                    => get('/admin/ai'),

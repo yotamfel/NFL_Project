@@ -168,8 +168,13 @@ def login(body: LoginBody):
         refresh = create_refresh_token()
         _store_refresh(conn, row.id, refresh)
 
+    record_visit(row.id, row.username)
     user_dict = _user_row_to_dict(row)
     user_dict["is_admin"] = is_admin
+    unread = _count_unread(row.id)
+    user_dict["unread_notifications_count"] = unread
+    if is_admin:
+        user_dict["unresolved_feedback_count"] = _count_unresolved_feedback()
     return {
         "access_token":  create_access_token(row.id, row.username, is_admin=is_admin),
         "refresh_token": refresh,
@@ -196,9 +201,12 @@ def refresh_token(body: RefreshBody):
     record_visit(user.id, user.username)
 
     unread = _count_unread(user.id)
+    user_dict = {**_user_row_to_dict(user), "unread_notifications_count": unread}
+    if user.is_admin:
+        user_dict["unresolved_feedback_count"] = _count_unresolved_feedback()
     return {
         "access_token": create_access_token(user.id, user.username, is_admin=bool(user.is_admin)),
-        "user": {**_user_row_to_dict(user), "unread_notifications_count": unread},
+        "user": user_dict,
     }
 
 
@@ -218,7 +226,10 @@ def me(current_user: dict = Depends(get_current_user)):
         if not row:
             raise HTTPException(status_code=404, detail="User not found")
         unread = _count_unread(row.id)
-    return {**_user_row_to_dict(row), "unread_notifications_count": unread}
+    user_dict = {**_user_row_to_dict(row), "unread_notifications_count": unread}
+    if row.is_admin:
+        user_dict["unresolved_feedback_count"] = _count_unresolved_feedback()
+    return user_dict
 
 
 def _count_unread(user_id: int) -> int:
@@ -226,3 +237,10 @@ def _count_unread(user_id: int) -> int:
         return conn.execute(text(
             "SELECT COUNT(*) FROM notifications WHERE user_id = :uid AND is_read = FALSE"
         ), {"uid": user_id}).scalar() or 0
+
+
+def _count_unresolved_feedback() -> int:
+    with engine.connect() as conn:
+        return conn.execute(text(
+            "SELECT COUNT(*) FROM feedback WHERE resolved = FALSE"
+        )).scalar() or 0

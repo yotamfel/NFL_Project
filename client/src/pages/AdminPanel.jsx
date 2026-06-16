@@ -99,9 +99,10 @@ function VisitsTab() {
 // ── Users management ──────────────────────────────────────────────────────────
 function UsersTab() {
   const { user: me } = useAuth()
-  const [users,     setUsers]     = useState(null)
+  const [users,      setUsers]      = useState(null)
   const [confirming, setConfirming] = useState(null)
-  const [deleting,  setDeleting]  = useState({})
+  const [deleting,   setDeleting]   = useState({})
+  const [search,     setSearch]     = useState('')
 
   useEffect(() => { api.getAdminUsers().then(setUsers).catch(() => {}) }, [])
 
@@ -119,72 +120,93 @@ function UsersTab() {
 
   if (!users) return <Spinner />
 
+  const q = search.toLowerCase()
+  const visible = users.filter(u =>
+    !q || u.username.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
+  )
+
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-slate-800 text-left">
-            <th className="px-4 py-3 text-slate-400 font-medium">Username</th>
-            <th className="px-4 py-3 text-slate-400 font-medium">Email</th>
-            <th className="px-4 py-3 text-slate-400 font-medium">Role</th>
-            <th className="px-4 py-3 text-slate-400 font-medium">Joined</th>
-            <th className="px-4 py-3"></th>
-          </tr>
-        </thead>
-        <tbody>
-          {users.map(u => (
-            <tr key={u.id} className="border-b border-slate-800/60 last:border-0 hover:bg-slate-800/30">
-              <td className="px-4 py-3 text-white font-medium">{u.username}</td>
-              <td className="px-4 py-3 text-slate-400">{u.email}</td>
-              <td className="px-4 py-3">
-                {u.is_admin
-                  ? <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 font-semibold">admin</span>
-                  : <span className="text-xs px-2 py-0.5 rounded-full bg-slate-700 text-slate-400">user</span>}
-              </td>
-              <td className="px-4 py-3 text-slate-500 text-xs">{new Date(u.created_at).toLocaleDateString()}</td>
-              <td className="px-4 py-3 text-right">
-                {u.id !== me?.id && (
-                  confirming === u.id ? (
-                    <div className="flex items-center gap-2 justify-end">
-                      <span className="text-slate-400 text-xs">Delete {u.username}?</span>
-                      <button onClick={() => deleteUser(u.id)} disabled={deleting[u.id]}
-                        className="px-2.5 py-1 bg-red-500 hover:bg-red-400 disabled:opacity-50 text-white text-xs font-bold rounded-lg transition-colors">
-                        {deleting[u.id] ? '…' : 'Yes'}
-                      </button>
-                      <button onClick={() => setConfirming(null)}
-                        className="px-2.5 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs rounded-lg transition-colors">
-                        Cancel
-                      </button>
-                    </div>
-                  ) : (
-                    <button onClick={() => setConfirming(u.id)}
-                      className="px-2.5 py-1 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors">
-                      Delete
-                    </button>
-                  )
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="space-y-3">
+      <div className="flex items-center gap-3">
+        <input value={search} onChange={e => setSearch(e.target.value)}
+          placeholder="Search by username or email…"
+          className="flex-1 bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-slate-500 placeholder-slate-600" />
+        <span className="text-slate-500 text-xs shrink-0">{visible.length} / {users.length}</span>
+      </div>
+      <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+        <div className="overflow-y-auto max-h-[60vh]">
+          <table className="w-full text-sm">
+            <thead className="sticky top-0 bg-slate-900 z-10">
+              <tr className="border-b border-slate-800 text-left">
+                <th className="px-4 py-3 text-slate-400 font-medium">Username</th>
+                <th className="px-4 py-3 text-slate-400 font-medium">Email</th>
+                <th className="px-4 py-3 text-slate-400 font-medium">Role</th>
+                <th className="px-4 py-3 text-slate-400 font-medium">Joined</th>
+                <th className="px-4 py-3"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {visible.map(u => (
+                <tr key={u.id} className="border-b border-slate-800/60 last:border-0 hover:bg-slate-800/30">
+                  <td className="px-4 py-3 text-white font-medium">{u.username}</td>
+                  <td className="px-4 py-3 text-slate-400">{u.email}</td>
+                  <td className="px-4 py-3">
+                    {u.is_admin
+                      ? <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 font-semibold">admin</span>
+                      : <span className="text-xs px-2 py-0.5 rounded-full bg-slate-700 text-slate-400">user</span>}
+                  </td>
+                  <td className="px-4 py-3 text-slate-500 text-xs">{new Date(u.created_at).toLocaleDateString()}</td>
+                  <td className="px-4 py-3 text-right">
+                    {u.id !== me?.id && (
+                      confirming === u.id ? (
+                        <div className="flex items-center gap-2 justify-end">
+                          <span className="text-slate-400 text-xs">Delete {u.username}?</span>
+                          <button onClick={() => deleteUser(u.id)} disabled={deleting[u.id]}
+                            className="px-2.5 py-1 bg-red-500 hover:bg-red-400 disabled:opacity-50 text-white text-xs font-bold rounded-lg transition-colors">
+                            {deleting[u.id] ? '…' : 'Yes'}
+                          </button>
+                          <button onClick={() => setConfirming(null)}
+                            className="px-2.5 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs rounded-lg transition-colors">
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <button onClick={() => setConfirming(u.id)}
+                          className="px-2.5 py-1 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors">
+                          Delete
+                        </button>
+                      )
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   )
 }
 
 // ── Feedback management ────────────────────────────────────────────────────────
 function FeedbackTab() {
-  const [items,    setItems]    = useState(null)
-  const [filter,   setFilter]   = useState('all')
-  const [expanded, setExpanded] = useState(null)
-  const [replies,  setReplies]  = useState({})
-  const [saving,   setSaving]   = useState({})
+  const { refreshUnread } = useAuth()
+  const [items,      setItems]      = useState(null)
+  const [filter,     setFilter]     = useState('open')
+  const [search,     setSearch]     = useState('')
+  const [expanded,   setExpanded]   = useState(null)
+  const [replies,    setReplies]    = useState({})
+  const [saving,     setSaving]     = useState({})
+  const [confirming, setConfirming] = useState(null)
+  const [deleting,   setDeleting]   = useState({})
 
   useEffect(() => { api.getAdminFeedback().then(setItems).catch(() => {}) }, [])
 
-  const filtered = (items || []).filter(i => {
-    if (filter === 'open')     return !i.resolved
-    if (filter === 'resolved') return i.resolved
+  const q = search.toLowerCase()
+  const visible = (items || []).filter(i => {
+    if (filter === 'open')     { if (i.resolved) return false }
+    if (filter === 'resolved') { if (!i.resolved) return false }
+    if (q) return i.username.toLowerCase().includes(q) || i.message.toLowerCase().includes(q)
     return true
   })
 
@@ -204,15 +226,30 @@ function FeedbackTab() {
     try {
       await api.patchAdminFeedback(id, { resolved: !resolved })
       setItems(prev => prev.map(i => i.id === id ? { ...i, resolved: !resolved } : i))
+      refreshUnread()
     } catch { /* ignore */ }
+  }
+
+  const deleteFeedback = async (id) => {
+    setDeleting(d => ({ ...d, [id]: true }))
+    try {
+      await api.deleteAdminFeedback(id)
+      setItems(prev => prev.filter(i => i.id !== id))
+      if (expanded === id) setExpanded(null)
+      refreshUnread()
+    } catch { /* ignore */ }
+    finally {
+      setDeleting(d => ({ ...d, [id]: false }))
+      setConfirming(null)
+    }
   }
 
   if (!items) return <Spinner />
 
   return (
-    <div>
-      {/* Filter bar */}
-      <div className="flex gap-2 mb-4">
+    <div className="space-y-3">
+      {/* Filter + search bar */}
+      <div className="flex flex-wrap gap-2 items-center">
         {['all', 'open', 'resolved'].map(f => (
           <button key={f} onClick={() => setFilter(f)}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-colors ${
@@ -221,31 +258,53 @@ function FeedbackTab() {
             {f}
           </button>
         ))}
-        <span className="ml-auto text-slate-500 text-xs self-center">{filtered.length} items</span>
+        <input value={search} onChange={e => setSearch(e.target.value)}
+          placeholder="Search by user or message…"
+          className="flex-1 min-w-40 bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-1.5 focus:outline-none focus:border-slate-500 placeholder-slate-600" />
+        <span className="text-slate-500 text-xs shrink-0">{visible.length} items</span>
       </div>
 
-      <div className="space-y-2">
-        {filtered.length === 0 && (
+      <div className="space-y-2 overflow-y-auto max-h-[65vh] pr-1">
+        {visible.length === 0 && (
           <p className="text-slate-500 text-sm text-center py-8">No feedback found.</p>
         )}
-        {filtered.map(item => (
+        {visible.map(item => (
           <div key={item.id} className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
             {/* Row header */}
-            <button className="w-full px-4 py-3 flex items-center gap-3 text-left hover:bg-slate-800/50 transition-colors"
-              onClick={() => setExpanded(expanded === item.id ? null : item.id)}>
-              <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                item.category === 'bug'     ? 'bg-red-500/20 text-red-400' :
-                item.category === 'feature' ? 'bg-blue-500/20 text-blue-400' :
-                item.category === 'data'    ? 'bg-purple-500/20 text-purple-400' :
-                'bg-slate-700 text-slate-300'
-              }`}>{item.category}</span>
-              <span className="text-slate-300 text-sm font-medium truncate flex-1">{item.username}</span>
-              <span className="text-slate-500 text-xs shrink-0">{new Date(item.created_at).toLocaleDateString()}</span>
-              <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${item.resolved ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}`}>
-                {item.resolved ? 'resolved' : 'open'}
-              </span>
-              <span className="text-slate-500 text-xs shrink-0">{expanded === item.id ? '▲' : '▼'}</span>
-            </button>
+            <div className="px-4 py-3 flex items-center gap-3 hover:bg-slate-800/50 transition-colors">
+              <button className="flex items-center gap-3 text-left flex-1 min-w-0"
+                onClick={() => setExpanded(expanded === item.id ? null : item.id)}>
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                  item.category === 'bug'     ? 'bg-red-500/20 text-red-400' :
+                  item.category === 'feature' ? 'bg-blue-500/20 text-blue-400' :
+                  item.category === 'data'    ? 'bg-purple-500/20 text-purple-400' :
+                  'bg-slate-700 text-slate-300'
+                }`}>{item.category}</span>
+                <span className="text-slate-300 text-sm font-medium truncate">{item.username}</span>
+                <span className="text-slate-500 text-xs shrink-0">{new Date(item.created_at).toLocaleDateString()}</span>
+                <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${item.resolved ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}`}>
+                  {item.resolved ? 'resolved' : 'open'}
+                </span>
+                <span className="text-slate-500 text-xs shrink-0">{expanded === item.id ? '▲' : '▼'}</span>
+              </button>
+              {/* Delete */}
+              {confirming === item.id ? (
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className="text-slate-400 text-xs">Delete?</span>
+                  <button onClick={() => deleteFeedback(item.id)} disabled={deleting[item.id]}
+                    className="px-2 py-0.5 bg-red-500 hover:bg-red-400 disabled:opacity-50 text-white text-xs font-bold rounded transition-colors">
+                    {deleting[item.id] ? '…' : 'Yes'}
+                  </button>
+                  <button onClick={() => setConfirming(null)}
+                    className="px-2 py-0.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs rounded transition-colors">
+                    No
+                  </button>
+                </div>
+              ) : (
+                <button onClick={() => setConfirming(item.id)}
+                  className="shrink-0 text-slate-600 hover:text-red-400 text-xs transition-colors px-1">✕</button>
+              )}
+            </div>
 
             {/* Expanded */}
             {expanded === item.id && (
@@ -259,7 +318,6 @@ function FeedbackTab() {
                   </div>
                 )}
 
-                {/* Reply box */}
                 <div>
                   <textarea
                     placeholder="Reply to this feedback (will notify the user)…"

@@ -68,7 +68,11 @@ export function AuthProvider({ children }) {
   const refreshUnread = useCallback(async () => {
     try {
       const me = await api.me()
-      setUser(prev => prev ? { ...prev, unread_notifications_count: me.unread_notifications_count } : prev)
+      setUser(prev => prev ? {
+        ...prev,
+        unread_notifications_count: me.unread_notifications_count,
+        ...(me.unresolved_feedback_count != null ? { unresolved_feedback_count: me.unresolved_feedback_count } : {}),
+      } : prev)
     } catch { /* ignore */ }
   }, [])
 

@@ -110,13 +110,18 @@ export default function Nav() {
         <div className="flex items-center gap-1 overflow-x-auto flex-1 mr-3" style={{ scrollbarWidth: 'none' }}>
           {LINKS.filter(({ adminOnly }) => !adminOnly || user?.is_admin).map(({ to, label, adminOnly }) => (
             <NavLink key={to} to={to} className={({ isActive }) =>
-              `text-xs font-medium px-2.5 py-1.5 rounded-lg transition-colors whitespace-nowrap shrink-0 ${
+              `relative text-xs font-medium px-2.5 py-1.5 rounded-lg transition-colors whitespace-nowrap shrink-0 ${
                 isActive
                   ? adminOnly ? 'bg-amber-500/20 text-amber-400' : 'bg-slate-800 text-white'
                   : adminOnly ? 'text-amber-500 hover:text-amber-300 hover:bg-amber-500/10' : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
               }`
             }>
               {label}
+              {adminOnly && (user?.unresolved_feedback_count > 0) && (
+                <span className="absolute -top-1 -right-1 min-w-4 h-4 bg-red-500 rounded-full text-white text-[9px] flex items-center justify-center font-bold px-0.5">
+                  {user.unresolved_feedback_count > 9 ? '9+' : user.unresolved_feedback_count}
+                </span>
+              )}
             </NavLink>
           ))}
         </div>

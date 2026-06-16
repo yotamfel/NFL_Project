@@ -90,6 +90,14 @@ def admin_patch_feedback(feedback_id: int, body: AdminFeedbackPatch, admin: dict
     return {"ok": True}
 
 
+@router.delete("/admin/feedback/{feedback_id}", status_code=204)
+def admin_delete_feedback(feedback_id: int, admin: dict = Depends(_require_admin)):
+    with engine.begin() as conn:
+        result = conn.execute(text("DELETE FROM feedback WHERE id = :id"), {"id": feedback_id})
+        if result.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Feedback not found")
+
+
 @router.get("/admin/users")
 def admin_list_users(admin: dict = Depends(_require_admin)):
     with engine.connect() as conn:
