@@ -35,9 +35,9 @@ const FEATURE_CARDS = [
     color: '#f472b6', dark: '#500724',
   },
   {
-    icon: '📋', title: 'Dashboard',
-    desc: 'Build custom dashboards with charts, tables and text widgets — drag, resize, and export',
-    href: '/dashboard',
+    icon: '★', title: 'Saved & Notes',
+    desc: 'Save players, charts and comparisons — add personal notes and export to PNG',
+    href: '/saved',
     color: '#22d3ee', dark: '#083344',
   },
 ]

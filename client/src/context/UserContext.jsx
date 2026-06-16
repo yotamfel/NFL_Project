@@ -5,56 +5,10 @@ const Ctx = createContext(null)
 
 const EMPTY_SAVED = { players: [], comparisons: [], searches: [], notes: [], charts: [], tables: [] }
 
-function loadDashboards(key) {
-  try { return JSON.parse(localStorage.getItem(key)) ?? [] }
-  catch { return [] }
-}
-
-function persistDashboards(key, dashboards) {
-  if (key) localStorage.setItem(key, JSON.stringify(dashboards))
-}
-
 export function UserProvider({ children }) {
   const { user } = useAuth()
   const username  = user?.username ?? ''
-  const dashKey   = user ? `nfl_dashboards_${user.id}` : null
 
-  const [dashboards, setDashboards] = useState([])
-
-  // Reload dashboards when the logged-in user changes
-  useEffect(() => {
-    setDashboards(dashKey ? loadDashboards(dashKey) : [])
-  }, [dashKey])
-
-  const updDash = useCallback(fn => {
-    setDashboards(prev => {
-      const next = fn(prev)
-      persistDashboards(dashKey, next)
-      return next
-    })
-  }, [dashKey])
-
-  // ── Dashboards ────────────────────────────────────────────────────────────
-  const saveDashboard = name => {
-    const id = Date.now().toString()
-    updDash(ds => [{
-      id,
-      name,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      widgets: [],
-    }, ...ds])
-    return id
-  }
-  const removeDashboard  = id => updDash(ds => ds.filter(d => d.id !== id))
-  const updateDashboard  = (id, changes) => updDash(ds =>
-    ds.map(d => d.id === id ? { ...d, ...changes, updatedAt: new Date().toISOString() } : d)
-  )
-  const getDashboard     = id => dashboards.find(d => d.id === id)
-
-  // ── Charts & Tables (localStorage cache for dashboard builder) ────────────
-  // These are the "saved chart/table configs" used in the dashboard. They live
-  // in localStorage alongside dashboards and are NOT migrated to the DB.
   const [saved, setSaved] = useState(() => EMPTY_SAVED)
 
   useEffect(() => {
@@ -117,14 +71,13 @@ export function UserProvider({ children }) {
 
   return (
     <Ctx.Provider value={{
-      username, saved, dashboards,
+      username, saved,
       savePlayer, removePlayer, isPlayerSaved, updatePlayerNote,
       saveComparison, removeComparison, updateComparisonNote,
       saveSearch, removeSearch, updateSearchNote,
       addNote, removeNote, updateNote,
       saveChart, removeChart, isChartSaved,
       saveTable, removeTable, isTableSaved,
-      saveDashboard, removeDashboard, updateDashboard, getDashboard,
     }}>
       {children}
     </Ctx.Provider>

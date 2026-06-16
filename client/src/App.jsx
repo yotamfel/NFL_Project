@@ -15,8 +15,6 @@ import Saved from './pages/Saved'
 import LeagueTrends from './pages/LeagueTrends'
 import Guide from './pages/Guide'
 import AdminAi from './pages/AdminAi'
-import Dashboard from './pages/Dashboard'
-import DashboardBuilder from './pages/DashboardBuilder'
 import Anomalies from './pages/Anomalies'
 import Feedback from './pages/Feedback'
 import AdminPanel from './pages/AdminPanel'
@@ -29,8 +27,6 @@ import Footer from './components/Footer'
 function AppInner() {
   const { user, isLoading } = useAuth()
   const location = useLocation()
-  const isBuilder = /^\/dashboard\/.+/.test(location.pathname)
-
   useEffect(() => {
     const html = document.documentElement
     const theme = user?.theme || 'dark'
@@ -62,10 +58,10 @@ function AppInner() {
 
   return (
     <UserProvider>
-      <div className={`flex flex-col bg-slate-950 ${isBuilder ? 'h-screen overflow-hidden' : 'min-h-screen'}`}>
+      <div className="flex flex-col bg-slate-950 min-h-screen">
         <Nav />
         <Onboarding />
-        <main className={`flex-1 w-full mx-auto ${isBuilder ? 'min-h-0 overflow-hidden' : 'max-w-6xl px-4 py-6'}`}>
+        <main className="flex-1 w-full mx-auto max-w-6xl px-4 py-6">
           <Routes>
             <Route path="/"                element={<PlayerSearch />} />
             <Route path="/players"         element={<PlayerLanding />} />
@@ -78,8 +74,6 @@ function AppInner() {
             <Route path="/guide"           element={<Guide />} />
             <Route path="/admin/ai"        element={<AdminAi />} />
             <Route path="/admin"           element={<AdminPanel />} />
-            <Route path="/dashboard"       element={<Dashboard />} />
-            <Route path="/dashboard/:id"   element={<DashboardBuilder />} />
             <Route path="/anomalies"       element={<Anomalies />} />
             <Route path="/feedback"        element={<Feedback />} />
             <Route path="/about"           element={<About />} />
@@ -87,7 +81,7 @@ function AppInner() {
             <Route path="/privacy"         element={<Privacy />} />
           </Routes>
         </main>
-        {!isBuilder && <Footer />}
+        <Footer />
       </div>
     </UserProvider>
   )

@@ -96,6 +96,5 @@ async function _migrateLocalStorage(username) {
     ;(saved.tables     || []).forEach(t => items.push({ type: 'table',      label: t.title || 'table', data: t, note: '' }))
     if (items.length) await api.migrateSaved(items)
     localStorage.removeItem(key)
-    localStorage.removeItem(`nfl_dashboards_${username}`)
   } catch { /* ignore migration errors */ }
 }
