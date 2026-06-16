@@ -107,7 +107,7 @@ export default function FdvPage() {
               cat: 'Defense (LB / DL / CB / S)',
               color: '#f87171',
               formula: 'sacks × 8 + INTs × 8 + pass deflections × 2 + forced fumbles × 4 + TFL × 3 + tackles × 0.25 + QB hits × 1.5 + safeties × 6',
-              notes: 'High-value turnovers (sacks, INTs) are heavily weighted. Tackles are included at a lower weight because their quality varies widely. Minimum 8 games played to qualify.',
+              notes: 'High-value plays (sacks, INTs) are heavily weighted. Tackles are included at a lower weight because their quality varies widely. Minimum 13 games played to qualify (true starters only). Era-normalisation is computed within four position sub-groups: pass rushers (DE/OLB/outside LB) compete with other pass rushers; coverage players (CB/S) with coverage; interior DL (DT/NT) with interior DL; and inside linebackers (ILB/MLB) with inside linebackers. This prevents sack totals from dominating across unrelated positions.',
             },
             {
               cat: 'Kicking',
@@ -191,6 +191,19 @@ export default function FdvPage() {
         <p className={section}>Known Limitations</p>
         <ul className="space-y-2 text-sm text-slate-400 list-disc list-inside">
           <li>
+            <span className="text-slate-300 font-medium">Longevity bias</span>
+            {' '}— FDV is a career sum, so players who played 16+ seasons accumulate
+            more than equally dominant players with shorter careers. A linebacker
+            who played 18 solid seasons can outscore a pass rusher who had 15 elite
+            seasons. This is an inherent trade-off in career-value metrics.
+          </li>
+          <li>
+            <span className="text-slate-300 font-medium">Positional value not captured</span>
+            {' '}— a QB who is 2 standard deviations above average has more impact on
+            team winning than a linebacker at the same relative excellence. FDV treats
+            all positions as equally valuable within their peer group.
+          </li>
+          <li>
             <span className="text-slate-300 font-medium">Offensive linemen</span>
             {' '}have no reliable per-season statistics in our database.
             OL players will show FDV = 0 until stat tracking improves.
@@ -199,11 +212,6 @@ export default function FdvPage() {
             <span className="text-slate-300 font-medium">Pre-1999 data gaps</span>
             {' '}exist for some advanced stats (e.g. TFL, QB hits, targets).
             Seasons with missing columns still compute FDV from available data.
-          </li>
-          <li>
-            <span className="text-slate-300 font-medium">Team context</span>
-            {' '}is not captured — a great player on a bad team may be
-            undervalued relative to the same player on a winning team.
           </li>
           <li>
             <span className="text-slate-300 font-medium">Post-season stats</span>

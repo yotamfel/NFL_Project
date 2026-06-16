@@ -95,6 +95,36 @@ def _raw_offense(df: pd.DataFrame) -> pd.Series:
     return rush_yds * 0.06 + rush_td * 5 + rec_yds * 0.07 + rec_td * 7 + rec * 0.5 - fmb * 2
 
 
+# Four defensive sub-groups — each z-scored independently so every position
+# type competes only with its true peers:
+#   pass_rush : edge rushers (DE, OLB in 3-4, outside LBs) — sack-primary
+#   coverage  : cornerbacks and safeties
+#   dt        : interior defensive linemen (DT / NT)
+#   lb        : true inside / middle linebackers (ILB, MLB, RILB, LILB)
+#
+# Outside linebackers (LLB, RLB) go to pass_rush because many accumulated
+# sack totals comparable to DEs — comparing them to ILBs distorts z-scores.
+_PASS_RUSH_POS = frozenset({
+    'DE', 'LDE', 'RDE', 'OLB', 'LOLB', 'ROLB', 'LLB', 'RLB',
+})
+_COVERAGE_POS  = frozenset({'CB', 'LCB', 'RCB', 'NCB', 'DB', 'S', 'FS', 'SS'})
+_DT_POS        = frozenset({'DT', 'NT', 'LDT', 'RDT'})
+# ILB, MLB, RILB, LILB, and bare 'LB' → 'lb'
+
+
+def _def_group(pos) -> str:
+    if pd.isna(pos):
+        return 'lb'
+    p = str(pos).upper().strip()
+    if p in _PASS_RUSH_POS:
+        return 'pass_rush'
+    if p in _COVERAGE_POS:
+        return 'coverage'
+    if p in _DT_POS:
+        return 'dt'
+    return 'lb'
+
+
 def _raw_defense(df: pd.DataFrame) -> pd.Series:
     sk      = df.get('sk',      pd.Series(0, index=df.index)).fillna(0)
     int_    = df.get('int',     pd.Series(0, index=df.index)).fillna(0)
@@ -149,7 +179,7 @@ def _qualify(df: pd.DataFrame, category: str) -> pd.Series:
         rec = df.get('rec', pd.Series(0, index=df.index)).fillna(0)
         return (att + rec) >= 30
     if category == 'defense':
-        return df['g'].fillna(0) >= 8
+        return df['g'].fillna(0) >= 13  # true starters only (≥ 75 % of 16/17-game season)
     if category == 'kicking':
         return df.get('fga_total', pd.Series(0, index=df.index)).fillna(0) >= 10
     if category == 'punting':
@@ -162,7 +192,13 @@ def _qualify(df: pd.DataFrame, category: str) -> pd.Series:
 
 
 def _fdv_for_category(df: pd.DataFrame, category: str) -> pd.DataFrame:
-    """Returns DataFrame[player_id, season, fdv_season] for one category."""
+    """Returns DataFrame[player_id, season, fdv_season] for one category.
+
+    Fully vectorised — no Python-level loops over years or position groups.
+    For defense, z-scores are computed within position sub-groups so that
+    pass rushers (DE/OLB) compete with pass rushers, coverage (CB/S) with
+    coverage, and interior defenders with interior defenders.
+    """
     if df.empty:
         return pd.DataFrame(columns=['player_id', 'season', 'fdv_season'])
 
@@ -173,47 +209,77 @@ def _fdv_for_category(df: pd.DataFrame, category: str) -> pd.DataFrame:
     ).clip(0, 1.0)
 
     q_mask = _qualify(df, category)
+    weight = 0.4 if category == 'returns' else 1.0
 
-    # Global fallback for thin years
-    q_global = df[q_mask]['raw']
-    g_mean = q_global.mean() if len(q_global) >= 8 else df['raw'].mean()
-    g_std  = max(q_global.std() if len(q_global) >= 8 else df['raw'].std(), 1e-6)
+    # Choose grouping key: defense uses (pos_group, season), others use season only
+    if category == 'defense' and 'pos' in df.columns:
+        df['_grp_key'] = df['pos'].apply(_def_group)
+        norm_cols = ['_grp_key', 'season']
+    else:
+        df['_grp_key'] = 'all'
+        norm_cols = ['_grp_key', 'season']
 
-    results = []
-    for year, grp in df.groupby('season'):
-        q_grp = grp[q_mask.reindex(grp.index, fill_value=False)]
-        if len(q_grp) >= 8:
-            mean_r = q_grp['raw'].mean()
-            std_r  = max(q_grp['raw'].std(), 1e-6)
-        else:
-            mean_r, std_r = g_mean, g_std
+    df_q = df[q_mask]
 
-        grp = grp.copy()
-        z = (grp['raw'] - mean_r) / std_r
-        weight = 0.4 if category == 'returns' else 1.0
-        grp['fdv_season'] = np.maximum(0.0, 6 + 3 * z) * grp['game_ratio'] * weight
-        results.append(grp[['player_id', 'season', 'fdv_season']])
+    # Per (group, year) stats among qualified players
+    year_stats = (
+        df_q.groupby(norm_cols)['raw']
+        .agg(q_mean='mean', q_std='std', q_count='count')
+        .reset_index()
+    )
 
-    if not results:
-        return pd.DataFrame(columns=['player_id', 'season', 'fdv_season'])
-    return pd.concat(results, ignore_index=True)
+    # Global fallback per group (used when a year has fewer than 8 qualified)
+    global_stats = (
+        df_q.groupby('_grp_key')['raw']
+        .agg(g_mean='mean', g_std='std')
+        .reset_index()
+    )
+
+    df = df.merge(year_stats,   on=norm_cols,   how='left')
+    df = df.merge(global_stats, on='_grp_key',  how='left')
+
+    use_year = df['q_count'] >= 8
+    df['mean_r'] = np.where(use_year, df['q_mean'], df['g_mean']).astype(float)
+    df['std_r']  = np.where(
+        use_year,
+        df['q_std'].clip(lower=1e-6),
+        df['g_std'].clip(lower=1e-6),
+    ).astype(float)
+    df['std_r'] = df['std_r'].fillna(1e-6)
+
+    z = (df['raw'] - df['mean_r']) / df['std_r']
+    # Cap at 18 per season (≈ legendary MVP-calibre year) so thin position
+    # pools or hybrid players don't produce absurdly high z-scores.
+    df['fdv_season'] = np.minimum(18.0, np.maximum(0.0, 6 + 3 * z)) * df['game_ratio'] * weight
+
+    return df[['player_id', 'season', 'fdv_season']].reset_index(drop=True)
 
 
 def build_fdv(engine) -> pd.DataFrame:
     """Main computation. Returns DataFrame[player_id, fdv]."""
-    all_season_fdv: list[pd.DataFrame] = []
+    CATEGORIES = ['passing', 'offense', 'defense', 'kicking', 'punting', 'returns']
 
-    for cat in ['passing', 'offense', 'defense', 'kicking', 'punting', 'returns']:
+    # Load all tables upfront in one burst so the DB connection doesn't time out
+    # between reads while Python is busy with computation.
+    print('Loading tables…')
+    raw_tables: dict[str, pd.DataFrame] = {}
+    for cat in CATEGORIES:
         print(f'  {cat}…', end=' ', flush=True)
         try:
             df = pd.read_sql(f'SELECT * FROM {cat}_seasons', engine)
+            raw_tables[cat] = df
+            print(f'{len(df):,} rows')
         except Exception as exc:
             print(f'SKIP ({exc})')
+    engine.dispose()  # release all pooled connections before heavy computation
+
+    print('Computing FDV…')
+    all_season_fdv: list[pd.DataFrame] = []
+    for cat in CATEGORIES:
+        if cat not in raw_tables or raw_tables[cat].empty:
             continue
-        if df.empty:
-            print('empty')
-            continue
-        cat_fdv = _fdv_for_category(df, cat)
+        print(f'  {cat}…', end=' ', flush=True)
+        cat_fdv = _fdv_for_category(raw_tables[cat], cat)
         cat_fdv['category'] = cat
         all_season_fdv.append(cat_fdv)
         print(f'{len(cat_fdv):,} player-seasons')

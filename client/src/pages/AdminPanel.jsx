@@ -388,33 +388,33 @@ const SOURCES = [
   {
     name: 'Pro Football Reference (PFR)',
     url: 'pro-football-reference.com',
-    badge: 'Primary',
-    badgeColor: 'bg-amber-500/20 text-amber-400',
+    badge: 'Historical',
+    badgeColor: 'bg-slate-500/20 text-slate-400',
     icon: '🏈',
-    coverage: '1970 – present',
+    coverage: '1970 – 2024 (one-time scrape)',
     sections: [
       {
         title: 'What it is',
-        body: 'Pro Football Reference is widely regarded as the most comprehensive and authoritative NFL statistics database available to the public. It is part of the Sports Reference family of sites (which also covers MLB, NBA, NHL, and college sports) and has been the go-to resource for journalists, analysts, front-office staff, and researchers for over two decades.',
+        body: 'Pro Football Reference is widely regarded as the most comprehensive and authoritative NFL statistics database available to the public. It is part of the Sports Reference family of sites and has been the go-to resource for journalists, analysts, and researchers for over two decades.',
       },
       {
-        title: 'History & credibility',
-        body: 'Launched in 2000, PFR has accumulated a reputation as the gold standard of NFL data. It is frequently cited in mainstream sports media, academic research, and by NFL teams themselves. Sports Reference has data-sharing relationships with major outlets including ESPN and the Associated Press. The site\'s "Approximate Value" (AV) metric — a position-neutral career quality score — was created by PFR founder Doug Drinen and is now one of the most widely used career evaluation tools in the sport.',
+        title: 'Role in this platform',
+        body: 'PFR was used as a one-time historical source to build the foundational dataset — all season statistics from 1970 through 2024, draft records, and combine measurements. It is not an active live dependency. The platform no longer scrapes PFR for ongoing updates; new season data is handled by nflverse.',
       },
       {
-        title: 'Data depth',
-        body: 'PFR\'s depth is unmatched among public sources. It covers every season back to 1920, every player who ever appeared in an NFL game, every draft pick going back decades, combine measurements, game logs, play-by-play for recent seasons, coaching records, team histories, and stadium information. For this platform, we use PFR as the backbone for all regular-season and playoff statistics from 1970 (the AFL–NFL merger) through the most recently completed season.',
+        title: 'What we took from it',
+        body: 'All passing, rushing, receiving, defense, kicking, punting, and return statistics by season (1970–2024); draft pick records including round, pick, position, and college; combine measurements (height, weight, 40-yard dash, vertical jump, broad jump, bench press, 3-cone, shuttle). PFR\'s Career AV column is stored in the draft table as a legacy field but is no longer used — it has been replaced by our own FDV metric.',
       },
       {
-        title: 'How we use it',
-        body: 'The bulk of the historical database was built from PFR data files. This covers all passing, rushing, receiving, defense, kicking, punting, and return statistics by season; draft pick records including round, pick, position, college, and Career AV; combine measurements (height, weight, 40-yard dash, vertical jump, broad jump, bench press, 3-cone, shuttle); injury history drawn from weekly official injury reports; and playoff statistics separately tracked from regular-season totals.',
+        title: 'Why we moved away from it',
+        body: 'PFR data is accessed via web scraping, which is brittle, slow, and subject to rate limits. Their Career AV metric is also opaque — the formula is not fully disclosed and cannot be independently reproduced. Going forward, nflverse provides cleaner, machine-readable, regularly updated data, and FDV replaces AV as the career quality signal.',
       },
     ],
   },
   {
     name: 'nflverse / nflreadpy',
     url: 'nflverse.nflreadr.com',
-    badge: 'Supplemental',
+    badge: 'Primary',
     badgeColor: 'bg-blue-500/20 text-blue-400',
     icon: '📦',
     coverage: '1999 – present',
@@ -433,7 +433,33 @@ const SOURCES = [
       },
       {
         title: 'Data it provides to this platform',
-        body: 'Through nflreadpy we ingest recent season statistics that supplement the PFR historical base; per-game player logs going back to 1999; snap count percentages by week (how much of each team\'s offensive, defensive, or special teams snaps a player was on the field for); official NFL injury report filings by week and body part; advanced receiving metrics such as average depth of target, yards after catch, broken tackles, and drop rate; and the Career AV values for recent draft picks that PFR publishes but which nflverse aggregates more conveniently.',
+        body: 'Through nflreadpy we ingest recent season statistics that supplement the PFR historical base; per-game player logs going back to 1999; snap count percentages by week (how much of each team\'s offensive, defensive, or special teams snaps a player was on the field for); official NFL injury report filings by week and body part; and advanced receiving metrics such as average depth of target, yards after catch, broken tackles, and drop rate.',
+      },
+    ],
+  },
+  {
+    name: 'FDV — Fourth & Data Value',
+    url: '/methodology',
+    badge: 'Proprietary',
+    badgeColor: 'bg-violet-500/20 text-violet-400',
+    icon: '📐',
+    coverage: '1970 – present',
+    sections: [
+      {
+        title: 'What it is',
+        body: 'FDV (Fourth & Data Value) is a proprietary career value metric built entirely from the statistics in this platform. It replaces PFR\'s Career Approximate Value (AV) as the primary career quality signal — with a fully transparent, independently computed alternative whose formula is completely open.',
+      },
+      {
+        title: 'Why we built it',
+        body: 'Career AV is a useful benchmark but it is a third-party metric whose exact formula is not fully disclosed and cannot be independently reproduced. FDV is our answer: every number is traceable to a specific formula and a specific row in our database. The full methodology is documented at /methodology.',
+      },
+      {
+        title: 'How it is computed',
+        body: 'For each player-season, a category-specific raw score is computed (passing, offense, defense, kicking, punting, returns). That raw score is then era-normalised via z-score relative to qualified starters in the same year and the same position group — pass rushers compete with pass rushers, coverage players with coverage players. Season FDV = max(0, 6 + 3×z) × game_ratio. Career FDV = sum of season FDVs plus a 10% peak bonus on the top 3 seasons.',
+      },
+      {
+        title: 'Where it appears',
+        body: 'FDV is displayed on every player profile page, is the primary career quality signal in Draft Analysis (custom queries, steals/busts, round stats, ranking chart), and is used to rank players on the player landing page. It is updated by running etl/build_fdv.py after any new season data is loaded.',
       },
     ],
   },
@@ -481,7 +507,7 @@ function SourcesTab() {
       <div>
         <h2 className="text-white font-semibold text-lg">Data Sources</h2>
         <p className="text-slate-400 text-sm mt-0.5">
-          The platform combines three distinct data sources, each covering different aspects of NFL history and analytics.
+          The platform is built on three external data sources plus our own proprietary FDV metric. PFR provided the historical foundation (one-time scrape); nflverse is the active ongoing source for new season data; NGS provides tracking-based metrics. Career quality is measured by our own FDV, not PFR's Career AV.
         </p>
       </div>
 
