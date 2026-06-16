@@ -75,7 +75,7 @@ function AlertCard({ alert }) {
           : <span className="font-semibold" style={{ color: style.dot }}>{alert.player_name}</span>
         }
         {alert.team && (
-          <span className="text-slate-500 text-xs font-medium ml-1">({alert.team})</span>
+          <span className="font-semibold ml-1" style={{ color: style.dot }}>({alert.team})</span>
         )}
         {' '}
         <span className="text-slate-400">
