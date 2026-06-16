@@ -46,7 +46,7 @@ def _clear_fails(username: str):
 
 # ── Visit tracking ─────────────────────────────────────────────────────────────
 def record_visit(user_id: int, username: str):
-    if username == ADMIN_USERNAME:
+    if ADMIN_USERNAME and username.lower() == ADMIN_USERNAME.lower():
         return
     with engine.begin() as conn:
         last = conn.execute(text(
@@ -134,6 +134,7 @@ def register(body: RegisterBody):
         refresh = create_refresh_token()
         _store_refresh(conn, user_id, refresh)
 
+    record_visit(user_id, username)
     return {
         "access_token":  create_access_token(user_id, username, is_admin=is_admin),
         "refresh_token": refresh,
