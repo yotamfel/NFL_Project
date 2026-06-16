@@ -195,7 +195,7 @@ const CONTENT = {
           {
             title: 'Historical reference lines',
             body: [
-              '1970 — AFL–NFL merger: the modern NFL era begins. Data coverage starts here. No vertical line is drawn, but the legend notes this as the starting point.',
+              '1970 — AFL–NFL merger: the modern NFL era begins. Data coverage starts here.',
               '1978 — Season extended from 14 to 16 games. Counting stats jump league-wide from this year onward.',
               '1982 — Strike-shortened season (9 games played). Counting stats drop sharply; switching to the per-game average gives a fairer comparison.',
               '1987 — Second strike season (15 games, some played with replacement players).',
