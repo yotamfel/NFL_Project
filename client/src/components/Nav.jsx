@@ -185,20 +185,11 @@ export default function Nav() {
                 {notifs.length === 0 ? (
                   <p className="text-slate-500 text-sm text-center py-6">No notifications yet</p>
                 ) : notifs.map(n => (
-                  <div key={n.id} className="px-4 py-3 border-b border-slate-700/60 last:border-0 flex items-start gap-2 group">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-slate-200 text-sm leading-relaxed">{n.message}</p>
-                      <p className="text-slate-500 text-xs mt-1">{new Date(n.created_at).toLocaleDateString()}</p>
-                    </div>
-                    <button onClick={async () => {
-                      try {
-                        await api.deleteNotification(n.id)
-                        setNotifs(prev => prev.filter(x => x.id !== n.id))
-                      } catch { /* ignore */ }
-                    }} className="shrink-0 text-slate-600 hover:text-red-400 text-xs opacity-0 group-hover:opacity-100 transition-all pt-0.5">
-                      ✕
-                    </button>
-                  </div>
+                  <NotifRow key={n.id} n={n} onDelete={id => {
+                    api.deleteNotification(id).then(() =>
+                      setNotifs(prev => prev.filter(x => x.id !== id))
+                    ).catch(() => {})
+                  }} />
                 ))}
               </div>
             </div>
@@ -251,6 +242,33 @@ export default function Nav() {
 
       </div>
     </nav>
+  )
+}
+
+const TRUNCATE_LEN = 120
+
+function NotifRow({ n, onDelete }) {
+  const [expanded, setExpanded] = useState(false)
+  const long = n.message.length > TRUNCATE_LEN
+  return (
+    <div className="px-4 py-3 border-b border-slate-700/60 last:border-0 flex items-start gap-2 group">
+      <div className="flex-1 min-w-0">
+        <p className="text-slate-200 text-sm leading-relaxed">
+          {long && !expanded ? n.message.slice(0, TRUNCATE_LEN) + '…' : n.message}
+        </p>
+        {long && (
+          <button onClick={() => setExpanded(v => !v)}
+            className="text-xs text-amber-400 hover:text-amber-300 mt-0.5 transition-colors">
+            {expanded ? 'Show less' : 'Read more'}
+          </button>
+        )}
+        <p className="text-slate-500 text-xs mt-1">{new Date(n.created_at).toLocaleDateString()}</p>
+      </div>
+      <button onClick={() => onDelete(n.id)}
+        className="shrink-0 text-slate-600 hover:text-red-400 text-xs opacity-0 group-hover:opacity-100 transition-all pt-0.5">
+        ✕
+      </button>
+    </div>
   )
 }
 

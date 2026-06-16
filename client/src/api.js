@@ -41,7 +41,7 @@ async function request(method, path, body, { skipAuth = false } = {}) {
       } catch {
         throw new Error('Network error. Check your connection.')
       }
-      if (retry.ok) return retry.json()
+      if (retry.ok) return retry.status === 204 ? null : retry.json()
       const rb = await retry.json().catch(() => ({}))
       throw new Error(rb.detail ?? `${retry.status} ${retry.statusText}`)
     }
@@ -53,7 +53,7 @@ async function request(method, path, body, { skipAuth = false } = {}) {
     const b = await res.json().catch(() => ({}))
     throw new Error(b.detail ?? `${res.status} ${res.statusText}`)
   }
-  return res.json()
+  return res.status === 204 ? null : res.json()
 }
 
 async function _tryRefresh() {
