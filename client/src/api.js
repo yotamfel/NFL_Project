@@ -99,8 +99,10 @@ export const api = {
   submitUserFeedback: (category, message) => post('/feedback', { category, message }),
 
   // ── Notifications ─────────────────────────────────────────────────────────
-  getNotifications: ()   => get('/notifications'),
-  markNotifRead:    (id) => patch(`/notifications/${id}/read`, {}),
+  getNotifications:      ()   => get('/notifications'),
+  markNotifRead:         (id) => patch(`/notifications/${id}/read`, {}),
+  deleteNotification:    (id) => del(`/notifications/${id}`),
+  deleteAllNotifications: ()  => del('/notifications'),
 
   // ── Admin ─────────────────────────────────────────────────────────────────
   getAdminFeedback: ()              => get('/admin/feedback'),

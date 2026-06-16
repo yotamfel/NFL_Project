@@ -28,3 +28,21 @@ def mark_read(notif_id: int, current_user: dict = Depends(get_current_user)):
         if result.rowcount == 0:
             raise HTTPException(status_code=404, detail="Notification not found")
     return {"ok": True}
+
+
+@router.delete("/{notif_id}", status_code=204)
+def delete_notification(notif_id: int, current_user: dict = Depends(get_current_user)):
+    uid = int(current_user["sub"])
+    with engine.begin() as conn:
+        result = conn.execute(text(
+            "DELETE FROM notifications WHERE id = :id AND user_id = :uid"
+        ), {"id": notif_id, "uid": uid})
+        if result.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Notification not found")
+
+
+@router.delete("", status_code=204)
+def delete_all_notifications(current_user: dict = Depends(get_current_user)):
+    uid = int(current_user["sub"])
+    with engine.begin() as conn:
+        conn.execute(text("DELETE FROM notifications WHERE user_id = :uid"), {"uid": uid})

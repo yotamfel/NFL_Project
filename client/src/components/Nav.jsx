@@ -33,7 +33,12 @@ export default function Nav() {
   const bellRef     = useRef(null)
 
   useEffect(() => {
-    setLocalUnread(user?.unread_notifications_count ?? 0)
+    const count = user?.unread_notifications_count ?? 0
+    setLocalUnread(count)
+    // If bell is open and new notifications arrived, refresh the list
+    if (count > 0 && bellOpen) {
+      api.getNotifications().then(setNotifs).catch(() => {})
+    }
   }, [user?.unread_notifications_count])
 
   // Search debounce
@@ -162,16 +167,37 @@ export default function Nav() {
           </button>
           {bellOpen && (
             <div className="absolute top-full right-0 mt-2 w-80 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl overflow-hidden z-50">
-              <div className="px-4 py-3 border-b border-slate-700">
+              <div className="px-4 py-3 border-b border-slate-700 flex items-center justify-between">
                 <p className="text-slate-200 text-sm font-semibold">Notifications</p>
+                {notifs.length > 0 && (
+                  <button onClick={async () => {
+                    try {
+                      await api.deleteAllNotifications()
+                      setNotifs([])
+                      setLocalUnread(0)
+                    } catch { /* ignore */ }
+                  }} className="text-xs text-slate-500 hover:text-red-400 transition-colors">
+                    Clear all
+                  </button>
+                )}
               </div>
               <div className="max-h-80 overflow-y-auto">
                 {notifs.length === 0 ? (
                   <p className="text-slate-500 text-sm text-center py-6">No notifications yet</p>
                 ) : notifs.map(n => (
-                  <div key={n.id} className="px-4 py-3 border-b border-slate-700/60 last:border-0">
-                    <p className="text-slate-200 text-sm leading-relaxed">{n.message}</p>
-                    <p className="text-slate-500 text-xs mt-1">{new Date(n.created_at).toLocaleDateString()}</p>
+                  <div key={n.id} className="px-4 py-3 border-b border-slate-700/60 last:border-0 flex items-start gap-2 group">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-slate-200 text-sm leading-relaxed">{n.message}</p>
+                      <p className="text-slate-500 text-xs mt-1">{new Date(n.created_at).toLocaleDateString()}</p>
+                    </div>
+                    <button onClick={async () => {
+                      try {
+                        await api.deleteNotification(n.id)
+                        setNotifs(prev => prev.filter(x => x.id !== n.id))
+                      } catch { /* ignore */ }
+                    }} className="shrink-0 text-slate-600 hover:text-red-400 text-xs opacity-0 group-hover:opacity-100 transition-all pt-0.5">
+                      ✕
+                    </button>
                   </div>
                 ))}
               </div>

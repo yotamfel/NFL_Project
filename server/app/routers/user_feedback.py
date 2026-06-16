@@ -7,6 +7,7 @@ from sqlalchemy import text
 from typing import Optional
 
 from app.auth import get_current_user
+from app.config import ADMIN_USERNAME
 from app.db import engine
 
 router = APIRouter(tags=["user-feedback"])
@@ -39,6 +40,16 @@ def submit_feedback(body: FeedbackBody, current_user: dict = Depends(get_current
         row = conn.execute(text(
             "INSERT INTO feedback (user_id, username, category, message) VALUES (:uid, :uname, :cat, :msg) RETURNING id"
         ), {"uid": uid, "uname": current_user["username"], "cat": body.category, "msg": message}).fetchone()
+        # Notify admin
+        if ADMIN_USERNAME:
+            admin = conn.execute(text(
+                "SELECT id FROM users WHERE LOWER(username) = :u"
+            ), {"u": ADMIN_USERNAME.lower()}).fetchone()
+            if admin:
+                preview = message[:80] + ('…' if len(message) > 80 else '')
+                conn.execute(text(
+                    "INSERT INTO notifications (user_id, message, feedback_id) VALUES (:uid, :msg, :fid)"
+                ), {"uid": admin.id, "msg": f"New {body.category} feedback from {current_user['username']}: {preview}", "fid": row.id})
     return {"id": row.id}
 
 

@@ -76,6 +76,13 @@ export function AuthProvider({ children }) {
     } catch { /* ignore */ }
   }, [])
 
+  // Poll every 30s while logged in to keep counts live
+  useEffect(() => {
+    if (!user) return
+    const id = setInterval(refreshUnread, 30_000)
+    return () => clearInterval(id)
+  }, [user?.id, refreshUnread])
+
   return (
     <AuthCtx.Provider value={{ user, isLoading, login, register, logout, updatePreferences, refreshUnread }}>
       {children}
