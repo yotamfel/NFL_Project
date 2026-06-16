@@ -787,7 +787,7 @@ export default function Comparison() {
           </select>
         </div>
         {lbData && lbData.length > 0 ? (
-          <div className="relative group scroll-x">
+          <div className="relative group pt-7">
             <CsvDownloadButton
               columns={[
                 { key: '_rank', label: '#' },
@@ -798,7 +798,7 @@ export default function Comparison() {
               rows={lbData.map((p, i) => ({ ...p, _rank: i + 1 }))}
               title={`Leaderboard — ${STAT_OPTIONS[category]?.find(s => s.key === lbStat)?.label ?? lbStat}`}
             />
-          <table className="min-w-full text-sm">
+          <div className="scroll-x"><table className="min-w-full text-sm">
             <thead>
               <tr className="text-slate-500 text-xs border-b border-slate-800">
                 <th className="text-left py-2 pr-4 font-medium w-8">#</th>
@@ -838,7 +838,7 @@ export default function Comparison() {
                 )
               })}
             </tbody>
-          </table>
+          </table></div>
           </div>
         ) : (
           <p className="text-slate-600 text-sm text-center py-4">No data.</p>
