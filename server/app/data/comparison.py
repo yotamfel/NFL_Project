@@ -62,3 +62,43 @@ def compare_season(player_ids: list[str], category: str, season: int) -> dict:
     by_id = {r.player_id: dict(r._mapping) for r in rows}
     seasons_data = [by_id[p["player_id"]] for p in players if p["player_id"] in by_id]
     return {"players": players, "career": seasons_data}
+
+
+def compare_career_range(player_ids: list[str], category: str, season_from: int, season_to: int) -> dict:
+    """Career totals restricted to [season_from, season_to], aggregated from the seasons table."""
+    if category not in CATEGORIES:
+        raise ValueError(f"unknown category {category!r}; must be one of {CATEGORIES}")
+
+    _MAX_COLS = {"lng", "punt_ret_lng", "kick_ret_lng"}
+    _SKIP = {"player_id", "season", "player_name", "pos", "team", "age"}
+
+    with engine.connect() as conn:
+        players = _player_info(conn, player_ids)
+        rows = conn.execute(
+            text(f"""
+                SELECT s.*, p.player_name, p.pos
+                FROM {category}_seasons s
+                JOIN players p ON p.player_id = s.player_id
+                WHERE s.player_id = ANY(:pids)
+                  AND s.season BETWEEN :sfrom AND :sto
+            """),
+            {"pids": player_ids, "sfrom": season_from, "sto": season_to},
+        ).fetchall()
+
+    agg: dict[str, dict] = {}
+    for r in rows:
+        rd = dict(r._mapping)
+        pid = rd["player_id"]
+        if pid not in agg:
+            agg[pid] = {"player_id": pid, "player_name": rd.get("player_name"), "pos": rd.get("pos")}
+        for k, v in rd.items():
+            if k in _SKIP or v is None:
+                continue
+            if isinstance(v, (int, float)):
+                if k in _MAX_COLS:
+                    agg[pid][k] = max(agg[pid].get(k) or 0, v)
+                else:
+                    agg[pid][k] = (agg[pid].get(k) or 0) + v
+
+    career = [agg[p["player_id"]] for p in players if p["player_id"] in agg]
+    return {"players": players, "career": career}

@@ -305,6 +305,8 @@ export default function Comparison() {
   const [showAllStats,  setShowAllStats]  = useState(false)
   const [addPanelOpen,  setAddPanelOpen]  = useState(true)
   const [compSeason,    setCompSeason]    = useState('')
+  const [seasonFrom,    setSeasonFrom]    = useState('')
+  const [seasonTo,      setSeasonTo]      = useState('')
   const [lbStat,        setLbStat]        = useState('')
   const [lbData,        setLbData]        = useState(null)
   const [narState,      setNarState]      = useState('idle')  // idle | loading | done | error
@@ -350,15 +352,16 @@ export default function Comparison() {
     setLoading(true); setError(null)
     const req = compSeason
       ? api.compareSeason(playerIds, category, parseInt(compSeason))
-      : api.compareCareer(playerIds, category)
+      : api.compareCareer(playerIds, category, { seasonFrom: seasonFrom || undefined, seasonTo: seasonTo || undefined })
     req
       .then(r  => { if (!cancelled) { setData(r);          setLoading(false) } })
       .catch(e => { if (!cancelled) { setError(e.message); setLoading(false) } })
     return () => { cancelled = true }
-  }, [playerIds.join(','), category, compSeason])
+  }, [playerIds.join(','), category, compSeason, seasonFrom, seasonTo])
 
   // Search players to add
   useEffect(() => {
+    if (!addPanelOpen) return
     clearTimeout(debounceRef.current)
     const useStatSearch = filterCat && filterStat
 
@@ -388,7 +391,7 @@ export default function Comparison() {
     }, 280)
 
     return () => clearTimeout(debounceRef.current)
-  }, [searchQuery, filterPos, filterSeason, filterCat, filterStat, filterMin])
+  }, [searchQuery, filterPos, filterSeason, filterCat, filterStat, filterMin, addPanelOpen])
 
   const resetNarrative = () => { setNarState('idle'); setNarrative(null); setNarLogId(null) }
 
@@ -607,7 +610,7 @@ export default function Comparison() {
               Career totals
             </button>
             <button
-              onClick={() => { if (!compSeason) setCompSeason(String(YEARS[0])) }}
+              onClick={() => { if (!compSeason) { setCompSeason(String(YEARS[0])); setSeasonFrom(''); setSeasonTo('') } }}
               className={`px-3 py-1.5 transition-colors ${compSeason ? 'bg-slate-600 text-white' : 'text-slate-500 hover:text-slate-300'}`}>
               Single season
             </button>
@@ -617,6 +620,28 @@ export default function Comparison() {
               className="bg-slate-800 border border-slate-700 text-slate-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-slate-500">
               {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
             </select>
+          )}
+          {!compSeason && (
+            <>
+              <span className="text-xs text-slate-600">From:</span>
+              <select value={seasonFrom} onChange={e => setSeasonFrom(e.target.value)}
+                className="bg-slate-800 border border-slate-700 text-slate-200 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-slate-500">
+                <option value="">All</option>
+                {YEARS.slice().reverse().map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+              <span className="text-xs text-slate-600">To:</span>
+              <select value={seasonTo} onChange={e => setSeasonTo(e.target.value)}
+                className="bg-slate-800 border border-slate-700 text-slate-200 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-slate-500">
+                <option value="">All</option>
+                {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+              {(seasonFrom || seasonTo) && (
+                <button onClick={() => { setSeasonFrom(''); setSeasonTo('') }}
+                  className="text-xs text-slate-600 hover:text-slate-300 transition-colors">
+                  Clear
+                </button>
+              )}
+            </>
           )}
         </div>
       )}
@@ -681,7 +706,11 @@ export default function Comparison() {
             style={{ background: 'linear-gradient(160deg, #0f172a 0%, #1e293b 100%)' }}>
             <div className="flex items-center justify-between flex-wrap gap-3">
               <h2 className="text-white font-bold capitalize">
-                {compSeason ? `${compSeason} season` : 'Career totals'} — {category}
+                {compSeason
+                  ? `${compSeason} season`
+                  : (seasonFrom || seasonTo)
+                    ? `${seasonFrom || '1970'}–${seasonTo || '2025'}`
+                    : 'Career totals'} — {category}
               </h2>
               <div className="flex items-center gap-3 flex-wrap">
                 {data.players.map((p, i) => (
@@ -707,7 +736,11 @@ export default function Comparison() {
           <div className="bg-slate-800/70 border border-slate-700/60 rounded-2xl p-5">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-white font-bold capitalize">
-                {compSeason ? `${compSeason} stats` : 'Career stats'} — {category}
+                {compSeason
+                  ? `${compSeason} stats`
+                  : (seasonFrom || seasonTo)
+                    ? `${seasonFrom || '1970'}–${seasonTo || '2025'} stats`
+                    : 'Career stats'} — {category}
               </h2>
               <div className="flex rounded-lg overflow-hidden border border-slate-700 text-xs">
                 <button
@@ -723,7 +756,7 @@ export default function Comparison() {
               </div>
             </div>
             <StatTable columns={tableCols} rows={data.career} keyField="player_id"
-              title={`${compSeason ? compSeason : 'Career'} stats — ${category}`} />
+              title={`${compSeason ? compSeason : (seasonFrom || seasonTo) ? `${seasonFrom || '1970'}–${seasonTo || '2025'}` : 'Career'} stats — ${category}`} />
           </div>
         </>
       )}

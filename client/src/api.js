@@ -132,8 +132,12 @@ export const api = {
     return get(`/players/popular?${p}`)
   },
 
-  compareCareer: (ids, category) =>
-    get(`/compare?${ids.map(id => `player_ids=${encodeURIComponent(id)}`).join('&')}&category=${category}`),
+  compareCareer: (ids, category, { seasonFrom, seasonTo } = {}) => {
+    let url = `/compare?${ids.map(id => `player_ids=${encodeURIComponent(id)}`).join('&')}&category=${category}`
+    if (seasonFrom) url += `&season_from=${seasonFrom}`
+    if (seasonTo)   url += `&season_to=${seasonTo}`
+    return get(url)
+  },
   compareSeason: (ids, category, season) =>
     get(`/compare?${ids.map(id => `player_ids=${encodeURIComponent(id)}`).join('&')}&category=${category}&season=${season}`),
 
