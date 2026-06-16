@@ -74,6 +74,9 @@ function AlertCard({ alert }) {
             </Link>
           : <span className="font-semibold" style={{ color: style.dot }}>{alert.player_name}</span>
         }
+        {alert.team && (
+          <span className="text-slate-500 text-xs font-medium ml-1">({alert.team})</span>
+        )}
         {' '}
         <span className="text-slate-400">
           {alert.description?.replace(alert.player_name, '').replace(/^[:\s–-]+/, '').trim()}

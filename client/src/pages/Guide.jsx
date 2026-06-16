@@ -167,7 +167,7 @@ const CONTENT = {
           },
           {
             title: 'Steal/Bust Recommendations',
-            body: 'The Recommendations box under each steal/bust list shows players who statistically look like a steal or bust candidate based on their combine measurements vs. their Career AV. The model uses a regression trained on combine data (40 time, vertical, weight, etc.) to predict expected Career AV. A player with actual AV much higher than predicted = steal. Much lower = bust.',
+            body: 'Below the result table, a System Recommendation analyzes the statistical distribution of all picks in the same round range and suggests a meaningful threshold — the top-quartile cutoff for steals, or the bottom-quartile cutoff for busts. Hit "Apply" to adopt the suggested value. A Steal/Bust Score chart then ranks the players in your result by a composite z-score across all your selected criteria, so the biggest over-performers (steals) or under-performers (busts) rise to the top.',
           },
           {
             title: 'Round Stats',
@@ -446,7 +446,7 @@ const CONTENT = {
         subsections: [
           {
             title: 'כרטיס כותרת',
-            body: 'מציג Position, שנות פעילות ומספר עונות. אם השחקן נדרפט — מוצגים Round, Pick, שנה, קבוצה, מכללה ו-Career AV. מדדי Combine (גובה, משקל, 40-yard dash, Vertical, Broad Jump, Bench, 3-Cone, Shuttle) מוצגים אם קיימים. כפתור ★ שומר את השחקן ברשימת Saved.',
+            body: 'מציג Position, שנות פעילות ומספר עונות. אם השחקן נבחר בדראפט — מוצגים Round, Pick, שנה, קבוצה, מכללה ו-Career AV. מדדי Combine (גובה, משקל, 40-yard dash, Vertical, Broad Jump, Bench, 3-Cone, Shuttle) מוצגים אם קיימים. כפתור ★ שומר את השחקן ברשימת Saved.',
           },
           {
             title: 'טבלאות סטטיסטיקה — Basic / Advanced',
@@ -454,13 +454,13 @@ const CONTENT = {
           },
           {
             title: 'Career Charts',
-            body: 'הגרפים מעל כל טבלה מציגים קווי מגמה של הקריירה. לכל קו יש Dropdown צבעוני — לחץ עליו כדי לעבור לכל Stat אחר מהטבלה (כולל Advanced). ברירות המחדל מראש הן המדדים המשמעותיים ביותר. פסים אדומים מסמנים עונות שבהן השחקן החסיר 4 משחקים ומעלה עקב פציעה.',
+            body: 'הגרפים מעל כל טבלה מציגים קווי מגמה של הקריירה. לכל קו יש תפריט נפתח צבעוני — לחץ עליו כדי לעבור לכל Stat אחר מהטבלה (כולל Advanced). ברירות המחדל מראש הן המדדים המשמעותיים ביותר. פסים אדומים מסמנים עונות שבהן השחקן החסיר 4 משחקים ומעלה עקב פציעה.',
           },
           {
             title: 'Injury History — היסטוריית פציעות (2009+)',
             body: [
               'עמודת G — משחקים שהשחקן שיחק מתוך הצפוי באותה עונה (למשל 5/16). מספר נמוך מצביע על היעדרות ארוכה גם אם אין רישומים רשמיים.',
-              'עמודת Missed — הגבוה מבין: (1) משחקים שהשחקן רוּשם כ-Out בדוח השבועי, או (2) משחקים חסרים מוערכים מתוך נתוני G. כשנעשה שימוש בהערכה מופיע סימן †.',
+              'עמודת Missed — הגבוה מבין: (1) משחקים שהשחקן נרשם כ-Out בדוח השבועי, או (2) משחקים חסרים מוערכים מתוך נתוני G. כשנעשה שימוש בהערכה מופיע סימן †.',
               '† (מוערך) — השחקן כנראה נכנס ל-IR (Injured Reserve) באמצע העונה. דוח הפציעות השבועי מפסיק לציין שחקני IR, ולכן העמודה הזו ממלאת את הפער.',
               'Doubtful / Quest. — מספר משחקים שהשחקן נרשם כ-Doubtful או Questionable בדוח הרשמי.',
               'תגיות פציעה — איברי גוף שסומנו בדוחות השבועיים (Knee, Hamstring וכד\').',
@@ -470,11 +470,11 @@ const CONTENT = {
           {
             title: 'Advanced Receiving — WR / TE / RB (PFR 2018+, NGS 2016+)',
             body: [
-              'ADOT — Average Depth of Target: עומק ממוצע של הזריקה (ביארדים) על מסירות שנשלחו לרצפטור הזה.',
-              'YAC/Rec — Yards After Catch per reception: יארדים לאחר הקליטה לכל קליטה.',
+              'ADOT — Average Depth of Target: עומק ממוצע של הזריקה (ביארדים) על מסירות שנשלחו לתופס הזה.',
+              'YAC/Rec — Yards After Catch per reception: יארדים לאחר התפיסה לכל תפיסה.',
               'YBC/Rec — Yards Before Catch per reception: ה-Air Yards של השלמות בלבד.',
-              'BrkTkl — Broken Tackles: מגעי הגנה שנשברו לאחר הקליטה.',
-              'Drop% — אחוז הזריקות הקלוטות שנפלו.',
+              'BrkTkl — Broken Tackles: ניסיונות תיקול שהתופס עבר אחרי התפיסה.',
+              'Drop% — אחוז הזריקות לתופס שנפלו.',
               'TgtRtg — Passer Rating כשהשחקן הזה הוא המטרה המיועדת.',
               'Sep — ממוצע המרחק (ברגליים) מהמגן הקרוב ברגע הזריקה. גבוה יותר = פתוח יותר. (Next Gen Stats)',
               'Cush — Cushion: המרחק הממוצע בין הRB/WR לCB בתחילת כל סנאפ. (Next Gen Stats)',
@@ -505,14 +505,14 @@ const CONTENT = {
           },
           {
             title: 'Snap Counts (2013+)',
-            body: 'מציג איזה אחוז מה-Snaps של הקבוצה השחקן היה על המגרש. השתמש ב-Dropdown של העונה לפירוט שבועי, או גלול למטה לראות את מגמת הקריירה. ירידה פתאומית ב-Snap% היא לעיתים קרובות אינדיקציה מוקדמת לפציעה, שינוי תפקיד או ירידה.',
+            body: 'מציג איזה אחוז מה-Snaps של הקבוצה השחקן היה על המגרש. השתמש ב-תפריט הנפתח של העונה לפירוט שבועי, או גלול למטה לראות את מגמת הקריירה. ירידה פתאומית ב-Snap% היא לעיתים קרובות אינדיקציה מוקדמת לפציעה, שינוי תפקיד או ירידה.',
           },
           {
             title: 'בחירת טווח — עונה סדירה / Playoffs / כל המשחקים',
             body: [
-              'Regular Season (ברירת מחדל) — מציג רק סטטיסטיקות עונה סדירה, כפי שתמיד היה.',
+              'Regular Season (ברירת מחדל) — מציג רק סטטיסטיקות עונה סדירה.',
               'Playoffs — מציג סטטיסטיקות Playoffs בלבד לפי עונה. כיסוי: 1999–2025 לקטגוריות Passing ו-Offense. ספרי הגנה, Kicking, Punting, ו-Returns בפלייאוף אינם זמינים עדיין.',
-              'All Games — ממזג את סטטיסטיקות העונה הסדירה והפלייאוף לתצוגה משולבת אחת. כל שורת עונה מציגה את הסכום הכולל (כולל משחקי פלייאוף), ושורת Karriere מסכמת הכל. שימושי להשוואת ערכי קריירה אמיתיים כולל תרומות לפוסט-סיזן.',
+              'All Games — ממזג את סטטיסטיקות העונה הסדירה והפלייאוף לתצוגה משולבת אחת. כל שורת עונה מציגה את הסכום הכולל (כולל משחקי פלייאוף), ושורת הקריירה מסכמת הכל. שימושי להשוואת ערכי קריירה אמיתיים כולל תרומות לפוסט-סיזן.',
               'הלחצן מופיע מעל סעיפי הסטטיסטיקות בכל פרופיל שחקן. נתוני הפלייאוף נטענים בבקשה ראשונה ושמורים בזיכרון המהיר לאורך הסשן.',
             ],
           },
@@ -533,23 +533,23 @@ const CONTENT = {
           },
           {
             title: 'Career vs. Single Season',
-            body: 'עבור בין "Career totals" (סה"כ כל המשחקים הרגולריים) ל-"Single Season" להשוואת עונה ספציפית. כשסינגל-סיזון פעיל, Dropdown מאפשר בחירת השנה.',
+            body: 'עבור בין "Career totals" (סה"כ כל משחקי העונה הסדירה) ל-"Single Season" להשוואת עונה ספציפית. כשסינגל-סיזון פעיל, התפריט הנפתח מאפשר בחירת השנה.',
           },
           {
             title: 'Category ותצוגת Stat',
-            body: 'השתמש ב-Dropdown של הקטגוריה (Passing, Offense, Defense, Kicking, Punting, Returns) כדי לעבור בין סוגי סטטיסטיקה. Toggle "Basic / All stats" מעל הטבלה מרחיב לכלל הסטטיסטיקות.',
+            body: 'השתמש בתפריט הנפתח של הקטגוריה (Passing, Offense, Defense, Kicking, Punting, Returns) כדי לעבור בין סוגי סטטיסטיקה. פאנל "Basic / All stats" מעל הטבלה מרחיב לכלל הסטטיסטיקות.',
           },
           {
             title: 'Leaderboard',
-            body: 'תמיד גלוי בתחתית העמוד. מציג 20 השחקנים המובילים בכל Stat בקטגוריה ובטווח הזמן שנבחרו. עבור בין Metrics עם ה-Dropdown של הסטטיסטיקה. שחקנים שהוספת להשוואה מסומנים בזהב.',
+            body: 'תמיד גלוי בתחתית העמוד. מציג 20 השחקנים המובילים בכל Stat בקטגוריה ובטווח הזמן שנבחרו. עבור בין Metrics עם התפריט הנפתח של הסטטיסטיקה. שחקנים שהוספת להשוואה מסומנים בזהב.',
           },
           {
             title: 'Advanced Filters (פאנל הוספת שחקן)',
-            body: 'פתח "Filters" בפאנל הוספת שחקן לסינון לפי Position, עונה, או ספי Stat. פילטר הסטטיסטיקה (Category + Stat + ערך מינימלי) מדרג תוצאות לפי הסטטיסטיקה הנבחרת — למשל: כל WRs עם 1,000+ ReceivingYards בעונה אחת.',
+            body: 'פתח "Filters" בפאנל הוספת שחקן לסינון לפי Position, עונה, או לפי Stat. פילטר הסטטיסטיקה (Category + Stat + ערך מינימלי) מדרג תוצאות לפי הסטטיסטיקה הנבחרת — למשל: כל WRs עם 1,000+ Receiving Yards בעונה אחת.',
           },
           {
             title: 'AI Comparison Narrative — נרטיב השוואה',
-            body: 'לאחר טעינת נתוני ההשוואה, לחץ "Generate Narrative" מתחת לטבלת הסטטיסטיקה. Claude כותב פסקת ניתוח של 4–6 משפטים המשווה בין השחקנים על פני מדדי מפתח, מציין מי מוביל בכל סטטיסטיקה ונותן פסיקה כוללת. דרג עם 👍 או 👎.',
+            body: 'לאחר טעינת נתוני ההשוואה, לחץ "Generate Narrative" מתחת לטבלת הסטטיסטיקה. Claude כותב פסקת ניתוח של 4–6 משפטים המשווה בין השחקנים על פני מדדי מפתח, מציין מי מוביל בכל סטטיסטיקה ונותן פסקה כוללת. דרג עם 👍 או 👎.',
           },
         ],
       },
@@ -564,7 +564,7 @@ const CONTENT = {
           },
           {
             title: 'Career AV',
-            body: 'Career Approximate Value הוא מדד איכות קריירה ניטרלי-עמדה של Pro Football Reference. הוא מביא בחשבון משחקים מופיעים, Pro Bowls, All-Pro ועוד. הוא לא מושלם, אך הוא המספר היחיד הטוב ביותר להשוואת ערך קריירה בין עמדות שונות.',
+            body: 'Career Approximate Value הוא מדד איכות קריירה ניטרלי-עמדה של Pro Football Reference. הוא מביא בחשבון משחקים כפותח, Pro Bowls, All-Pro ועוד. הוא לא מושלם, אך הוא המדד הטוב ביותר להשוואת ערך קריירה בין עמדות שונות.',
           },
           {
             title: 'Custom Query',
@@ -573,14 +573,14 @@ const CONTENT = {
           {
             title: 'Steals & Busts',
             body: [
-              'Steals ("גנבות"): שחקנים שנדרפטו בסיבוב 4 ומעלה והשיגו Career AV של 50 ומעלה. אלה שחקנים שנמוך מאוד הוערכו ביום ה-Draft.',
-              'Busts ("כישלונות"): שחקנים שנדרפטו בסיבובים 1–2 והשיגו Career AV של 15 ומטה. השקעת Draft גבוהה עם תשואה נמוכה מאוד.',
-              'הספים חלים גם על ה-Stat שנבחר אם עברת מ-Career AV לסטטיסטיקה אחרת.',
+              'Steals ("גנבות"): לדוגמה: שחקנים שנבחרו בדראפט בסיבוב 4 ומעלה והשיגו Career AV של 50 ומעלה. אלה שחקנים שהוערכו נמוך מאוד ביום ה-Draft.',
+              'Busts ("כישלונות"): לדוגמה: שחקנים שנבחרו בדראפט בסיבובים 1–2 והשיגו Career AV של 15 ומטה. השקעת Draft גבוהה עם תשואה נמוכה מאוד.',
+              'ההגדרות חלות גם על ה-Stat שנבחר אם עברת מ-Career AV לסטטיסטיקה אחרת.',
             ],
           },
           {
             title: 'Recommendations — המלצות Steal/Bust',
-            body: 'תיבת ה-Recommendations מתחת לכל רשימה מציגה שחקנים שנראים כמועמדים ל-Steal או Bust לפי מדדי ה-Combine שלהם מול ה-Career AV בפועל. המודל משתמש ב-Regression שאומן על נתוני Combine (40 Time, Vertical, Weight וכד\') לחיזוי Career AV צפוי. AV בפועל גבוה בהרבה מהצפוי = Steal. נמוך בהרבה = Bust.',
+            body: 'מתחת לטבלת התוצאות, ה-System Recommendation מנתח את ההתפלגות הסטטיסטית של כל הבחירות באותו טווח סיבובים ומציע סף מומלץ — חתך הרבעון העליון לגנבות, או חתך הרבעון התחתון לכישלונות. לחץ "Apply" לאימוץ הערך. תרשים ה-Steal/Bust Score מדרג את שחקני התוצאה לפי z-score מורכב של כל הקריטריונים שבחרת, כך שהמבצעים הטובים ביותר (גנבות) או הגרועים ביותר (כישלונות) עולים לראש.',
           },
           {
             title: 'Round Stats',
@@ -595,7 +595,7 @@ const CONTENT = {
         subsections: [
           {
             title: 'Season Trend',
-            body: 'מציג כיצד Stat נבחר השתנה ברחבי הליגה לאורך עונות. בחר Category ו-Stat ב-Dropdowns. סנן לפי Position וטווח שנים. ה-Toggle Aggregation עובר בין Sum (סה"כ כל השחקנים) ל-Average (לשחקן).',
+            body: 'מציג כיצד Stat נבחר השתנה ברחבי הליגה לאורך עונות. בחר Category ו-Stat בתפריט הנפתח. סנן לפי Position וטווח שנים. הפאנל Aggregation עובר בין Sum (סה"כ כל השחקנים) ל-Average (לשחקן).',
           },
           {
             title: 'By Team',
@@ -655,7 +655,7 @@ const CONTENT = {
               'Career High — הנתון המצטבר של השחקן בעונה הנוכחית כבר עבר את שיא הקריירה הקודם שלו. במהלך העונה זה יכול להדליק אזהרה גם באמצע השנה אם השחקן בקצב שיא.',
               'YoY Surge — שיפור של 40%+ לעומת אותו שחקן בעונה הקודמת. תופס עונות פריצה וחזרות לפסגה.',
               'Efficiency — מדד יעילות (Passer Rating, Y/A, Y/Rec, Y/Carry) גבוה ב-1.5+ סטיות תקן מעל ממוצע הקריירה. מדגיש שחקנים שיעילים יותר, לא רק פרודוקטיביים יותר.',
-              'Versatile — תרומה משמעותית בשתי קטגוריות: 300+ יארד ריצה + 300+ יארד קליטה (RB דואלי), או 200+ ניסיונות מסירה + 50+ ניסיונות ריצה (QB דואלי).',
+              'Versatile — תרומה משמעותית בשתי קטגוריות: 300+ יארד ריצה + 300+ יארד תפיסה (RB דואלי), או 200+ ניסיונות מסירה + 50+ ניסיונות ריצה (QB דואלי).',
               'Above Avg — מדד ספירה 1.5+ סטיות תקן מעל ממוצע הקריירה.',
               'Decline — מדד ספירה 1.5+ סטיות תקן מתחת לממוצע. מסמן ירידה משמעותית.',
             ],
@@ -700,11 +700,11 @@ const CONTENT = {
           },
           {
             title: 'פסי פציעות',
-            body: 'גרפי קריירה כוללים Toggle לـ "Injury bands" בשורת הפקדים. כבה אותו להסתרת הפסים האדומים שמסמנים עונות עם 4+ משחקים חסרים — שימושי לייצוא נקי יותר.',
+            body: 'גרפי קריירה כוללים פאנל ל- "Injury bands" בשורת הפקדים. כבה אותו להסתרת הפסים האדומים שמסמנים עונות עם 4+ משחקים חסרים — שימושי לייצוא נקי יותר.',
           },
           {
             title: 'עריכת צבעי טבלה',
-            body: 'כל כרטיס טבלה מציג בוחרי צבע לשורת הכותרת, שורות זוגיות ושורות אי-זוגיות. השינויים מיועדים מיידית בתצוגה המקדימה.',
+            body: 'כל כרטיס טבלה מציג אפשרויות בחירת צבע לשורת הכותרת, שורות זוגיות ושורות אי-זוגיות. השינויים מיועדים מיידית בתצוגה המקדימה.',
           },
           {
             title: 'ייצוא PNG',
@@ -761,7 +761,7 @@ const CONTENT = {
           {
             title: 'Receiving / Offense',
             body: [
-              'Rec — Receptions: קליטות',
+              'Rec — Receptions: תפיסות',
               'Tgt — Targets: מסירות שנשלחו לשחקן',
               'Ctch% — Catch Rate: Rec / Tgt',
               'Y/Rec — Yards per Reception',

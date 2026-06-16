@@ -56,6 +56,7 @@ CREATE TABLE IF NOT EXISTS anomaly_alerts (
     player_id    TEXT NOT NULL,
     player_name  TEXT NOT NULL,
     pos          TEXT,
+    team         TEXT,
     category     TEXT NOT NULL,
     metric       TEXT NOT NULL,
     value        NUMERIC,
@@ -74,6 +75,7 @@ CREATE INDEX IF NOT EXISTS anomaly_alerts_detected ON anomaly_alerts (detected_a
 ALTER_TABLE = """
 ALTER TABLE anomaly_alerts ADD COLUMN IF NOT EXISTS week     INT;
 ALTER TABLE anomaly_alerts ADD COLUMN IF NOT EXISTS opponent TEXT;
+ALTER TABLE anomaly_alerts ADD COLUMN IF NOT EXISTS team     TEXT;
 """
 
 
@@ -88,10 +90,10 @@ def _v(value, decimals=0):
 
 def _row(season, player_id, player_name, pos, category, metric,
          value, career_avg, career_high, alert_type, description, severity,
-         week=None, opponent=None):
+         week=None, opponent=None, team=None):
     return {
         "season": season, "player_id": player_id, "player_name": player_name,
-        "pos": pos, "category": category, "metric": metric,
+        "pos": pos, "team": team, "category": category, "metric": metric,
         "value": value, "career_avg": career_avg, "career_high": career_high,
         "alert_type": alert_type, "description": description, "severity": severity,
         "week": week, "opponent": opponent,
@@ -126,13 +128,13 @@ def detect_counting(target: int, conn) -> list[dict]:
                 HAVING COUNT(*) >= 2
             ),
             current AS (
-                SELECT s.player_id, s.player_name, p.pos, s.{metric} AS value
+                SELECT s.player_id, s.player_name, p.pos, s.team, s.{metric} AS value
                 FROM {table} s
                 JOIN players p USING (player_id)
                 WHERE s.season = :tgt AND s.{vol_col} >= :minvol
                   AND s.{metric} IS NOT NULL AND s.{metric} > 0
             )
-            SELECT c.player_id, c.player_name, c.pos, c.value,
+            SELECT c.player_id, c.player_name, c.pos, c.team, c.value,
                    h.avg_val AS career_avg, h.prev_high AS career_high,
                    CASE
                      WHEN c.value > h.prev_high                                 THEN 'career_high'
@@ -161,7 +163,8 @@ def detect_counting(target: int, conn) -> list[dict]:
             else:
                 desc = f"{r.player_name} posted only {_v(v)} {label}, well below their career avg of {_v(ca)}"
             rows.append(_row(target, r.player_id, r.player_name, r.pos,
-                             category, metric, v, ca, ch, r.alert_type, desc, sev))
+                             category, metric, v, ca, ch, r.alert_type, desc, sev,
+                             team=r.team))
     return rows
 
 
@@ -187,13 +190,13 @@ def detect_yoy_surge(target: int, conn) -> list[dict]:
                 WHERE season = :prev AND {vol_col} >= :minvol AND {metric} > 0
             ),
             current AS (
-                SELECT s.player_id, s.player_name, p.pos, s.{metric} AS value
+                SELECT s.player_id, s.player_name, p.pos, s.team, s.{metric} AS value
                 FROM {table} s
                 JOIN players p USING (player_id)
                 WHERE s.season = :tgt AND s.{vol_col} >= :minvol
                   AND s.{metric} IS NOT NULL AND s.{metric} > 0
             )
-            SELECT c.player_id, c.player_name, c.pos,
+            SELECT c.player_id, c.player_name, c.pos, c.team,
                    c.value, pr.prev_val,
                    (c.value - pr.prev_val)::float / pr.prev_val AS pct_change
             FROM current c
@@ -212,7 +215,8 @@ def detect_yoy_surge(target: int, conn) -> list[dict]:
             desc = (f"{r.player_name} surged from {_v(pv)} to {_v(v)} {label} "
                     f"(+{pct:.0f}% vs prior season)")
             rows.append(_row(target, r.player_id, r.player_name, r.pos,
-                             category, metric, v, pv, None, "yoy_surge", desc, sev))
+                             category, metric, v, pv, None, "yoy_surge", desc, sev,
+                             team=r.team))
     return rows
 
 
@@ -234,13 +238,13 @@ def detect_efficiency(target: int, conn) -> list[dict]:
                 HAVING COUNT(*) >= 2
             ),
             current AS (
-                SELECT s.player_id, s.player_name, p.pos, s.{metric} AS value
+                SELECT s.player_id, s.player_name, p.pos, s.team, s.{metric} AS value
                 FROM {table} s
                 JOIN players p USING (player_id)
                 WHERE s.season = :tgt AND s.{vol_col} >= :minvol
                   AND s.{metric} IS NOT NULL AND s.{metric} > 0
             )
-            SELECT c.player_id, c.player_name, c.pos, c.value,
+            SELECT c.player_id, c.player_name, c.pos, c.team, c.value,
                    h.avg_val AS career_avg, h.prev_high AS career_high,
                    (c.value - h.avg_val) / NULLIF(h.std_val, 0) AS z_score
             FROM current c
@@ -260,7 +264,8 @@ def detect_efficiency(target: int, conn) -> list[dict]:
             desc = (f"{r.player_name} posted {_v(v, dec)} {label}, "
                     f"a career-best efficiency (career avg: {_v(ca, dec)})")
             rows.append(_row(target, r.player_id, r.player_name, r.pos,
-                             category, metric, v, ca, ch, "efficiency_peak", desc, sev))
+                             category, metric, v, ca, ch, "efficiency_peak", desc, sev,
+                             team=r.team))
     return rows
 
 
@@ -271,7 +276,7 @@ def detect_versatile(target: int, conn) -> list[dict]:
 
     # Dual-threat RBs / offensive weapons: 300+ rush AND 300+ rec yards
     results = conn.execute(text("""
-        SELECT s.player_id, s.player_name, p.pos,
+        SELECT s.player_id, s.player_name, p.pos, s.team,
                s.rush_yds, s.rec_yds,
                s.rush_yds + s.rec_yds AS total_yscm,
                s.rush_td + s.rec_td   AS total_td
@@ -290,11 +295,12 @@ def detect_versatile(target: int, conn) -> list[dict]:
         desc = (f"{r.player_name}: {_v(ry)} rush yards + {_v(recy)} rec yards "
                 f"({_v(total)} from scrimmage) — elite dual-threat")
         rows.append(_row(target, r.player_id, r.player_name, r.pos,
-                         "offense", "yscm", total, None, None, "versatile", desc, sev))
+                         "offense", "yscm", total, None, None, "versatile", desc, sev,
+                         team=r.team))
 
     # Dual-threat QBs: 200+ pass attempts AND 50+ rush attempts
     results = conn.execute(text("""
-        SELECT ps.player_id, ps.player_name, p.pos,
+        SELECT ps.player_id, ps.player_name, p.pos, ps.team,
                ps.yds AS pass_yds, ps.td AS pass_td,
                os.rush_yds, os.rush_td
         FROM passing_seasons ps
@@ -312,7 +318,8 @@ def detect_versatile(target: int, conn) -> list[dict]:
         desc = (f"{r.player_name}: {_v(py)} passing yards + {_v(ry)} rushing yards "
                 f"— dual-threat QB")
         rows.append(_row(target, r.player_id, r.player_name, r.pos,
-                         "passing", "rush_yds", ry, None, None, "versatile", desc, sev))
+                         "passing", "rush_yds", ry, None, None, "versatile", desc, sev,
+                         team=r.team))
 
     return rows
 
@@ -351,14 +358,14 @@ def detect_game_highs(target: int, conn) -> list[dict]:
                 HAVING COUNT(*) >= 3
             ),
             this_season AS (
-                SELECT w.player_id, w.week, w.opponent, w.{metric} AS value,
+                SELECT w.player_id, w.week, w.team, w.opponent, w.{metric} AS value,
                        p.player_name, p.pos
                 FROM weekly_stats w
                 JOIN players p USING (player_id)
                 WHERE w.season = :tgt AND w.game_type = 'REG'
                   AND w.{metric} >= :min_val
             )
-            SELECT ts.player_id, ts.player_name, ts.pos,
+            SELECT ts.player_id, ts.player_name, ts.pos, ts.team,
                    ts.week, ts.opponent, ts.value,
                    cb.prev_best
             FROM this_season ts
@@ -383,7 +390,7 @@ def detect_game_highs(target: int, conn) -> list[dict]:
             rows.append(_row(target, r.player_id, r.player_name, r.pos,
                              "game", metric, v, None, pb,
                              "game_high", desc, sev,
-                             week=r.week, opponent=r.opponent))
+                             week=r.week, opponent=r.opponent, team=r.team))
     return rows
 
 
@@ -410,7 +417,7 @@ def detect_game_milestones(target: int, conn) -> list[dict]:
     rows = []
     for metric, threshold, label in MILESTONES:
         results = conn.execute(text(f"""
-            SELECT w.player_id, w.week, w.opponent, w.{metric} AS value,
+            SELECT w.player_id, w.week, w.team, w.opponent, w.{metric} AS value,
                    p.player_name, p.pos
             FROM weekly_stats w
             JOIN players p USING (player_id)
@@ -427,17 +434,17 @@ def detect_game_milestones(target: int, conn) -> list[dict]:
             rows.append(_row(target, r.player_id, r.player_name, r.pos,
                              "game", metric, v, None, None,
                              "game_milestone", desc, sev,
-                             week=r.week, opponent=r.opponent))
+                             week=r.week, opponent=r.opponent, team=r.team))
     return rows
 
 
 INSERT_SQL = """
     INSERT INTO anomaly_alerts
-        (season, player_id, player_name, pos, category, metric,
+        (season, player_id, player_name, pos, team, category, metric,
          value, career_avg, career_high, alert_type, description, severity,
          week, opponent)
     VALUES
-        (:season, :player_id, :player_name, :pos, :category, :metric,
+        (:season, :player_id, :player_name, :pos, :team, :category, :metric,
          :value, :career_avg, :career_high, :alert_type, :description, :severity,
          :week, :opponent)
 """

@@ -110,6 +110,10 @@ def _run_migrations():
             ALTER TABLE users
             ADD COLUMN IF NOT EXISTS onboarding_complete BOOLEAN NOT NULL DEFAULT FALSE
         """))
+        conn.execute(text("""
+            ALTER TABLE anomaly_alerts
+            ADD COLUMN IF NOT EXISTS team TEXT
+        """))
 
 
 _run_migrations()

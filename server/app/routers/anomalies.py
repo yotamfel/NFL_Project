@@ -35,7 +35,7 @@ def get_anomalies(
     where = ("WHERE " + " AND ".join(filters)) if filters else ""
     order = "season DESC, week DESC NULLS LAST, severity DESC" if sort == "latest" else "severity DESC, detected_at DESC"
     sql = text(f"""
-        SELECT id, detected_at, season, player_id, player_name, pos,
+        SELECT id, detected_at, season, player_id, player_name, pos, team,
                category, metric, value, career_avg, career_high,
                alert_type, description, severity,
                week, opponent

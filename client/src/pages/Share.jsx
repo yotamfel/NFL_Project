@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-const PLATFORM_URL = 'https://nfl-project-production.up.railway.app'
+const PLATFORM_URL = 'https://fourth-and-data.up.railway.app'
 
 export default function Share() {
   const [copied, setCopied] = useState(false)
