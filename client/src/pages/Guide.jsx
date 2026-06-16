@@ -192,6 +192,16 @@ const CONTENT = {
             title: 'Season breakdown table',
             body: 'Below the chart, a table shows the value for each season in the selected range, useful for spotting year-over-year changes.',
           },
+          {
+            title: 'Historical reference lines',
+            body: [
+              '1970 — AFL–NFL merger: the modern NFL era begins. Data coverage starts here. No vertical line is drawn, but the legend notes this as the starting point.',
+              '1978 — Season extended from 14 to 16 games. Counting stats jump league-wide from this year onward.',
+              '1982 — Strike-shortened season (9 games played). Counting stats drop sharply; switching to the per-game average gives a fairer comparison.',
+              '1987 — Second strike season (15 games, some played with replacement players).',
+              '2004 — Illegal contact rules were strictly enforced, triggering a permanent surge in passing stats.',
+            ],
+          },
         ],
       },
       {
@@ -261,6 +271,38 @@ const CONTENT = {
           {
             title: 'Tracked metrics',
             body: 'Counting stats: passing yards/TDs, rushing yards/TDs, receiving yards/TDs, sacks, interceptions, passes defended, combined tackles. Rate stats: passer rating, yards per attempt, yards per reception, yards per carry. Volume thresholds apply (e.g. 200+ pass attempts for QBs) to filter out small-sample noise.',
+          },
+        ],
+      },
+      {
+        id: 'notifications',
+        icon: '🔔',
+        title: 'Notifications & Feedback',
+        subsections: [
+          {
+            title: 'Notification bell',
+            body: 'The bell icon (🔔) in the top navigation bar shows a red badge when you have unread notifications. Click it to open the notification panel. The count updates automatically every ~10 seconds — no page refresh needed.',
+          },
+          {
+            title: 'Reading & managing notifications',
+            body: 'Opening the bell marks all current notifications as read and clears the badge. Hover a notification row and click ✕ to delete it. Use "Clear all" at the top of the panel to delete everything at once.',
+          },
+          {
+            title: 'Feedback thread in the bell',
+            body: 'Notifications linked to your feedback show a "View thread & reply" link. Click it to expand the full conversation as a chat — admin messages appear on the left, your messages on the right. Type a reply and press Enter (or click Send) to respond directly from the bell panel without leaving the page.',
+          },
+          {
+            title: 'Sending feedback',
+            body: 'Click "Feedback" in the navigation bar. Choose a category (Bug Report, Feature Request, Data Issue, General), write your message (minimum 10 characters), and click Send. The admin will review it and may reply — you\'ll receive a bell notification when they do, and you can reply back to start a threaded conversation.',
+          },
+          {
+            title: 'Settings (⚙)',
+            body: [
+              'Guide language — switch between English and Hebrew for all guide content.',
+              'Share — copy the platform link or share via WhatsApp or X/Twitter.',
+              'About — learn more about Fourth & Data and the data it covers.',
+              'Sign Out — ends your current session.',
+            ],
           },
         ],
       },
@@ -605,6 +647,16 @@ const CONTENT = {
             title: 'Season Breakdown',
             body: 'טבלה מתחת לגרף מציגה את הערך לכל עונה בטווח הנבחר — שימושית לזיהוי שינויים משנה לשנה.',
           },
+          {
+            title: 'קווי עזר היסטוריים',
+            body: [
+              '1970 — מיזוג AFL–NFL: עידן ה-NFL המודרני מתחיל כאן. כיסוי הנתונים מתחיל בשנה זו. אין קו אנכי — אך האגדה מציינת זאת כנקודת פתיחה.',
+              '1978 — העונה הורחבה מ-14 ל-16 משחקים. מדדי ספירה קפצו ברחבי הליגה מאז.',
+              '1982 — עונה קצרה בגלל שביתה (9 משחקים בלבד). מדדי הספירה צנחו — תצוגת ממוצע לשחקן/למשחק מספקת השוואה הוגנת יותר.',
+              '1987 — שביתה נוספת (15 משחקים, חלקם עם שחקנים חלופיים).',
+              '2004 — אכיפה מחמירה של חוקי ה-Illegal Contact הולידה עלייה קבועה בסטטיסטיקות הזריקה.',
+            ],
+          },
         ],
       },
       {
@@ -674,6 +726,38 @@ const CONTENT = {
           {
             title: 'מדדים שנבדקים',
             body: 'מדדי ספירה: Passing Yards/TDs, Rush Yards/TDs, Rec Yards/TDs, Sacks, Interceptions, Passes Defended, Combined Tackles. מדדי יעילות: Passer Rating, Y/A, Y/Rec, Y/Carry. ספי נפח מינימלי חלים (למשל 200+ ניסיונות מסירה ל-QBs) כדי לסנן רעש של מדגמים קטנים.',
+          },
+        ],
+      },
+      {
+        id: 'notifications',
+        icon: '🔔',
+        title: 'התראות ומשוב',
+        subsections: [
+          {
+            title: 'פעמון ההתראות',
+            body: 'אייקון הפעמון (🔔) בסרגל הניווט מציג תג אדום כשיש לך התראות שלא נקראו. לחץ עליו לפתיחת פאנל ההתראות. הספירה מתעדכנת אוטומטית כל ~10 שניות — ללא צורך ברענון הדף.',
+          },
+          {
+            title: 'קריאה וניהול התראות',
+            body: 'פתיחת הפעמון מסמנת את כל ההתראות כנקראות ומנקה את התג. רחף על שורת התראה ולחץ ✕ למחיקתה. השתמש ב-"Clear all" בראש הפאנל למחיקת הכל.',
+          },
+          {
+            title: 'שרשור משוב בפעמון',
+            body: 'התראות המקושרות למשוב שלך מציגות קישור "View thread & reply". לחץ עליו לפתיחת השיחה המלאה כצ\'אט — הודעות האדמין משמאל, ההודעות שלך מימין. הקלד תגובה ולחץ Enter (או Send) להגבה ישירות מפאנל הפעמון מבלי לעזוב את הדף.',
+          },
+          {
+            title: 'שליחת משוב',
+            body: 'לחץ על "Feedback" בסרגל הניווט. בחר קטגוריה (Bug Report, Feature Request, Data Issue, General), כתוב את הודעתך (לפחות 10 תווים), ולחץ Send. האדמין יסקור את המשוב ועשוי להגיב — תקבל התראת פעמון כשהוא עושה זאת, ותוכל להגיב בחזרה לשיחה ממשיכה.',
+          },
+          {
+            title: 'הגדרות (⚙)',
+            body: [
+              'שפת מדריך — עבור בין אנגלית לעברית.',
+              'שיתוף — העתק את קישור הפלטפורמה או שתף דרך WhatsApp או X/Twitter.',
+              'About — מידע על Fourth & Data והנתונים המכוסים.',
+              'Sign Out — יציאה מהחשבון.',
+            ],
           },
         ],
       },
