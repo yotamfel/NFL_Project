@@ -19,7 +19,7 @@ export default function About() {
 
         <div>
           <h2 className="text-white font-bold mb-2">The data</h2>
-          <p>Statistics are sourced from multiple data providers and cover the 1970–2025 regular seasons. Different data types have different coverage windows — see the in-app Guide for full details. The platform is continuously updated as new seasons are completed.</p>
+          <p>Statistics are sourced from multiple data providers and currently cover the 1970–2025 regular seasons, with new seasons added each year as they are completed. Different data types have different coverage windows — see the in-app Guide for full details.</p>
         </div>
 
         <div>
