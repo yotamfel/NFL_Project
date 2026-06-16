@@ -22,6 +22,7 @@ import Feedback from './pages/Feedback'
 import AdminPanel from './pages/AdminPanel'
 import About from './pages/About'
 import Share from './pages/Share'
+import Privacy from './pages/Privacy'
 import Onboarding from './components/Onboarding'
 import Footer from './components/Footer'
 
@@ -49,8 +50,10 @@ function AppInner() {
     return user ? <Navigate to="/" replace /> : <Auth />
   }
 
-  if (location.pathname === '/about' || location.pathname === '/share') {
-    return location.pathname === '/about' ? <About /> : <Share />
+  if (['/about', '/share', '/privacy'].includes(location.pathname)) {
+    if (location.pathname === '/about')   return <About />
+    if (location.pathname === '/share')   return <Share />
+    if (location.pathname === '/privacy') return <Privacy />
   }
 
   if (!user) {
@@ -81,6 +84,7 @@ function AppInner() {
             <Route path="/feedback"        element={<Feedback />} />
             <Route path="/about"           element={<About />} />
             <Route path="/share"           element={<Share />} />
+            <Route path="/privacy"         element={<Privacy />} />
           </Routes>
         </main>
         {!isBuilder && <Footer />}

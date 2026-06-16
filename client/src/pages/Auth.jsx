@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
 export default function Auth() {
@@ -93,15 +93,20 @@ export default function Auth() {
 
             {tab === 'register' && (
               <>
-                <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4 text-xs text-slate-400 leading-relaxed space-y-2">
-                  <p className="font-semibold text-slate-300">By creating an account, you agree to the following:</p>
-                  <p>We collect and store: your username, email address, and encrypted password; a record of each time you log in (date and time only); any players, comparisons, or searches you choose to save; and any feedback you submit.</p>
-                  <p>We do not share your data with third parties. You can delete your account by contacting us through the feedback form.</p>
+                <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4 text-xs text-slate-400 leading-relaxed">
+                  <p>
+                    We collect your username, email, and password (stored as an encrypted hash) to secure your account and keep your saved data private.
+                    Your email is never used for marketing and is never shared.{' '}
+                    <Link to="/privacy" target="_blank"
+                      className="text-amber-400 hover:text-amber-300 underline underline-offset-2">
+                      Read the full Privacy Policy
+                    </Link>
+                  </p>
                 </div>
                 <label className="flex items-center gap-2.5 cursor-pointer">
                   <input type="checkbox" checked={agreed} onChange={e => setAgreed(e.target.checked)}
                     className="w-4 h-4 rounded border-slate-600 accent-amber-500 cursor-pointer" />
-                  <span className="text-slate-400 text-sm">I understand and agree</span>
+                  <span className="text-slate-400 text-sm">I have read and agree to the Privacy Policy</span>
                 </label>
               </>
             )}
