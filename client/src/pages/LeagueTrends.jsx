@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
-  Tooltip, ReferenceLine, ResponsiveContainer, Label, Legend,
+  Tooltip, ReferenceLine, ResponsiveContainer, Legend,
   BarChart, Bar, Cell, LabelList,
 } from 'recharts'
 import { api } from '../api'
@@ -593,10 +593,7 @@ export default function LeagueTrends() {
                   {NOTABLE.map(n =>
                     !n.noLine && chartData.some(d => d.season === n.season) && (
                       <ReferenceLine key={n.season} x={n.season} stroke={n.color}
-                        strokeDasharray="4 3" strokeOpacity={0.6}>
-                        <Label value={n.label} position="top"
-                          style={{ fill: n.color, fontSize: 10, opacity: 0.8 }} />
-                      </ReferenceLine>
+                        strokeDasharray="4 3" strokeOpacity={0.6} />
                     )
                   )}
                   <Line type="monotone" dataKey="t1" name="t1"
