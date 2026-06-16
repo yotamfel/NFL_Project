@@ -930,6 +930,7 @@ export default function DraftAnalysis() {
               across all positions — a career AV of 50 means roughly the same thing for
               a QB, a DE, or a kicker.
             </p>
+            <p className="text-slate-600 text-xs mt-2">Source: <a href="https://www.pro-football-reference.com" target="_blank" rel="noopener noreferrer" className="hover:text-slate-400 transition-colors">Pro Football Reference</a></p>
           </div>
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Scale</p>

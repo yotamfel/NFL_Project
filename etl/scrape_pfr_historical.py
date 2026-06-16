@@ -1,4 +1,9 @@
 """
+*** HISTORICAL USE ONLY — DO NOT RUN AGAIN ***
+This script was used once to bootstrap the database with 1970–1998 season stats
+from Pro Football Reference. All data for 1999 onward is sourced from nflreadpy
+(open-source). This file is kept for audit/documentation purposes only.
+
 Scrape Pro Football Reference for historical season stats and save as CSV files
 that are fully compatible with clean.py / load_seasons.py.
 

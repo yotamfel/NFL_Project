@@ -935,7 +935,10 @@ export default function PlayerProfile() {
                 </p>
                 <p className="text-slate-400 text-sm">{draft.team}{draft.college ? ` · ${draft.college}` : ''}</p>
                 {draft.career_av != null && (
-                  <p className="font-bold mt-1" style={{ color: c.hex }}>Career AV: {draft.career_av}</p>
+                  <p className="font-bold mt-1" style={{ color: c.hex }}>
+                    Career AV: {draft.career_av}
+                    <span className="text-slate-500 font-normal text-xs ml-1">(via PFR)</span>
+                  </p>
                 )}
               </div>
             )}
