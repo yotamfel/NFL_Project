@@ -24,9 +24,9 @@ export default function FdvPage() {
         <p className="text-xs font-bold uppercase tracking-widest text-violet-400 mb-1">Metric Methodology</p>
         <h1 className="text-3xl font-black text-white tracking-tight">FDV — Fourth & Data Value</h1>
         <p className="text-slate-400 mt-2 leading-relaxed">
-          FDV is our proprietary, position-neutral career value metric built entirely
-          from the statistics in this platform. It replaces the third-party Career AV
-          metric with a fully transparent, independently computed alternative.
+          FDV is our proprietary career value metric built entirely from the statistics and draft
+          data in this platform. It replaces the third-party Career AV metric with a fully
+          transparent, position-aware, independently computed alternative.
         </p>
       </div>
 
@@ -48,84 +48,120 @@ export default function FdvPage() {
 
       {/* Core algorithm */}
       <div className={card}>
-        <p className={section}>Core Algorithm</p>
+        <p className={section}>Core Algorithm — Three Layers</p>
         <ol className="space-y-3 text-sm text-slate-400 list-decimal list-inside">
           <li>
-            <span className="text-slate-200 font-semibold">Raw score per player-season</span>
-            {' '}— A category-specific weighted formula converts raw statistics into a single
-            number representing how impactful that player was that season.
+            <span className="text-slate-200 font-semibold">Position-specific raw score</span>
+            {' '}— Each of the 11 position groups (QB, RB, WR, TE, EDGE, DT, LB, CB, S, K, P)
+            has its own formula tailored to the statistics that matter most at that role.
+            A QB is evaluated on passing efficiency and clutch play; a CB on interceptions and
+            pass deflections; a DT on sacks and tackles for loss.
           </li>
           <li>
-            <span className="text-slate-200 font-semibold">Era normalisation</span>
-            {' '}— For each season-year and category, raw scores are z-scored relative to
-            qualified starters in that year. This ensures a great 1978 season is valued the
-            same as a great 2018 season, even though the game has changed dramatically.
+            <span className="text-slate-200 font-semibold">Within-position era normalisation</span>
+            {' '}— Raw scores are z-scored against same-position peers in the same season-year.
+            A dominant 1978 CB is measured against 1978 CBs; a dominant 2022 CB against 2022 CBs.
           </li>
           <li>
             <span className="text-slate-200 font-semibold">Season FDV</span>
-            {' '}— <code className="text-violet-300 text-xs">max(0, 6 + 3 × z) × (games_played / full_season)</code>.
-            The game-participation ratio weights seasons by how much the player actually played.
+            {' '}— <code className="text-violet-300 text-xs">max(0, 6 + 3 × z) × (games / full_season)</code>,
+            capped at 18 per season. Returns are added as a 25% bonus.
           </li>
           <li>
-            <span className="text-slate-200 font-semibold">Multi-category handling</span>
-            {' '}— A player who appears in multiple categories (e.g. a RB who also returns kicks)
-            gets credit for their primary role (maximum of passing / offense / defense / kicking / punting)
-            plus a 40%-weighted returns bonus.
+            <span className="text-slate-200 font-semibold">Career aggregation with longevity decay</span>
+            {' '}— Top 10 seasons count at full value, seasons 11–13 at 50%, and seasons 14+ at 30%.
+            This prevents long-but-average careers from outscoring shorter dominant ones.
           </li>
           <li>
-            <span className="text-slate-200 font-semibold">Career FDV</span>
-            {' '}— Sum of all season FDVs, plus a 10% peak bonus equal to 10% of the player's
-            top-3 season scores. The peak bonus rewards players with sustained elite seasons
-            without penalising longevity.
+            <span className="text-slate-200 font-semibold">Cross-position normalisation</span>
+            {' '}— Career FDV is z-scored within each position group, then mapped to a common scale
+            so that equal dominance at any position produces comparable final scores.
+          </li>
+          <li>
+            <span className="text-slate-200 font-semibold">Positional value multiplier</span>
+            {' '}— A final multiplier (0.70–1.20) is derived from 55 years of NFL draft data
+            (1970–2025). Positions that historically command more draft capital — reflecting
+            the league's consensus on positional impact — receive a higher multiplier.
+            This is computed automatically from our draft database, not manually assigned.
           </li>
         </ol>
       </div>
 
-      {/* Formulas by category */}
+      {/* Formulas by position */}
       <div className={card}>
-        <p className={section}>Raw Score Formulas</p>
+        <p className={section}>Raw Score Formulas by Position</p>
         <p className="text-slate-500 text-xs mb-3">
-          All formulas produce a raw score that is then era-normalised before contributing to FDV.
-          Coefficients were calibrated so an average full-time starter season yields a z-score near 0.
+          Each position group has a tailored formula. Raw scores are then era-normalised
+          within the position group before contributing to FDV.
         </p>
         <div className="space-y-4">
 
           {[
             {
-              cat: 'Passing (QBs)',
+              cat: 'QB',
               color: '#60a5fa',
-              formula: '(ANY/A × attempts / 10) + game-winning drives × 3 + 4th-quarter comebacks × 2',
-              notes: 'ANY/A (Adjusted Net Yards per Attempt) is the most predictive single-season QB efficiency metric. Volume is captured via attempts. Clutch performance is rewarded via GWD and 4QC. Minimum 200 attempts to qualify for era normalisation.',
+              formula: '(ANY/A × att / 10) + GWD × 3 + 4QC × 2 + rush_yds × 0.04 + rush_td × 3',
+              notes: 'Efficiency via ANY/A, volume via attempts, clutch via GWD/4QC, dual-threat via rushing. Min 200 pass attempts to qualify.',
             },
             {
-              cat: 'Offense (RB / WR / TE / FB)',
+              cat: 'RB',
               color: '#4ade80',
-              formula: 'rush_yds × 0.06 + rush_td × 5 + rec_yds × 0.07 + rec_td × 7 + receptions × 0.5 − fumbles × 2',
-              notes: 'Receiving TDs and yards are weighted slightly more than rushing to reflect scarcity. Fumbles penalise ball-security issues. Minimum 30 combined rush attempts + receptions to qualify.',
+              formula: 'rush_yds × 0.08 + rush_td × 6 + rec × 0.3 + rec_yds × 0.06 + rec_td × 5 − fumbles × 3',
+              notes: 'Rushing production + receiving versatility. Fumbles penalised heavily. Min 50 rush attempts to qualify.',
             },
             {
-              cat: 'Defense (LB / DL / CB / S)',
+              cat: 'WR',
+              color: '#22d3ee',
+              formula: 'rec_yds × 0.09 + rec_td × 7 + rec × 0.5 + rush_yds × 0.03 + rush_td × 3 − fumbles × 2',
+              notes: 'Receiving volume and scoring + gadget play value. Min 20 receptions to qualify.',
+            },
+            {
+              cat: 'TE',
+              color: '#a3e635',
+              formula: 'rec_yds × 0.10 + rec_td × 8 + rec × 0.6 − fumbles × 2',
+              notes: 'Higher per-catch weights than WR to reflect scarcity of receiving production at TE. Min 15 receptions to qualify.',
+            },
+            {
+              cat: 'EDGE (DE / OLB)',
               color: '#f87171',
-              formula: 'sacks × 8 + INTs × 8 + pass deflections × 2 + forced fumbles × 4 + TFL × 3 + tackles × 0.25 + QB hits × 1.5 + safeties × 6',
-              notes: 'High-value plays (sacks, INTs) are heavily weighted. Tackles are included at a lower weight because their quality varies widely. Minimum 13 games played to qualify (true starters only). Era-normalisation is computed within four position sub-groups: pass rushers (DE/OLB/outside LB) compete with other pass rushers; coverage players (CB/S) with coverage; interior DL (DT/NT) with interior DL; and inside linebackers (ILB/MLB) with inside linebackers. This prevents sack totals from dominating across unrelated positions.',
+              formula: 'sacks × 10 + TFL × 4 + QB hits × 2 + FF × 5 + INTs × 5 + PD × 1.5 + tackles × 0.1 + safeties × 6',
+              notes: 'Sack-primary with disruption bonuses. When TFL / QB hits are unavailable (pre-1999), their weight is redistributed to sacks. Min 10 games to qualify.',
             },
             {
-              cat: 'Kicking',
+              cat: 'DT / NT',
               color: '#fb923c',
-              formula: 'FGM × 5 + FGM 50+ yds × 4 + XPM × 0.4 − missed FGs × 3',
-              notes: 'Long field goals receive a bonus for difficulty. Misses are penalised to capture accuracy. Minimum 10 FG attempts to qualify.',
+              formula: 'sacks × 9 + TFL × 5 + QB hits × 3 + FF × 5 + tackles × 0.3 + PD × 1 + safeties × 6',
+              notes: 'Interior disruption weighted more than EDGE. Missing-stat redistribution applies. Min 10 games.',
             },
             {
-              cat: 'Punting',
+              cat: 'LB (ILB / MLB)',
+              color: '#fbbf24',
+              formula: 'sacks × 6 + tackles × 0.5 + TFL × 4 + INTs × 7 + PD × 2.5 + FF × 4 + safeties × 6',
+              notes: 'Balanced across run stopping, coverage, and pass rush. When TFL is missing, weight shifts to sacks and tackles. Min 10 games.',
+            },
+            {
+              cat: 'CB',
+              color: '#c084fc',
+              formula: 'INTs × 10 + PD × 3 + FF × 4 + tackles × 0.2 + sacks × 3 + safeties × 6',
+              notes: 'Ball production (INTs, PDs) dominates. Min 10 games.',
+            },
+            {
+              cat: 'S (FS / SS)',
+              color: '#e879f9',
+              formula: 'INTs × 8 + PD × 2.5 + tackles × 0.3 + sacks × 5 + FF × 4 + TFL × 3 + safeties × 6',
+              notes: 'Hybrid role: coverage + run support + blitz. Missing-stat redistribution applies. Min 10 games.',
+            },
+            {
+              cat: 'K',
+              color: '#fb923c',
+              formula: 'FGM × 5 + FGM 50+ × 4 + XPM × 0.4 − missed FGs × 3',
+              notes: 'Long field goals receive a difficulty bonus. Min 10 FG attempts.',
+            },
+            {
+              cat: 'P',
               color: '#a78bfa',
-              formula: 'net yards × 0.015 + punts inside-20 × 2.5 − blocked punts × 4',
-              notes: 'Net yards capture both distance and return-yards allowed. Inside-20 punts capture field-position impact. Minimum 15 punts to qualify.',
-            },
-            {
-              cat: 'Returns (bonus)',
-              color: '#38bdf8',
-              formula: 'KR yards × 0.02 + PR yards × 0.025 + return TDs × 8',
-              notes: 'Returns are a secondary bonus category added on top of a player\'s primary category score, at 40% weight. This avoids double-counting when a WR also returns punts.',
+              formula: 'net yards × 0.015 + inside-20 × 2.5 − blocked punts × 4',
+              notes: 'Field-position impact. Min 15 punts.',
             },
           ].map(({ cat, color, formula, notes }) => (
             <div key={cat} className="rounded-xl border border-slate-700/40 bg-slate-800/40 p-4 space-y-2">
@@ -150,14 +186,56 @@ export default function FdvPage() {
           passer was equally dominant relative to his peers.
         </p>
         <p className="text-slate-400 text-sm leading-relaxed mt-2">
-          FDV solves this by computing a <strong className="text-white">z-score per season-year</strong>{' '}
+          FDV solves this by computing a <strong className="text-white">z-score per position group per season-year</strong>{' '}
           among qualified players. A z-score of +2 means "2 standard deviations above the average
-          starter in that specific year" — the same interpretation whether the year is 1975 or 2024.
+          starter at your position in that specific year."
         </p>
         <p className="text-slate-400 text-sm leading-relaxed mt-2">
-          For early seasons where fewer than 8 qualified players exist in a category
+          For early seasons where fewer than 8 qualified players exist
           (e.g. kickers in the 1970s), we fall back to the all-years mean and standard deviation
-          for that category to keep scores stable.
+          for that position group.
+        </p>
+      </div>
+
+      {/* Positional value */}
+      <div className={card}>
+        <p className={section}>Positional Value Multiplier</p>
+        <p className="text-slate-400 text-sm leading-relaxed">
+          Not all positions contribute equally to winning football games. A franchise QB impacts
+          outcomes more than a franchise punter. FDV accounts for this with a draft-derived
+          multiplier applied after cross-position normalisation.
+        </p>
+        <p className="text-slate-400 text-sm leading-relaxed mt-2">
+          The multiplier is computed from our draft database (1970–2025, 16,800+ picks) using
+          a composite of two signals: <strong className="text-white">average draft position</strong>{' '}
+          (how early is the position picked?) and <strong className="text-white">round-1 frequency</strong>{' '}
+          (what percentage of picks at this position are in the first round?). The result is
+          scaled to a 0.70–1.20 range.
+        </p>
+        <div className="mt-3 space-y-1.5">
+          {[
+            { pos: 'EDGE',  mult: '1.20', color: '#f87171' },
+            { pos: 'QB',    mult: '1.14', color: '#60a5fa' },
+            { pos: 'S',     mult: '1.09', color: '#e879f9' },
+            { pos: 'DT',    mult: '1.07', color: '#fb923c' },
+            { pos: 'WR',    mult: '0.98', color: '#22d3ee' },
+            { pos: 'RB',    mult: '0.96', color: '#4ade80' },
+            { pos: 'CB',    mult: '0.95', color: '#c084fc' },
+            { pos: 'TE',    mult: '0.91', color: '#a3e635' },
+            { pos: 'LB',    mult: '0.89', color: '#fbbf24' },
+            { pos: 'K',     mult: '0.72', color: '#fb923c' },
+            { pos: 'P',     mult: '0.70', color: '#a78bfa' },
+          ].map(({ pos, mult, color }) => (
+            <div key={pos} className="flex items-center gap-3">
+              <span className="text-xs font-mono font-bold w-12 shrink-0" style={{ color }}>{pos}</span>
+              <div className="flex-1 h-px bg-slate-700/40" />
+              <span className="text-xs font-mono text-slate-300">{mult}x</span>
+            </div>
+          ))}
+        </div>
+        <p className="text-slate-600 text-xs pt-2">
+          These multipliers are not hand-picked — they are derived automatically from how
+          NFL teams have historically allocated premium draft capital across positions.
         </p>
       </div>
 
@@ -166,12 +244,13 @@ export default function FdvPage() {
         <p className={section}>FDV Scale</p>
         <div className="space-y-2">
           {[
-            { range: '0–20',    label: 'Minimal NFL impact / depth player',     color: '#475569' },
-            { range: '20–50',   label: 'Backup / role player',                  color: '#64748b' },
-            { range: '50–90',   label: 'Solid multi-year starter',              color: '#3b82f6' },
-            { range: '90–130',  label: 'Quality Pro Bowl-level career',         color: '#f59e0b' },
-            { range: '130–180', label: 'Star player / borderline Hall of Fame', color: '#f97316' },
-            { range: '180+',    label: 'Hall of Fame level',                    color: '#a78bfa' },
+            { range: '< 30',     label: 'Depth / minimal NFL impact',              color: '#475569' },
+            { range: '30–50',    label: 'Backup / role player',                    color: '#64748b' },
+            { range: '50–70',    label: 'Solid multi-year starter',                color: '#3b82f6' },
+            { range: '70–90',    label: 'Pro Bowl-level career',                   color: '#f59e0b' },
+            { range: '90–130',   label: 'Star / borderline Hall of Fame',          color: '#f97316' },
+            { range: '130–180',  label: 'Hall of Fame level',                      color: '#a78bfa' },
+            { range: '180+',     label: 'All-time great / inner-circle HOF',       color: '#ec4899' },
           ].map(({ range, label, color }) => (
             <div key={range} className="flex items-center gap-3">
               <span className="text-xs font-mono font-bold w-20 shrink-0" style={{ color }}>{range}</span>
@@ -180,10 +259,6 @@ export default function FdvPage() {
             </div>
           ))}
         </div>
-        <p className="text-slate-600 text-xs pt-1">
-          An "average starter season" in any era yields approximately 6 FDV for a full 16-/17-game season.
-          Pro Bowl-calibre seasons yield 9–12 FDV. Legendary seasons yield 15–18 FDV.
-        </p>
       </div>
 
       {/* Limitations */}
@@ -191,38 +266,31 @@ export default function FdvPage() {
         <p className={section}>Known Limitations</p>
         <ul className="space-y-2 text-sm text-slate-400 list-disc list-inside">
           <li>
-            <span className="text-slate-300 font-medium">Longevity bias</span>
-            {' '}— FDV is a career sum, so players who played 16+ seasons accumulate
-            more than equally dominant players with shorter careers. A linebacker
-            who played 18 solid seasons can outscore a pass rusher who had 15 elite
-            seasons. This is an inherent trade-off in career-value metrics.
-          </li>
-          <li>
-            <span className="text-slate-300 font-medium">Positional value not captured</span>
-            {' '}— a QB who is 2 standard deviations above average has more impact on
-            team winning than a linebacker at the same relative excellence. FDV treats
-            all positions as equally valuable within their peer group.
-          </li>
-          <li>
             <span className="text-slate-300 font-medium">Offensive linemen</span>
             {' '}have no reliable per-season statistics in our database.
             OL players will show FDV = 0 until stat tracking improves.
           </li>
           <li>
             <span className="text-slate-300 font-medium">Pre-1999 data gaps</span>
-            {' '}exist for some advanced stats (e.g. TFL, QB hits, targets).
-            Seasons with missing columns still compute FDV from available data.
+            {' '}exist for some advanced defensive stats (TFL, QB hits).
+            When these columns are missing, their formula weight is redistributed to
+            available stats (primarily sacks and tackles) so older players are not penalised.
           </li>
           <li>
             <span className="text-slate-300 font-medium">Post-season stats</span>
             {' '}are not included. FDV is computed from regular-season data only.
+          </li>
+          <li>
+            <span className="text-slate-300 font-medium">Blocking contribution</span>
+            {' '}is not captured for any position (TEs, FBs, RBs).
+            Players whose primary value is blocking will score lower than their true impact.
           </li>
         </ul>
       </div>
 
       {/* Footer */}
       <p className="text-slate-600 text-xs text-center pb-4">
-        FDV is computed by <code>etl/build_fdv.py</code> and updated whenever new season data is loaded.
+        FDV is computed by <code>etl/build_fdv_v3.py</code> and updated whenever new season data is loaded.
         The formula is fully open and auditable in the project repository.
       </p>
     </div>

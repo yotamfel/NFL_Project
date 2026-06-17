@@ -151,7 +151,7 @@ const CONTENT = {
           },
           {
             title: 'FDV — Fourth & Data Value',
-            body: 'FDV is our proprietary, position-neutral career value metric. It uses era-adjusted z-scores per category (passing, offense, defense, kicking, punting, returns) so a great 1978 season counts the same as a great 2018 season. An FDV of 90 means roughly the same thing for a QB, a DE, or a kicker. See /methodology for the full formula.',
+            body: 'FDV is our proprietary, position-aware career value metric. Each of 11 position groups (QB, RB, WR, TE, EDGE, DT, LB, CB, S, K, P) has a tailored formula. Scores are era-normalised within position, cross-normalised across positions, and weighted by a draft-derived positional value multiplier (0.70–1.20). HOF careers score 130–180+; solid starters 50–70. See /methodology for the full formula.',
           },
           {
             title: 'Custom Query',
@@ -366,7 +366,7 @@ const CONTENT = {
             title: 'General',
             body: [
               'G — Games played',
-              'FDV — Fourth & Data Value (our proprietary position-neutral career quality metric; see /methodology for the full formula)',
+              'FDV — Fourth & Data Value (our proprietary position-aware career quality metric with 11 position-specific formulas and draft-derived positional value weighting; see /methodology)',
             ],
           },
           {
@@ -606,7 +606,7 @@ const CONTENT = {
           },
           {
             title: 'FDV — Fourth & Data Value',
-            body: 'FDV הוא מדד ערך קריירה ניטרלי-עמדה קנייני שפיתחנו כאן ב-Fourth & Data. הוא מבוסס על נוסחאות משקל לפי קטגוריה (Passing, Offense, Defense, Kicking, Punting, Returns), מנורמל לפי עידן (z-score לפי שנה) כדי שהשוואה בין שנות 70 ל-2020 תהיה הוגנת, וכולל בונוס Peak על שלושת העונות הטובות ביותר. ראה את הנוסחה המלאה ב-/methodology.',
+            body: 'FDV הוא מדד ערך קריירה קנייני שפיתחנו כאן ב-Fourth & Data. כל אחת מ-11 קבוצות עמדה (QB, RB, WR, TE, EDGE, DT, LB, CB, S, K, P) מקבלת נוסחה ייחודית. הציונים מנורמלים לפי עידן בתוך כל עמדה, מושוואים בין עמדות, ומשוקללים לפי מכפיל ערך פוזיציוני (0.70–1.20) שנגזר מנתוני הדראפט שלנו (1970–2025). קריירות HOF מדורגות 130–180+; סטארטרים טובים 50–70. ראה את הנוסחה המלאה ב-/methodology.',
           },
           {
             title: 'Custom Query',
@@ -821,7 +821,7 @@ const CONTENT = {
             title: 'כללי',
             body: [
               'G — Games: משחקים שהשחקן שיחק בהם',
-              'FDV — Fourth & Data Value: מדד ניטרלי-עמדה קנייני שלנו לאיכות קריירה (ראה /methodology לנוסחה המלאה)',
+              'FDV — Fourth & Data Value: מדד קריירה קנייני עם 11 נוסחאות לפי עמדה ומשקלול ערך פוזיציוני מנתוני דראפט (ראה /methodology לנוסחה המלאה)',
             ],
           },
           {

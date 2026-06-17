@@ -35,8 +35,10 @@ players(player_id PK, player_name, pos, first_season, last_season, n_seasons, fd
   Canonical player identity. first_season and last_season accurately reflect
   the player's actual NFL debut and final season (coverage 1970-2025 for most
   categories). Everything else links to it via player_id.
-  fdv = Fourth & Data Value, our proprietary position-neutral career quality score
-  (higher is better; ~6 per average starter season; HOF careers score 180+).
+  fdv = Fourth & Data Value, our proprietary position-aware career quality score.
+  Each position group has a tailored formula; scores are cross-normalised and
+  weighted by draft-derived positional value (higher is better; HOF careers 130-180+;
+  all-time greats 180+; solid starters 50-70).
 
 ### Box-score stats
 Six categories, each with a `*_seasons` table (one row per player-season)
