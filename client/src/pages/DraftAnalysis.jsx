@@ -521,13 +521,13 @@ function RankingChart({ ranked, isSteal, selectedCriteria }) {
         <div className="mb-4 rounded-xl border border-slate-700/50 bg-slate-800/60 p-4 space-y-2 text-xs text-slate-400 leading-relaxed">
           <p className="text-slate-200 font-semibold text-sm">How the {label} is calculated</p>
           <p>
-            Each player is scored across <span className="text-white">every criterion you combined</span> (including Career AV, which is always included).
+            Each player is scored across <span className="text-white">every criterion you combined</span> (including FDV, which is always included).
             For each stat, we compute how many standard deviations the player is above or below the <span className="text-white">average of all players in this result set</span> — this is called a <span className="text-white">z-score</span>.
           </p>
           <p>
             {isSteal
-              ? <>A player who dominated in <em>every</em> criterion — e.g. high Career AV <em>and</em> high passing yards for a Round 5+ pick — gets a high average z-score. That makes them the <span className="text-white">biggest steal</span>.</>
-              : <>A player who underperformed in <em>every</em> criterion — e.g. low Career AV <em>and</em> low passing yards for a Round 1–2 pick — gets a very negative average z-score. That makes them the <span className="text-white">biggest bust</span>.</>
+              ? <>A player who dominated in <em>every</em> criterion — e.g. high FDV <em>and</em> high passing yards for a Round 5+ pick — gets a high average z-score. That makes them the <span className="text-white">biggest steal</span>.</>
+              : <>A player who underperformed in <em>every</em> criterion — e.g. low FDV <em>and</em> low passing yards for a Round 1–2 pick — gets a very negative average z-score. That makes them the <span className="text-white">biggest bust</span>.</>
             }
           </p>
           <p>

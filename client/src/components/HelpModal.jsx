@@ -16,11 +16,11 @@ const SECTIONS = [
     icon: '📊',
     en: {
       title: 'Player Profile',
-      body:  "Shows season-by-season stats with trend charts, combine measurements, and draft info. Career AV (Approximate Value) is Pro Football Reference's position-neutral career quality metric — higher is better.",
+      body:  "Shows season-by-season stats with trend charts, combine measurements, and draft info. FDV (Fourth & Data Value) is our proprietary position-aware career quality metric — higher is better. See /methodology for the full formula.",
     },
     he: {
       title: 'פרופיל שחקן',
-      body:  'מציג סטטיסטיקות עונה-עונה עם גרפי מגמה, מדדי קומביין ומידע על הדראפט. Career AV הוא מדד איכות קריירה ניטרלי-עמדה של Pro Football Reference — גבוה יותר = טוב יותר.',
+      body:  'מציג סטטיסטיקות עונה-עונה עם גרפי מגמה, מדדי קומביין ומידע על הדראפט. FDV (Fourth & Data Value) הוא מדד ערך קריירה קנייני שלנו — גבוה יותר = טוב יותר. ראה /methodology לנוסחה המלאה.',
     },
   },
   {
@@ -38,11 +38,11 @@ const SECTIONS = [
     icon: '🎯',
     en: {
       title: 'Draft Analysis',
-      body:  '"Steals" are round 4+ picks who overdelivered (Career AV ≥ 50). "Busts" are round 1–2 picks who underdelivered (Career AV ≤ 15). Rankings use an ML model trained on combine measurements to predict expected career value.',
+      body:  '"Steals" are round 4+ picks who overdelivered (FDV ≥ 40). "Busts" are round 1–2 picks who underdelivered (FDV ≤ 20). Rankings use an ML model trained on combine measurements to predict expected career value.',
     },
     he: {
       title: 'ניתוח דראפט',
-      body:  '"גנבות" הן בחירות מסיבוב 4+ שעברו ציפיות (Career AV ≥ 50). "כישלונות" הן בחירות מסיבוב 1–2 שהאכזבו (Career AV ≤ 15). הדירוגים מבוססים על מודל ML שאומן על מדדי קומביין לחיזוי ערך קריירה צפוי.',
+      body:  '"גנבות" הן בחירות מסיבוב 4+ שעברו ציפיות (FDV ≥ 40). "כישלונות" הן בחירות מסיבוב 1–2 שהאכזבו (FDV ≤ 20). הדירוגים מבוססים על מודל ML שאומן על מדדי קומביין לחיזוי ערך קריירה צפוי.',
     },
   },
   {

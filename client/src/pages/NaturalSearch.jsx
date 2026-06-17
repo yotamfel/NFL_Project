@@ -8,7 +8,7 @@ const EXAMPLES = [
   'Who had the most passing touchdowns between 2015 and 2020?',
   'Top 5 running backs by career rushing yards',
   "What was Tom Brady's career completion percentage?",
-  'Show me 2017 draft picks with the highest career AV',
+  'Show me 2017 draft picks with the highest FDV',
   'Which wide receivers had over 1000 receiving yards in 2022?',
 ]
 
