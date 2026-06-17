@@ -173,6 +173,7 @@ export const api = {
   },
 
   getSimilarPlayers: (playerId) => get(`/players/${playerId}/similar`),
+  scoutQuery: (question) => post('/scout', { question }),
 
   topPlayersByFdv: ({ pos, limit = 50 } = {}) => {
     const p = new URLSearchParams({ limit })
