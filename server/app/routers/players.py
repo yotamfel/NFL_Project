@@ -1,7 +1,7 @@
 """Module 1 endpoints: player search and full profile."""
 from fastapi import APIRouter, HTTPException, Query
 
-from app.data.players import get_player_profile, popular_players, search_players, top_players_by_stat
+from app.data.players import get_player_profile, popular_players, search_players, top_players_by_stat, top_players_by_fdv
 from app.data.snap_counts import get_snap_weeks, get_snap_seasons, get_snap_available_seasons
 from app.data.adv_receiving import get_adv_receiving
 from app.data.injuries import get_injury_seasons, get_injury_weeks
@@ -47,6 +47,14 @@ def top_by_stat(
         return top_players_by_stat(category, stat, pos=pos, season=season, min_val=min, limit=limit)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
+
+
+@router.get("/top_by_fdv")
+def top_fdv(
+    pos:   str | None = Query(None),
+    limit: int        = Query(50, ge=1, le=200),
+):
+    return top_players_by_fdv(pos=pos, limit=limit)
 
 
 @router.get("/{player_id}/injuries")

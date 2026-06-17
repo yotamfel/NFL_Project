@@ -164,6 +164,85 @@ def top_players_by_stat(
     return [{**dict(r._mapping), "pos": _normalize_pos(r._mapping.get("pos"))} for r in rows]
 
 
+_FDV_POS_GROUPS = {
+    'QB': ['QB'],
+    'RB': ['RB', 'FB', 'HB'],
+    'WR': ['WR', 'FL', 'SE'],
+    'TE': ['TE'],
+    'EDGE': ['DE', 'LDE', 'RDE', 'OLB', 'LOLB', 'ROLB', 'LLB', 'RLB'],
+    'DT': ['DT', 'NT', 'LDT', 'RDT'],
+    'LB': ['LB', 'ILB', 'MLB', 'RILB', 'LILB'],
+    'CB': ['CB', 'LCB', 'RCB', 'NCB', 'DB'],
+    'S': ['S', 'FS', 'SS'],
+    'K': ['K', 'PK'],
+    'P': ['P'],
+}
+_POS_TO_FDV_GRP: dict[str, str] = {}
+for _g, _poss in _FDV_POS_GROUPS.items():
+    for _p in _poss:
+        _POS_TO_FDV_GRP[_p] = _g
+
+
+def top_players_by_fdv(
+    pos: str | None = None,
+    limit: int = 50,
+) -> list[dict]:
+    where = "WHERE p.fdv IS NOT NULL AND p.fdv > 0"
+    if pos:
+        where += " AND UPPER(p.pos) = ANY(:pos_variants)"
+
+    sql = text(f"""
+        SELECT p.player_id, p.player_name, p.pos, p.fdv,
+               RANK() OVER (ORDER BY p.fdv DESC) AS overall_rank
+        FROM players p
+        {where}
+        ORDER BY p.fdv DESC
+        LIMIT :limit
+    """)
+
+    with engine.connect() as conn:
+        rows = conn.execute(sql, {
+            "pos_variants": _pos_variants(pos) if pos else None,
+            "limit": limit,
+        }).fetchall()
+
+    # Compute position rank by querying all FDVs per position group
+    pos_ranks: dict[str, int] = {}
+    all_sql = text("""
+        SELECT player_id, pos, fdv,
+               RANK() OVER (PARTITION BY pos ORDER BY fdv DESC) AS raw_rank
+        FROM players WHERE fdv IS NOT NULL AND fdv > 0
+    """)
+    with engine.connect() as conn:
+        all_rows = conn.execute(all_sql).fetchall()
+
+    # Build per-FDV-group ranking
+    from collections import defaultdict
+    grp_players: dict[str, list[tuple[str, float]]] = defaultdict(list)
+    for r in all_rows:
+        grp = _POS_TO_FDV_GRP.get(str(r.pos or '').upper(), '')
+        if grp:
+            grp_players[grp].append((r.player_id, float(r.fdv)))
+
+    grp_ranks: dict[str, int] = {}
+    for grp, players_list in grp_players.items():
+        players_list.sort(key=lambda x: -x[1])
+        for rank, (pid, _) in enumerate(players_list, 1):
+            grp_ranks[pid] = rank
+
+    result = []
+    for r in rows:
+        d = dict(r._mapping)
+        d['pos'] = _normalize_pos(d.get('pos'))
+        d['fdv'] = float(d['fdv']) if d['fdv'] is not None else 0
+        raw_pos = str(r.pos or '').upper()
+        d['pos_group'] = _POS_TO_FDV_GRP.get(raw_pos, '')
+        d['pos_rank'] = grp_ranks.get(r.player_id, 0)
+        result.append(d)
+
+    return result
+
+
 def search_players(
     query: str,
     limit: int = 10,

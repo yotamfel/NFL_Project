@@ -165,6 +165,12 @@ export const api = {
     return get(`/players/top_by_stat?${p}`)
   },
 
+  topPlayersByFdv: ({ pos, limit = 50 } = {}) => {
+    const p = new URLSearchParams({ limit })
+    if (pos) p.set('pos', pos)
+    return get(`/players/top_by_fdv?${p}`)
+  },
+
   getCombinedDraft: (body) => post('/draft/combined', body),
 
   getDraftRoundStats: ({ roundVal, roundOp, category = 'fdv', stat, scope = 'career', pos, draftYearFrom, draftYearTo } = {}) => {

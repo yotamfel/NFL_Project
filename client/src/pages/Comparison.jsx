@@ -336,20 +336,28 @@ export default function Comparison() {
     setLbStat(first)
   }, [category])
 
+  const isFdvMode = lbStat === '__fdv__'
+
   // Fetch leaderboard
   useEffect(() => {
     clearTimeout(lbDebounce.current)
     if (!lbStat) return
     lbDebounce.current = setTimeout(() => {
-      api.topPlayersByStat(category, lbStat, {
-        season: compSeason ? parseInt(compSeason) : undefined,
-        limit: 20,
-      })
-        .then(setLbData)
-        .catch(() => setLbData(null))
+      if (isFdvMode) {
+        api.topPlayersByFdv({ limit: 50 })
+          .then(setLbData)
+          .catch(() => setLbData(null))
+      } else {
+        api.topPlayersByStat(category, lbStat, {
+          season: compSeason ? parseInt(compSeason) : undefined,
+          limit: 20,
+        })
+          .then(setLbData)
+          .catch(() => setLbData(null))
+      }
     }, 300)
     return () => clearTimeout(lbDebounce.current)
-  }, [category, lbStat, compSeason])
+  }, [category, lbStat, compSeason, isFdvMode])
 
   // Load comparison data (career or specific season)
   useEffect(() => {
@@ -780,29 +788,38 @@ export default function Comparison() {
           <div>
             <h2 className="text-white font-bold">Top 20 Leaderboard</h2>
             <p className="text-slate-500 text-xs mt-0.5">
-              {compSeason ? `${compSeason} season` : 'Career totals'} — {playerIds.length > 0 ? 'compared players highlighted' : 'add players above to highlight them'}
+              {isFdvMode ? 'All-time career value' : (compSeason ? `${compSeason} season` : 'Career totals')} — {playerIds.length > 0 ? 'compared players highlighted' : 'add players above to highlight them'}
             </p>
           </div>
           <select
             value={lbStat}
             onChange={e => setLbStat(e.target.value)}
             className="bg-slate-900 border border-slate-700 text-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-slate-500">
-            {(STAT_OPTIONS[category] ?? []).map(s => (
-              <option key={s.key} value={s.key}>{s.label}</option>
-            ))}
+            <option value="__fdv__">FDV (Career Value)</option>
+            <optgroup label={category.charAt(0).toUpperCase() + category.slice(1)}>
+              {(STAT_OPTIONS[category] ?? []).map(s => (
+                <option key={s.key} value={s.key}>{s.label}</option>
+              ))}
+            </optgroup>
           </select>
         </div>
         {lbData && lbData.length > 0 ? (
           <div className="relative group pt-7">
             <CsvDownloadButton
-              columns={[
+              columns={isFdvMode ? [
+                { key: '_rank', label: '#' },
+                { key: 'player_name', label: 'Player' },
+                { key: 'pos', label: 'Pos' },
+                { key: 'fdv', label: 'FDV' },
+                { key: 'pos_rank', label: 'Pos Rank' },
+              ] : [
                 { key: '_rank', label: '#' },
                 { key: 'player_name', label: 'Player' },
                 { key: 'pos', label: 'Pos' },
                 { key: 'best_value', label: STAT_OPTIONS[category]?.find(s => s.key === lbStat)?.label ?? lbStat },
               ]}
               rows={lbData.map((p, i) => ({ ...p, _rank: i + 1 }))}
-              title={`Leaderboard — ${STAT_OPTIONS[category]?.find(s => s.key === lbStat)?.label ?? lbStat}`}
+              title={isFdvMode ? 'Leaderboard — FDV (Career Value)' : `Leaderboard — ${STAT_OPTIONS[category]?.find(s => s.key === lbStat)?.label ?? lbStat}`}
             />
           <div className="scroll-x"><table className="min-w-full text-sm">
             <thead>
@@ -811,8 +828,9 @@ export default function Comparison() {
                 <th className="text-left py-2 pr-4 font-medium">Player</th>
                 <th className="text-left py-2 pr-4 font-medium text-slate-600">Pos</th>
                 <th className="text-right py-2 font-medium">
-                  {STAT_OPTIONS[category]?.find(s => s.key === lbStat)?.label ?? lbStat}
+                  {isFdvMode ? 'FDV' : (STAT_OPTIONS[category]?.find(s => s.key === lbStat)?.label ?? lbStat)}
                 </th>
+                {isFdvMode && <th className="text-right py-2 pl-4 font-medium text-slate-600">Pos Rank</th>}
               </tr>
             </thead>
             <tbody>
@@ -838,8 +856,13 @@ export default function Comparison() {
                     </td>
                     <td className="py-2 pr-4 text-slate-500 text-xs">{p.pos}</td>
                     <td className="py-2 text-right text-white font-semibold">
-                      {p.best_value?.toLocaleString() ?? '—'}
+                      {isFdvMode ? (p.fdv?.toLocaleString() ?? '—') : (p.best_value?.toLocaleString() ?? '—')}
                     </td>
+                    {isFdvMode && (
+                      <td className="py-2 pl-4 text-right text-slate-400 text-xs font-mono">
+                        {p.pos_group ? `#${p.pos_rank} ${p.pos_group}` : '—'}
+                      </td>
+                    )}
                   </tr>
                 )
               })}
