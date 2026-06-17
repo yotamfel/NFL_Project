@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { BarChart, Bar, LineChart, Line, ScatterChart, Scatter,
          XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { api } from '../api'
+import SocialPostGenerator from '../components/SocialPostGenerator'
 
 const EXAMPLES = [
   'WRs drafted after round 4 with 1000+ career receiving yards',
@@ -168,6 +169,9 @@ export default function Scout() {
               </div>
             </div>
           )}
+
+          {/* Social post generator */}
+          <SocialPostGenerator data={result.results?.slice(0, 20)} context={question} />
 
           {/* SQL (collapsible) */}
           {result.sql && (

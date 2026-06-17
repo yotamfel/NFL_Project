@@ -174,6 +174,7 @@ export const api = {
 
   getSimilarPlayers: (playerId) => get(`/players/${playerId}/similar`),
   scoutQuery: (question) => post('/scout', { question }),
+  generateContent: (platform, data, context) => post('/content/generate', { platform, data, context }),
 
   topPlayersByFdv: ({ pos, limit = 50 } = {}) => {
     const p = new URLSearchParams({ limit })

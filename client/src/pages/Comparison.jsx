@@ -8,6 +8,8 @@ import { exportTableAsCsv, csvFilename } from '../utils/exportCsv'
 import { useUser } from '../context/UserContext'
 import { STAT_DEFS } from '../utils/statDefinitions'
 import AiFeedback from '../components/AiFeedback'
+import SocialPostGenerator from '../components/SocialPostGenerator'
+import { useAuth } from '../context/AuthContext'
 
 const CATEGORIES = ['passing', 'offense', 'defense', 'kicking', 'punting', 'returns']
 const BAR_COLORS = ['#60a5fa', '#fbbf24', '#4ade80', '#f87171']
@@ -294,6 +296,7 @@ function shortName(full = '') {
 }
 
 export default function Comparison() {
+  const { user } = useAuth()
   const [searchParams] = useSearchParams()
 
   const [category,      setCategory]      = useState(() => searchParams.get('category') || 'passing')
@@ -720,6 +723,13 @@ export default function Comparison() {
                 <p className="text-xs text-slate-600">Powered by Claude Sonnet 4.6</p>
               </div>
             </div>
+          )}
+
+          {user?.is_admin && data && (
+            <SocialPostGenerator
+              data={data.career}
+              context={`Player comparison: ${data.players?.map(p => p.player_name).join(' vs ')} — ${category} stats`}
+            />
           )}
 
           {/* Chart grid */}
