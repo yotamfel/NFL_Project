@@ -30,6 +30,28 @@ export default function FdvPage() {
         </p>
       </div>
 
+      {/* Scale — up top so readers see the reference immediately */}
+      <div className={card}>
+        <p className={section}>FDV Scale</p>
+        <div className="space-y-2">
+          {[
+            { range: '< 30',     label: 'Depth / minimal NFL impact',              color: '#475569' },
+            { range: '30–50',    label: 'Backup / role player',                    color: '#64748b' },
+            { range: '50–70',    label: 'Solid multi-year starter',                color: '#3b82f6' },
+            { range: '70–90',    label: 'Pro Bowl-level career',                   color: '#f59e0b' },
+            { range: '90–130',   label: 'Star / borderline Hall of Fame',          color: '#f97316' },
+            { range: '130–180',  label: 'Hall of Fame level',                      color: '#a78bfa' },
+            { range: '180+',     label: 'All-time great / inner-circle HOF',       color: '#ec4899' },
+          ].map(({ range, label, color }) => (
+            <div key={range} className="flex items-center gap-3">
+              <span className="text-xs font-mono font-bold w-20 shrink-0" style={{ color }}>{range}</span>
+              <div className="flex-1 h-px" style={{ background: `${color}40` }} />
+              <span className="text-xs text-slate-400">{label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Why we built it */}
       <div className={card}>
         <p className={section}>Why We Built FDV</p>
@@ -237,28 +259,6 @@ export default function FdvPage() {
           These multipliers are not hand-picked — they are derived automatically from how
           NFL teams have historically allocated premium draft capital across positions.
         </p>
-      </div>
-
-      {/* Scale */}
-      <div className={card}>
-        <p className={section}>FDV Scale</p>
-        <div className="space-y-2">
-          {[
-            { range: '< 30',     label: 'Depth / minimal NFL impact',              color: '#475569' },
-            { range: '30–50',    label: 'Backup / role player',                    color: '#64748b' },
-            { range: '50–70',    label: 'Solid multi-year starter',                color: '#3b82f6' },
-            { range: '70–90',    label: 'Pro Bowl-level career',                   color: '#f59e0b' },
-            { range: '90–130',   label: 'Star / borderline Hall of Fame',          color: '#f97316' },
-            { range: '130–180',  label: 'Hall of Fame level',                      color: '#a78bfa' },
-            { range: '180+',     label: 'All-time great / inner-circle HOF',       color: '#ec4899' },
-          ].map(({ range, label, color }) => (
-            <div key={range} className="flex items-center gap-3">
-              <span className="text-xs font-mono font-bold w-20 shrink-0" style={{ color }}>{range}</span>
-              <div className="flex-1 h-px" style={{ background: `${color}40` }} />
-              <span className="text-xs text-slate-400">{label}</span>
-            </div>
-          ))}
-        </div>
       </div>
 
       {/* Limitations */}
