@@ -226,7 +226,9 @@ export default function Nav() {
                 </div>
               </div>
               <SharePanel />
-              <div className="px-4 py-2 border-b border-slate-700/60">
+              <div className="px-4 py-2 border-b border-slate-700/60 flex flex-col gap-1.5">
+                <Link to="/sources" onClick={() => setSettingsOpen(false)}
+                  className="text-slate-400 hover:text-white text-xs transition-colors">Data Sources</Link>
                 <Link to="/about" onClick={() => setSettingsOpen(false)}
                   className="text-slate-400 hover:text-white text-xs transition-colors">About</Link>
               </div>
