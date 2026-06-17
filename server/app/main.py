@@ -11,8 +11,8 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from app.db import engine
 from app.routers import (
-    admin, anomalies, comparison, draft, feedback, players, search, trends,
-    auth as auth_router, saved, user_feedback, notifications, users,
+    admin, anomalies, comparison, draft, feedback, players, projects, search,
+    trends, auth as auth_router, saved, user_feedback, notifications, users,
 )
 
 app = FastAPI(title="NFL Data Platform API")
@@ -172,6 +172,7 @@ app.include_router(feedback.router, prefix="/api")   # AI thumbs → /api/ai/fee
 app.include_router(anomalies.router, prefix="/api")
 app.include_router(admin.router,    prefix="/api")
 app.include_router(saved.router,    prefix="/api")
+app.include_router(projects.router, prefix="/api")
 app.include_router(user_feedback.router, prefix="/api")
 app.include_router(notifications.router, prefix="/api")
 app.include_router(users.router,    prefix="/api")

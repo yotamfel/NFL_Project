@@ -30,7 +30,7 @@ def list_saved(current_user: dict = Depends(get_current_user)):
     uid = int(current_user["sub"])
     with engine.connect() as conn:
         rows = conn.execute(text(
-            "SELECT id, type, label, data, note, created_at FROM saved_items WHERE user_id = :uid ORDER BY created_at DESC"
+            "SELECT id, type, label, data, note, project_id, created_at FROM saved_items WHERE user_id = :uid ORDER BY created_at DESC"
         ), {"uid": uid}).fetchall()
     return [dict(r._mapping) for r in rows]
 
@@ -74,6 +74,28 @@ def delete_saved(item_id: int, current_user: dict = Depends(get_current_user)):
         result = conn.execute(text(
             "DELETE FROM saved_items WHERE id = :id AND user_id = :uid"
         ), {"id": item_id, "uid": uid})
+        if result.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Item not found")
+    return {"ok": True}
+
+
+class MoveProjectBody(BaseModel):
+    project_id: int | None = None
+
+
+@router.patch("/{item_id}/project")
+def move_to_project(item_id: int, body: MoveProjectBody, current_user: dict = Depends(get_current_user)):
+    uid = int(current_user["sub"])
+    with engine.begin() as conn:
+        if body.project_id is not None:
+            proj = conn.execute(text(
+                "SELECT id FROM projects WHERE id = :pid AND user_id = :uid"
+            ), {"pid": body.project_id, "uid": uid}).fetchone()
+            if not proj:
+                raise HTTPException(status_code=404, detail="Project not found")
+        result = conn.execute(text(
+            "UPDATE saved_items SET project_id = :pid WHERE id = :id AND user_id = :uid"
+        ), {"pid": body.project_id, "id": item_id, "uid": uid})
         if result.rowcount == 0:
             raise HTTPException(status_code=404, detail="Item not found")
     return {"ok": True}

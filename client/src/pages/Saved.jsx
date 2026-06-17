@@ -6,6 +6,8 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts'
 import { useUser } from '../context/UserContext'
+import { useAuth } from '../context/AuthContext'
+import { api } from '../api'
 import { posColor } from '../utils/posColors'
 import { CsvDownloadButton } from '../components/StatTable'
 import { CareerLineChart } from '../components/StatChart'
@@ -248,6 +250,7 @@ function TableCard({ table, config, onUpdate, onRemove }) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function Saved() {
+  const { user } = useAuth()
   const {
     username, saved,
     removePlayer, removeComparison, removeSearch,
@@ -310,7 +313,7 @@ export default function Saved() {
 
       {/* Tabs */}
       <div className="flex gap-1 flex-wrap">
-        {TABS.map(t => (
+        {[...TABS, ...(user?.is_admin ? [{ id: 'projects', label: 'Projects', icon: '📁' }] : [])].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
             className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
               tab === t.id ? 'bg-slate-700 text-white' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/60'
@@ -542,9 +545,211 @@ export default function Saved() {
           ))}
         </div>
       )}
+      {/* ── Projects (admin only) ──────────────────────────────────── */}
+      {tab === 'projects' && user?.is_admin && <ProjectsTab />}
     </div>
   )
 }
+
+
+// ─── Projects Tab (admin only) ───────────────────────────────────────────────
+function ProjectsTab() {
+  const [projects,     setProjects]     = useState([])
+  const [dbItems,      setDbItems]      = useState([])
+  const [expanded,     setExpanded]     = useState(null)
+  const [projItems,    setProjItems]    = useState({})
+  const [newName,      setNewName]      = useState('')
+  const [renaming,     setRenaming]     = useState(null)
+  const [renameText,   setRenameText]   = useState('')
+  const [confirming,   setConfirming]   = useState(null)
+  const [loading,      setLoading]      = useState(true)
+
+  const load = async () => {
+    try {
+      const [p, items] = await Promise.all([api.getProjects(), api.getSaved()])
+      setProjects(p)
+      setDbItems(items)
+    } catch { /* ignore */ }
+    finally { setLoading(false) }
+  }
+  useState(() => { load() })
+
+  const unsorted = dbItems.filter(i => !i.project_id)
+
+  const toggle = async (id) => {
+    if (expanded === id) { setExpanded(null); return }
+    setExpanded(id)
+    if (!projItems[id]) {
+      try {
+        const items = await api.getProjectItems(id)
+        setProjItems(prev => ({ ...prev, [id]: items }))
+      } catch { setProjItems(prev => ({ ...prev, [id]: [] })) }
+    }
+  }
+
+  const create = async () => {
+    const name = newName.trim()
+    if (!name) return
+    try {
+      const p = await api.createProject(name)
+      setProjects(prev => [p, ...prev])
+      setNewName('')
+    } catch { /* ignore */ }
+  }
+
+  const rename = async (id) => {
+    const name = renameText.trim()
+    if (!name) return
+    try {
+      await api.renameProject(id, name)
+      setProjects(prev => prev.map(p => p.id === id ? { ...p, name } : p))
+      setRenaming(null)
+    } catch { /* ignore */ }
+  }
+
+  const remove = async (id) => {
+    try {
+      await api.deleteProject(id)
+      setProjects(prev => prev.filter(p => p.id !== id))
+      setConfirming(null)
+      load()
+    } catch { /* ignore */ }
+  }
+
+  const moveItem = async (itemId, projectId) => {
+    try {
+      await api.moveSavedToProject(itemId, projectId)
+      load()
+      setProjItems({})
+      setExpanded(null)
+    } catch { /* ignore */ }
+  }
+
+  if (loading) return <div className="text-slate-500 text-sm text-center py-8 animate-pulse">Loading...</div>
+
+  return (
+    <div className="space-y-4">
+      {/* New project input */}
+      <div className="flex gap-2">
+        <input
+          type="text" value={newName}
+          onChange={e => setNewName(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') create() }}
+          placeholder="New project name..."
+          className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm placeholder-slate-600 focus:outline-none focus:border-amber-500/50"
+        />
+        <button onClick={create} disabled={!newName.trim()}
+          className="bg-amber-500/20 hover:bg-amber-500/30 disabled:opacity-40 border border-amber-500/30 text-amber-300 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors">
+          Create
+        </button>
+      </div>
+
+      {/* Projects list */}
+      {projects.map(p => (
+        <div key={p.id} className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+          <div className="px-4 py-3 flex items-center gap-3">
+            <button onClick={() => toggle(p.id)} className="flex-1 text-left flex items-center gap-2">
+              <span className="text-slate-500 text-xs">{expanded === p.id ? '▼' : '▶'}</span>
+              {renaming === p.id ? (
+                <input autoFocus value={renameText}
+                  onChange={e => setRenameText(e.target.value)}
+                  onBlur={() => rename(p.id)}
+                  onKeyDown={e => { if (e.key === 'Enter') rename(p.id); if (e.key === 'Escape') setRenaming(null) }}
+                  className="bg-slate-800 border border-slate-600 rounded px-2 py-0.5 text-sm text-white focus:outline-none"
+                  onClick={e => e.stopPropagation()}
+                />
+              ) : (
+                <span className="text-white text-sm font-medium">{p.name}</span>
+              )}
+              <span className="text-slate-600 text-xs">{p.item_count} items</span>
+            </button>
+            <button onClick={() => { setRenaming(p.id); setRenameText(p.name) }}
+              className="text-slate-600 hover:text-slate-300 text-xs transition-colors px-1">Rename</button>
+            {confirming === p.id ? (
+              <div className="flex gap-1">
+                <button onClick={() => remove(p.id)}
+                  className="text-xs bg-red-500 text-white px-2 py-0.5 rounded font-bold">Yes</button>
+                <button onClick={() => setConfirming(null)}
+                  className="text-xs bg-slate-700 text-slate-300 px-2 py-0.5 rounded">No</button>
+              </div>
+            ) : (
+              <button onClick={() => setConfirming(p.id)}
+                className="text-slate-600 hover:text-red-400 text-xs transition-colors px-1">Delete</button>
+            )}
+          </div>
+
+          {expanded === p.id && (
+            <div className="border-t border-slate-800 px-4 py-3 space-y-2">
+              {(projItems[p.id] ?? []).length === 0 ? (
+                <p className="text-slate-600 text-xs text-center py-2">No items in this project</p>
+              ) : (
+                (projItems[p.id] ?? []).map(item => (
+                  <SavedItemRow key={item.id} item={item} projects={projects} onMove={moveItem} />
+                ))
+              )}
+            </div>
+          )}
+        </div>
+      ))}
+
+      {/* Unsorted items */}
+      {unsorted.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Unsorted ({unsorted.length})</p>
+          {unsorted.map(item => (
+            <SavedItemRow key={item.id} item={item} projects={projects} onMove={moveItem} />
+          ))}
+        </div>
+      )}
+
+      {projects.length === 0 && unsorted.length === 0 && (
+        <div className="text-center py-12 rounded-2xl border border-dashed border-slate-700/60">
+          <p className="text-slate-400 text-sm font-medium">No projects yet</p>
+          <p className="text-slate-600 text-xs mt-1">Create a project above to start organising your saved items</p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function SavedItemRow({ item, projects, onMove }) {
+  const [showMove, setShowMove] = useState(false)
+  return (
+    <div className="flex items-center gap-3 bg-slate-800/50 rounded-lg px-3 py-2">
+      <span className={`text-xs font-bold px-2 py-0.5 rounded-full shrink-0 ${
+        item.type === 'chart'      ? 'bg-blue-500/20 text-blue-400' :
+        item.type === 'table'      ? 'bg-green-500/20 text-green-400' :
+        item.type === 'player'     ? 'bg-amber-500/20 text-amber-400' :
+        item.type === 'comparison' ? 'bg-purple-500/20 text-purple-400' :
+        item.type === 'search'     ? 'bg-cyan-500/20 text-cyan-400' :
+        'bg-slate-700 text-slate-300'
+      }`}>{item.type}</span>
+      <span className="text-slate-200 text-sm truncate flex-1">{item.label}</span>
+      <span className="text-slate-600 text-xs shrink-0">{fmt(item.created_at)}</span>
+      <div className="relative shrink-0">
+        <button onClick={() => setShowMove(!showMove)}
+          className="text-slate-500 hover:text-slate-300 text-xs transition-colors">Move</button>
+        {showMove && (
+          <div className="absolute right-0 top-full mt-1 w-48 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 py-1">
+            <button onClick={() => { onMove(item.id, null); setShowMove(false) }}
+              className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-700/60">
+              Unsorted
+            </button>
+            {projects.map(p => (
+              <button key={p.id} onClick={() => { onMove(item.id, p.id); setShowMove(false) }}
+                className={`w-full text-left px-3 py-1.5 text-xs hover:bg-slate-700/60 ${
+                  item.project_id === p.id ? 'text-amber-400 font-semibold' : 'text-slate-300'
+                }`}>
+                {p.name}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 
 // ─── Shared sub-components ────────────────────────────────────────────────────
 function NoteField({ value, editing, noteText, setNoteText, onStart, onCommit, onCancel }) {

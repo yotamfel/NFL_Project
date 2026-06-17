@@ -94,6 +94,13 @@ export const api = {
   updateSaved: (id, note)     => patch(`/saved/${id}`, { note }),
   deleteSaved: (id)           => del(`/saved/${id}`),
   migrateSaved: (items)       => post('/saved/migrate', { items }),
+  moveSavedToProject: (id, projectId) => patch(`/saved/${id}/project`, { project_id: projectId }),
+
+  getProjects:     ()             => get('/projects'),
+  createProject:   (name)         => post('/projects', { name }),
+  renameProject:   (id, name)     => patch(`/projects/${id}`, { name }),
+  deleteProject:   (id)           => del(`/projects/${id}`),
+  getProjectItems: (id)           => get(`/projects/${id}/items`),
 
   // ── User feedback ─────────────────────────────────────────────────────────
   submitUserFeedback: (category, message) => post('/feedback', { category, message }),

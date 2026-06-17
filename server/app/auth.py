@@ -51,3 +51,11 @@ def get_current_user(
     if not creds:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
     return decode_access_token(creds.credentials)
+
+
+def require_admin(
+    current_user: dict = Depends(get_current_user),
+) -> dict:
+    if not current_user.get("is_admin"):
+        raise HTTPException(status_code=403, detail="This feature is not yet available to your account.")
+    return current_user
