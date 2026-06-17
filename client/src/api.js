@@ -172,6 +172,8 @@ export const api = {
     return get(`/players/top_by_stat?${p}`)
   },
 
+  getSimilarPlayers: (playerId) => get(`/players/${playerId}/similar`),
+
   topPlayersByFdv: ({ pos, limit = 50 } = {}) => {
     const p = new URLSearchParams({ limit })
     if (pos) p.set('pos', pos)

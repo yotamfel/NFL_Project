@@ -6,6 +6,7 @@ import {
 } from 'recharts'
 import { api } from '../api'
 import { useApi } from '../hooks/useApi'
+import { useAuth } from '../context/AuthContext'
 import { Loading, ErrorMsg } from '../components/Status'
 import StatTable, { CsvDownloadButton } from '../components/StatTable'
 import { CareerLineChart, ExportableChart } from '../components/StatChart'
@@ -782,6 +783,7 @@ function InsightsSection({ playerId, accentColor }) {
 }
 
 export default function PlayerProfile() {
+  const { user } = useAuth()
   const { id } = useParams()
   const { data: profile, loading, error } = useApi(() => api.getPlayer(id), [id])
   const { data: injData } = useApi(() => api.getInjuries(id), [id])
@@ -1084,11 +1086,72 @@ export default function PlayerProfile() {
       <NgsSection playerId={player.player_id} pos={player.pos} accentColor={c.hex} />
       <SnapCountsSection playerId={player.player_id} pos={player.pos} accentColor={c.hex} playerName={player.player_name} />
 
+      {user?.is_admin && <SimilarPlayersSection playerId={player.player_id} playerName={player.player_name} accentColor={c.hex} />}
+
       <div className="text-center pb-4">
         <Link to="/comparison" className="text-sm transition-colors hover:opacity-80"
           style={{ color: c.hex }}>
           Compare {player.player_name} with another player →
         </Link>
+      </div>
+    </div>
+  )
+}
+
+
+function SimilarPlayersSection({ playerId, playerName, accentColor }) {
+  const [similar, setSimilar] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError]     = useState(false)
+
+  useEffect(() => {
+    setLoading(true)
+    setSimilar(null)
+    setError(false)
+    api.getSimilarPlayers(playerId)
+      .then(data => setSimilar(data))
+      .catch(() => setError(true))
+      .finally(() => setLoading(false))
+  }, [playerId])
+
+  if (loading) return (
+    <div className="bg-slate-800/70 border border-slate-700/60 rounded-2xl p-5">
+      <h2 className="text-white font-bold flex items-center gap-2 mb-3">
+        <span className="w-1 h-5 rounded-full" style={{ background: accentColor }} />
+        Similar Players
+      </h2>
+      <p className="text-slate-500 text-sm animate-pulse">Finding similar players...</p>
+    </div>
+  )
+
+  if (error || !similar || similar.length === 0) return null
+
+  return (
+    <div className="bg-slate-800/70 border border-slate-700/60 rounded-2xl p-5">
+      <h2 className="text-white font-bold flex items-center gap-2 mb-1">
+        <span className="w-1 h-5 rounded-full" style={{ background: accentColor }} />
+        Similar Players
+      </h2>
+      <p className="text-slate-500 text-xs mb-4">Based on per-game career statistical similarity</p>
+      <div className="space-y-2">
+        {similar.map(p => (
+          <Link key={p.player_id} to={`/player/${p.player_id}`}
+            className="flex items-start gap-3 bg-slate-900/60 border border-slate-700/40 rounded-xl px-4 py-3 hover:border-slate-600 transition-colors group">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-white text-sm font-semibold group-hover:text-amber-300 transition-colors">{p.player_name}</span>
+                <span className="text-slate-500 text-xs">{p.pos}</span>
+                <span className="text-xs font-mono px-1.5 py-0.5 rounded bg-slate-700/60 text-slate-400">
+                  {(p.similarity_score * 100).toFixed(0)}% match
+                </span>
+              </div>
+              {p.explanation && (
+                <p className="text-slate-400 text-xs mt-1 leading-relaxed">{p.explanation}</p>
+              )}
+            </div>
+            <span className="text-slate-600 text-xs shrink-0 mt-1">→</span>
+          </Link>
+        ))}
       </div>
     </div>
   )
