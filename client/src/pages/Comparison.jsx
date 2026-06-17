@@ -725,12 +725,14 @@ export default function Comparison() {
             </div>
           )}
 
+          {/* Premium — hidden until launch
           {user?.is_admin && data && (
             <SocialPostGenerator
               data={data.career}
               context={`Player comparison: ${data.players?.map(p => p.player_name).join(' vs ')} — ${category} stats`}
             />
           )}
+          */}
 
           {/* Chart grid */}
           <div className="rounded-2xl border border-slate-700/60 p-5 space-y-4"

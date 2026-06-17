@@ -28,6 +28,49 @@ export default function About() {
         </div>
       </div>
 
+      {/* What's Next */}
+      <div className="bg-gradient-to-br from-amber-500/10 to-violet-500/10 border border-amber-500/20 rounded-2xl p-8 space-y-5">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-widest text-amber-500 mb-1">Coming Soon</p>
+          <h2 className="text-xl font-black text-white tracking-tight">What's Next?</h2>
+        </div>
+        <div className="space-y-4">
+          {[
+            {
+              icon: '🔬',
+              title: 'Player Similarity',
+              desc: 'Find players with similar statistical profiles — see who your favorite player compares to across eras, powered by machine learning.',
+            },
+            {
+              icon: '🧠',
+              title: 'AI Scout',
+              desc: 'Ask complex analytical questions in plain English and get instant answers with charts, summaries, and deep statistical insights.',
+            },
+            {
+              icon: '📁',
+              title: 'Research Projects',
+              desc: 'Organise your saved players, comparisons, and searches into project folders for focused research.',
+            },
+            {
+              icon: '📱',
+              title: 'Content Creator Mode',
+              desc: 'Turn any comparison or analysis into a ready-to-post tweet, Reddit discussion, or YouTube script with one click.',
+            },
+          ].map(f => (
+            <div key={f.title} className="flex gap-3">
+              <span className="text-xl mt-0.5 shrink-0">{f.icon}</span>
+              <div>
+                <p className="text-white text-sm font-semibold">{f.title}</p>
+                <p className="text-slate-400 text-xs leading-relaxed mt-0.5">{f.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+        <p className="text-slate-500 text-xs pt-2 border-t border-slate-700/40">
+          These features are in development and will be available soon.
+        </p>
+      </div>
+
       <button onClick={() => navigate('/')}
         className="text-xs text-slate-500 hover:text-slate-300 transition-colors flex items-center gap-1">
         ← Back to homepage

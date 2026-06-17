@@ -13,7 +13,6 @@ const LINKS = [
   { to: '/saved',      label: 'Saved' },
   { to: '/guide',      label: 'Guide' },
   { to: '/feedback',   label: 'Feedback' },
-  { to: '/scout',      label: 'AI Scout', adminOnly: true },
   { to: '/admin',      label: 'Admin', adminOnly: true },
 ]
 
