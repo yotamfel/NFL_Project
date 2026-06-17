@@ -21,6 +21,7 @@ import AdminPanel from './pages/AdminPanel'
 import About from './pages/About'
 import Privacy from './pages/Privacy'
 import FdvPage from './pages/FdvPage'
+import SourcesPage from './pages/SourcesPage'
 import Onboarding from './components/Onboarding'
 import Footer from './components/Footer'
 
@@ -79,6 +80,7 @@ function AppInner() {
             <Route path="/about"           element={<About />} />
             <Route path="/privacy"         element={<Privacy />} />
             <Route path="/methodology"     element={<FdvPage />} />
+            <Route path="/sources"          element={<SourcesPage />} />
           </Routes>
         </main>
         <Footer />
