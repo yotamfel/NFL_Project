@@ -116,7 +116,7 @@ const CONTENT = {
         subsections: [
           {
             title: 'Adding players',
-            body: 'Click "+ Add player" and type a name to search. Add up to 4 players. The first player\'s position auto-sets the stat category. Remove any player with the × on their chip.',
+            body: 'Click "+ Add player" and type a name to search. Add up to 4 players. The first player\'s position auto-sets the stat category. Remove any player with the × on their chip. Each player\'s chip shows their FDV score for quick career-quality context.',
           },
           {
             title: 'Career vs. Single Season',
@@ -124,7 +124,7 @@ const CONTENT = {
           },
           {
             title: 'Category & stat view',
-            body: 'Use the category dropdown (top right) to switch between Passing, Offense, Defense, Kicking, Punting, and Returns. Toggle "Basic / All stats" above the table to expand to the full stat set.',
+            body: 'Use the category dropdown (top right) to switch between Passing, Offense, Defense, Kicking, Punting, and Returns. Toggle "Basic / All stats" above the table to expand to the full stat set. The "What is FDV?" button in the header opens an explainer with the scale, reference points, and a link to the full methodology.',
           },
           {
             title: 'Leaderboard',
@@ -162,6 +162,7 @@ const CONTENT = {
             body: [
               'Steals: Players drafted in round 4 or later who achieved an FDV of 40 or more. These are players who were significantly undervalued on draft day.',
               'Busts: Players drafted in rounds 1–2 who achieved an FDV of 20 or less. High draft capital with very little return.',
+              'Position filtering uses the player\'s career position (the position they actually played), not the position listed on draft day. If a player was drafted as a QB but played WR in the NFL, they appear under WR. When the draft and career positions differ, the table shows both — e.g. "WR (QB)".',
               'The steal/bust thresholds apply to the currently selected stat category and stat when you switch away from FDV — so you can find, for example, late-round QBs with high passing yardage totals.',
             ],
           },
@@ -211,7 +212,7 @@ const CONTENT = {
         subsections: [
           {
             title: 'How it works',
-            body: 'Type any question in natural English. The AI (Claude) translates your question into a SQL query and runs it directly against the database. Results appear as a table below.',
+            body: 'Type any question in natural English. The AI (Claude) translates your question into a SQL query, runs it against the database, and analyzes the results. You get three things: an AI-written insight summarizing what the data shows, an auto-generated chart when the data fits (bar, line, or scatter), and the full results table.',
           },
           {
             title: 'Example questions',
@@ -571,7 +572,7 @@ const CONTENT = {
         subsections: [
           {
             title: 'הוספת שחקנים',
-            body: 'לחץ על "+ Add player" וחפש לפי שם. ניתן להוסיף עד 4 שחקנים. ה-Category נקבע אוטומטית לפי ה-Position של השחקן הראשון. הסר שחקן עם × על ה-chip שלו.',
+            body: 'לחץ על "+ Add player" וחפש לפי שם. ניתן להוסיף עד 4 שחקנים. ה-Category נקבע אוטומטית לפי ה-Position של השחקן הראשון. הסר שחקן עם × על ה-chip שלו. כל chip של שחקן מציג את ציון ה-FDV שלו להקשר מהיר על איכות הקריירה.',
           },
           {
             title: 'Career vs. Single Season',
@@ -579,7 +580,7 @@ const CONTENT = {
           },
           {
             title: 'Category ותצוגת Stat',
-            body: 'השתמש בתפריט הנפתח של הקטגוריה (Passing, Offense, Defense, Kicking, Punting, Returns) כדי לעבור בין סוגי סטטיסטיקה. פאנל "Basic / All stats" מעל הטבלה מרחיב לכלל הסטטיסטיקות.',
+            body: 'השתמש בתפריט הנפתח של הקטגוריה (Passing, Offense, Defense, Kicking, Punting, Returns) כדי לעבור בין סוגי סטטיסטיקה. פאנל "Basic / All stats" מעל הטבלה מרחיב לכלל הסטטיסטיקות. כפתור "What is FDV?" בכותרת פותח הסבר עם הסקלה, נקודות ייחוס, וקישור למתודולוגיה המלאה.',
           },
           {
             title: 'Leaderboard',
@@ -617,6 +618,7 @@ const CONTENT = {
             body: [
               'Steals ("גנבות"): לדוגמה: שחקנים שנבחרו בדראפט בסיבוב 4 ומעלה והשיגו FDV של 40 ומעלה. אלה שחקנים שהוערכו נמוך מאוד ביום ה-Draft.',
               'Busts ("כישלונות"): לדוגמה: שחקנים שנבחרו בדראפט בסיבובים 1–2 והשיגו FDV של 20 ומטה. השקעת Draft גבוהה עם תשואה נמוכה מאוד.',
+              'סינון לפי Position משתמש בעמדת הקריירה (העמדה שבה השחקן בפועל שיחק), לא בעמדה שרשומה ביום ה-Draft. אם שחקן נבחר כ-QB אבל שיחק כ-WR ב-NFL, הוא מופיע תחת WR. כשהעמדות שונות, הטבלה מציגה את שתיהן — למשל "WR (QB)".',
               'ההגדרות חלות גם על ה-Stat שנבחר אם עברת מ-FDV לסטטיסטיקה אחרת.',
             ],
           },
@@ -666,7 +668,7 @@ const CONTENT = {
         subsections: [
           {
             title: 'איך זה עובד',
-            body: 'הקלד שאלה חופשית באנגלית. ה-AI (Claude) מתרגם את השאלה ל-SQL ומריץ אותה ישירות מול בסיס הנתונים. התוצאות מופיעות כטבלה.',
+            body: 'הקלד שאלה חופשית באנגלית. ה-AI (Claude) מתרגם את השאלה ל-SQL, מריץ אותה מול בסיס הנתונים, ומנתח את התוצאות. מתקבלים שלושה דברים: תובנת AI שמסכמת את מה שהנתונים מראים, גרף אוטומטי כשהנתונים מתאימים (עמודות, קו, או פיזור), וטבלת תוצאות מלאה.',
           },
           {
             title: 'דוגמאות לשאלות',
@@ -986,8 +988,8 @@ export default function Guide() {
 
       <p className="text-center text-slate-600 text-xs pb-4">
         {isHe
-          ? 'מקור נתונים: Pro Football Reference · Next Gen Stats · 1970–2025 · 19,000+ שחקנים'
-          : 'Data: Pro Football Reference · Next Gen Stats · 1970–2025 · 19,000+ players'}
+          ? 'מקור נתונים: nflverse · Next Gen Stats · 1970–2025 · 19,000+ שחקנים'
+          : 'Data: nflverse · Next Gen Stats · 1970–2025 · 19,000+ players'}
       </p>
     </div>
   )
