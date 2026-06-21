@@ -128,24 +128,29 @@ def explain_similarities(target: dict, similar: list[dict], pos_group: str) -> l
         for i, p in enumerate(similar)
     )
 
-    prompt = f"""You are an NFL analyst. A statistical similarity algorithm found these players to be
-similar to {target["player_name"]} ({target["pos"]}) based on their per-game career stat profile.
+    prompt = f"""You are an NFL analyst. A cosine-similarity algorithm compared per-game career stats
+and found these players statistically similar to {target["player_name"]} ({target["pos"]}).
 
-Target player stats (per game): {target_stats}
+Target player stats (per game averages): {target_stats}
 
-Similar players found:
+Similar players (ranked by similarity score):
 {players_text}
 
-For each similar player, write ONE sentence explaining what makes their statistical profile
-similar to the target player. Be specific about which stats align. Return as a JSON array of
-strings, in the same order as the players listed, with no other text:
-["sentence for player 1", "sentence for player 2", ...]"""
+For each similar player, write 2-3 sentences covering:
+1. Which specific stats are closest and drive the high similarity score
+2. Style or role similarities beyond the numbers (playing style, era, role in offense/defense)
+3. One key difference — where they diverge most
+
+Be specific with numbers. Explain WHY this player matched at this percentage.
+
+Return ONLY a valid JSON array of strings, same order as listed, no other text:
+["explanation for player 1", "explanation for player 2", ...]"""
 
     with Timer() as t:
         try:
             resp = client.messages.create(
                 model=MODEL,
-                max_tokens=800,
+                max_tokens=1500,
                 messages=[{"role": "user", "content": prompt}],
             )
             raw = resp.content[0].text.strip()
