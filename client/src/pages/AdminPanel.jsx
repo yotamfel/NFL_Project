@@ -30,7 +30,7 @@ export default function AdminPanel() {
 
       {/* Tabs */}
       <div className="flex gap-1 bg-slate-900 border border-slate-800 rounded-xl p-1 mb-6 w-fit">
-        {['overview', 'visits', 'users', 'feedback'].map(t => (
+        {['overview', 'visits', 'users', 'feedback', 'usage'].map(t => (
           <button key={t} onClick={() => setTab(t)}
             className={`px-4 py-1.5 rounded-lg text-sm font-medium capitalize transition-colors ${
               tab === t ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'
@@ -44,6 +44,7 @@ export default function AdminPanel() {
       {tab === 'visits'   && <VisitsTab />}
       {tab === 'users'    && <UsersTab />}
       {tab === 'feedback' && <FeedbackTab />}
+      {tab === 'usage'    && <UsageTab />}
     </div>
   )
 }
@@ -413,6 +414,102 @@ function ChatBubble({ msg, username, isAdmin }) {
       <span className="text-[10px] text-slate-600 mt-0.5 px-1">
         {new Date(msg.created_at).toLocaleString()}
       </span>
+    </div>
+  )
+}
+
+// ── Feature Usage ─────────────────────────────────────────────────────────────
+function UsageTab() {
+  const [data, setData] = useState(null)
+  useEffect(() => { api.getFeatureUsage().then(setData).catch(() => {}) }, [])
+  if (!data) return <Spinner />
+
+  const totals = data.totals || {}
+
+  return (
+    <div className="space-y-6">
+      {/* AI totals */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        {[
+          { label: 'Smart Search', value: totals.smart_search },
+          { label: 'Comparisons', value: totals.comparisons },
+          { label: 'Player Insights', value: totals.insights },
+          { label: 'Total AI Calls', value: totals.total_ai_calls, highlight: true },
+        ].map(c => (
+          <div key={c.label} className={`rounded-xl p-5 border ${c.highlight ? 'bg-amber-500/10 border-amber-500/30' : 'bg-slate-900 border-slate-800'}`}>
+            <p className={`text-xs font-medium mb-1 ${c.highlight ? 'text-amber-400' : 'text-slate-400'}`}>{c.label}</p>
+            <p className={`text-3xl font-bold ${c.highlight ? 'text-amber-300' : 'text-white'}`}>{(c.value ?? 0).toLocaleString()}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Feedback quality */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="rounded-xl p-5 border border-emerald-800/40 bg-emerald-900/10">
+          <p className="text-xs font-medium mb-1 text-emerald-400">Thumbs Up</p>
+          <p className="text-3xl font-bold text-emerald-300">{totals.thumbs_up ?? 0}</p>
+        </div>
+        <div className="rounded-xl p-5 border border-red-800/40 bg-red-900/10">
+          <p className="text-xs font-medium mb-1 text-red-400">Thumbs Down</p>
+          <p className="text-3xl font-bold text-red-300">{totals.thumbs_down ?? 0}</p>
+        </div>
+      </div>
+
+      {/* Last 7 days breakdown */}
+      <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
+        <h3 className="text-white font-semibold text-sm mb-3">Last 7 Days</h3>
+        {(data.features_7d || []).length === 0 ? (
+          <p className="text-slate-500 text-sm text-center py-4">No AI usage in the last 7 days</p>
+        ) : (
+          <div className="space-y-2">
+            {(data.features_7d || []).map(f => (
+              <div key={f.feature} className="flex items-center justify-between py-2 border-b border-slate-800/60 last:border-0">
+                <span className="text-slate-300 text-sm">{f.feature}</span>
+                <div className="flex items-center gap-3">
+                  <span className="text-white font-bold">{f.count}</span>
+                  {f.avg_ms != null && (
+                    <span className="text-slate-500 text-xs">{Math.round(f.avg_ms)}ms avg</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Last 30 days */}
+      <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
+        <h3 className="text-white font-semibold text-sm mb-3">Last 30 Days</h3>
+        {(data.features_30d || []).length === 0 ? (
+          <p className="text-slate-500 text-sm text-center py-4">No AI usage in the last 30 days</p>
+        ) : (
+          <div className="space-y-2">
+            {(data.features_30d || []).map(f => (
+              <div key={f.feature} className="flex items-center justify-between py-2 border-b border-slate-800/60 last:border-0">
+                <span className="text-slate-300 text-sm">{f.feature}</span>
+                <span className="text-white font-bold">{f.count}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Saved items by type */}
+      <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
+        <h3 className="text-white font-semibold text-sm mb-3">Saved Items by Type</h3>
+        {(data.saved_by_type || []).length === 0 ? (
+          <p className="text-slate-500 text-sm text-center py-4">No saved items yet</p>
+        ) : (
+          <div className="space-y-2">
+            {(data.saved_by_type || []).map(t => (
+              <div key={t.type} className="flex items-center justify-between py-2 border-b border-slate-800/60 last:border-0">
+                <span className="text-slate-300 text-sm capitalize">{t.type}</span>
+                <span className="text-white font-bold">{t.count}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
