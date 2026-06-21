@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import Markdown from 'react-markdown'
 import { api } from '../api'
 
 const PLATFORMS = [
@@ -198,8 +199,12 @@ function ContentDisplay({ result }) {
     return (
       <div className="bg-black/30 rounded-xl px-4 py-3 border border-slate-700/40 space-y-2">
         <p className="text-white text-sm font-bold">{c.title}</p>
-        <div className="border-t border-slate-700/40 pt-2">
-          <p className="text-slate-300 text-sm leading-relaxed whitespace-pre-line">{c.body}</p>
+        <div className="border-t border-slate-700/40 pt-2 prose prose-sm prose-invert max-w-none
+          prose-table:border-collapse prose-th:border prose-th:border-slate-600 prose-th:px-3 prose-th:py-1.5 prose-th:bg-slate-800/60 prose-th:text-slate-300 prose-th:text-xs prose-th:font-semibold
+          prose-td:border prose-td:border-slate-700 prose-td:px-3 prose-td:py-1.5 prose-td:text-slate-300 prose-td:text-xs
+          prose-p:text-slate-300 prose-p:text-sm prose-p:leading-relaxed
+          prose-strong:text-white prose-h3:text-white prose-h3:text-sm">
+          <Markdown>{c.body}</Markdown>
         </div>
       </div>
     )
