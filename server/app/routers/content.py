@@ -60,11 +60,20 @@ def generate_content(body: ContentBody, user: dict = Depends(require_admin)):
     log_query(feature="content_creator", input_text=body.context,
               model_used=MODEL, tokens_used=tokens, response_ms=ms, success=True)
 
+    def _strip_fences(s):
+        s = s.strip()
+        if s.startswith("```"):
+            s = s.split("\n", 1)[-1]
+        if s.endswith("```"):
+            s = s.rsplit("```", 1)[0]
+        return s.strip()
+
     if body.platform == "twitter":
-        content = raw[:280]
+        content = _strip_fences(raw)[:280]
     else:
+        cleaned = _strip_fences(raw)
         try:
-            content = json.loads(raw)
+            content = json.loads(cleaned)
         except json.JSONDecodeError:
             try:
                 resp2 = client.messages.create(
@@ -72,14 +81,14 @@ def generate_content(body: ContentBody, user: dict = Depends(require_admin)):
                     messages=[
                         {"role": "user", "content": prompt},
                         {"role": "assistant", "content": raw},
-                        {"role": "user", "content": "Please return only valid JSON, no other text."},
+                        {"role": "user", "content": "Return only valid JSON, no markdown fences, no backticks."},
                     ],
                     timeout=15,
                 )
                 raw2 = "".join(b.text for b in resp2.content if b.type == "text").strip()
-                content = json.loads(raw2)
+                content = json.loads(_strip_fences(raw2))
             except (json.JSONDecodeError, Exception):
-                content = raw
+                content = cleaned
 
     uid = int(user["sub"])
     content_str = content if isinstance(content, str) else json.dumps(content)
