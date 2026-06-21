@@ -8,6 +8,8 @@ import { api } from '../api'
 import { Loading, ErrorMsg } from '../components/Status'
 import { ExportableChart } from '../components/StatChart'
 import { CsvDownloadButton } from '../components/StatTable'
+import { useAuth } from '../context/AuthContext'
+import SocialPostGenerator from '../components/SocialPostGenerator'
 
 // ── Stat catalogue ────────────────────────────────────────────────────────────
 const STAT_OPTIONS = {
@@ -174,6 +176,7 @@ function TrendTooltip({ active, payload, label, prevByKey, lineLabels }) {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function LeagueTrends() {
+  const { user } = useAuth()
   const [category,   setCategory]   = useState('passing')
   const [stat,       setStat]       = useState('td')
   const [agg,        setAgg]        = useState('sum')
@@ -699,6 +702,13 @@ export default function LeagueTrends() {
             </div>
           </div>
         </>
+      )}
+
+      {user?.is_admin && chartData?.length > 0 && (
+        <SocialPostGenerator
+          data={chartData}
+          context={`League Trends — ${category} ${stat} (${agg})`}
+        />
       )}
     </div>
   )

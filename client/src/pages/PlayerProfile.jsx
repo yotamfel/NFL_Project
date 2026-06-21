@@ -13,6 +13,7 @@ import { CareerLineChart, ExportableChart } from '../components/StatChart'
 import { exportTableAsCsv, csvFilename } from '../utils/exportCsv'
 import { posColor, posGradient, CARD_STRIPES } from '../utils/posColors'
 import { useUser } from '../context/UserContext'
+import SocialPostGenerator from '../components/SocialPostGenerator'
 import { STAT_DEFS } from '../utils/statDefinitions'
 import AiFeedback from '../components/AiFeedback'
 
@@ -1087,6 +1088,13 @@ export default function PlayerProfile() {
       <SnapCountsSection playerId={player.player_id} pos={player.pos} accentColor={c.hex} playerName={player.player_name} />
 
       {user?.is_admin && <SimilarPlayersSection playerId={player.player_id} playerName={player.player_name} accentColor={c.hex} />}
+
+      {user?.is_admin && data?.categories?.length > 0 && (
+        <SocialPostGenerator
+          data={data.categories.flatMap(cat => cat.career ? [cat.career] : [])}
+          context={`Player Profile — ${player.player_name} (${player.pos})`}
+        />
+      )}
 
       <div className="text-center pb-4">
         <Link to="/comparison" className="text-sm transition-colors hover:opacity-80"

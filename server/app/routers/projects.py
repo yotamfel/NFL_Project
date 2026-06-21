@@ -17,6 +17,11 @@ class MoveBody(BaseModel):
     project_id: int | None = None
 
 
+class AssignBody(BaseModel):
+    saved_item_id: int
+    project_ids: list[int]
+
+
 @router.get("")
 def list_projects(user: dict = Depends(require_admin)):
     uid = int(user["sub"])
@@ -70,6 +75,32 @@ def delete_project(project_id: int, user: dict = Depends(require_admin)):
         if result.rowcount == 0:
             raise HTTPException(status_code=404, detail="Project not found")
     return {"ok": True}
+
+
+@router.post("/assign")
+def assign_to_projects(body: AssignBody, user: dict = Depends(require_admin)):
+    uid = int(user["sub"])
+    with engine.begin() as conn:
+        item = conn.execute(text(
+            "SELECT type, label, data, note FROM saved_items WHERE id = :id AND user_id = :uid"
+        ), {"id": body.saved_item_id, "uid": uid}).fetchone()
+        if not item:
+            raise HTTPException(status_code=404, detail="Saved item not found")
+        new_ids = []
+        for pid in body.project_ids:
+            proj = conn.execute(text(
+                "SELECT id FROM projects WHERE id = :id AND user_id = :uid"
+            ), {"id": pid, "uid": uid}).fetchone()
+            if not proj:
+                raise HTTPException(status_code=404, detail=f"Project {pid} not found")
+            row = conn.execute(text("""
+                INSERT INTO saved_items (user_id, type, label, data, note, project_id)
+                VALUES (:uid, :type, :label, :data, :note, :pid)
+                RETURNING id
+            """), {"uid": uid, "type": item.type, "label": item.label,
+                   "data": item.data, "note": item.note, "pid": pid}).fetchone()
+            new_ids.append(row.id)
+    return {"created_ids": new_ids}
 
 
 @router.get("/{project_id}/items")

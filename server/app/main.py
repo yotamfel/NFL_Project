@@ -149,6 +149,46 @@ def _run_migrations():
         conn.execute(text(
             "ALTER TABLE players ADD COLUMN IF NOT EXISTS fdv NUMERIC(6,1)"
         ))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS ai_query_log (
+                id           BIGSERIAL PRIMARY KEY,
+                created_at   TIMESTAMPTZ DEFAULT now(),
+                feature      TEXT,
+                input_text   TEXT,
+                sql_generated TEXT,
+                model_used   TEXT,
+                tokens_used  INT,
+                response_ms  INT,
+                success      BOOLEAN DEFAULT TRUE,
+                error_msg    TEXT,
+                thumbs       INT
+            )
+        """))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS projects (
+                id         BIGSERIAL PRIMARY KEY,
+                user_id    BIGINT REFERENCES users(id) ON DELETE CASCADE,
+                name       TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT now()
+            )
+        """))
+        conn.execute(text("""
+            CREATE INDEX IF NOT EXISTS idx_projects_user ON projects (user_id, name)
+        """))
+        conn.execute(text("""
+            ALTER TABLE saved_items ADD COLUMN IF NOT EXISTS
+                project_id BIGINT REFERENCES projects(id) ON DELETE SET NULL
+        """))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS generated_content (
+                id               BIGSERIAL PRIMARY KEY,
+                user_id          BIGINT REFERENCES users(id) ON DELETE CASCADE,
+                platform         TEXT NOT NULL,
+                content_text     TEXT NOT NULL,
+                source_context   TEXT,
+                created_at       TIMESTAMPTZ DEFAULT now()
+            )
+        """))
 
 
 _run_migrations()

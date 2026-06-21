@@ -6,9 +6,11 @@ from typing import Any
 from anthropic import Anthropic
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+from sqlalchemy import text
 
 from app.auth import require_admin
 from app.config import ANTHROPIC_API_KEY
+from app.db import engine
 from app.ai_log import log_query
 from app.ai.content_prompts import PROMPTS
 
@@ -79,4 +81,40 @@ def generate_content(body: ContentBody, user: dict = Depends(require_admin)):
             except (json.JSONDecodeError, Exception):
                 content = raw
 
-    return {"platform": body.platform, "content": content}
+    uid = int(user["sub"])
+    content_str = content if isinstance(content, str) else json.dumps(content)
+    with engine.begin() as conn:
+        row = conn.execute(text("""
+            INSERT INTO generated_content (user_id, platform, content_text, source_context)
+            VALUES (:uid, :platform, :content, :context)
+            RETURNING id, created_at
+        """), {"uid": uid, "platform": body.platform,
+               "content": content_str, "context": body.context[:500]}).fetchone()
+
+    return {"id": row.id, "platform": body.platform, "content": content,
+            "created_at": str(row.created_at)}
+
+
+@router.get("/history")
+def content_history(user: dict = Depends(require_admin)):
+    uid = int(user["sub"])
+    with engine.connect() as conn:
+        rows = conn.execute(text("""
+            SELECT id, platform, content_text, source_context, created_at
+            FROM generated_content
+            WHERE user_id = :uid
+            ORDER BY created_at DESC
+            LIMIT 100
+        """), {"uid": uid}).fetchall()
+    return [dict(r._mapping) for r in rows]
+
+
+@router.delete("/{content_id}", status_code=204)
+def delete_content(content_id: int, user: dict = Depends(require_admin)):
+    uid = int(user["sub"])
+    with engine.begin() as conn:
+        result = conn.execute(text(
+            "DELETE FROM generated_content WHERE id = :id AND user_id = :uid"
+        ), {"id": content_id, "uid": uid})
+        if result.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Content not found")

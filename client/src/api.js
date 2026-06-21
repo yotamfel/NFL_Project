@@ -175,6 +175,9 @@ export const api = {
   getSimilarPlayers: (playerId) => get(`/players/${playerId}/similar`),
   scoutQuery: (question) => post('/scout', { question }),
   generateContent: (platform, data, context) => post('/content/generate', { platform, data, context }),
+  getContentHistory: () => get('/content/history'),
+  deleteContent: (id) => del(`/content/${id}`),
+  assignToProjects: (savedItemId, projectIds) => post('/projects/assign', { saved_item_id: savedItemId, project_ids: projectIds }),
 
   topPlayersByFdv: ({ pos, limit = 50 } = {}) => {
     const p = new URLSearchParams({ limit })

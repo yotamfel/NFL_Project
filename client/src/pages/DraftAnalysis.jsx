@@ -10,6 +10,8 @@ import { useApi } from '../hooks/useApi'
 import { Loading, ErrorMsg } from '../components/Status'
 import StatTable from '../components/StatTable'
 import { ExportableChart } from '../components/StatChart'
+import { useAuth } from '../context/AuthContext'
+import SocialPostGenerator from '../components/SocialPostGenerator'
 
 const DRAFT_COLS = [
   { key: 'draft_year',  label: 'Year' },
@@ -891,6 +893,7 @@ function StealBustPanel({ mode }) {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function DraftAnalysis() {
+  const { user } = useAuth()
   const [tab,     setTab]    = useState('picks')
   const [avInfo,  setAvInfo] = useState(false)
   const [filters, setFilters] = useState({ year: '', team: '', pos: '' })
@@ -1012,6 +1015,13 @@ export default function DraftAnalysis() {
 
       {tab === 'steals' && <StealBustPanel mode="steal" />}
       {tab === 'busts'  && <StealBustPanel mode="bust"  />}
+
+      {user?.is_admin && picks?.length > 0 && (
+        <SocialPostGenerator
+          data={picks}
+          context={`Draft Analysis — ${filters.year || 'All Years'} ${filters.pos || 'All Positions'} ${filters.team || 'All Teams'}`}
+        />
+      )}
     </div>
   )
 }
