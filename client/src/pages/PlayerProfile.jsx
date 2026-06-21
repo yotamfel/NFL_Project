@@ -1090,9 +1090,9 @@ export default function PlayerProfile() {
 
       {user?.is_admin && <SimilarPlayersSection playerId={player.player_id} playerName={player.player_name} accentColor={c.hex} />}
 
-      {user?.is_admin && data?.categories?.length > 0 && (
+      {user?.is_admin && profile?.categories?.length > 0 && (
         <SocialPostGenerator
-          data={data.categories.flatMap(cat => cat.career ? [cat.career] : [])}
+          data={profile.categories.flatMap(cat => cat.career ? [cat.career] : [])}
           context={`Player Profile — ${player.player_name} (${player.pos})`}
         />
       )}
