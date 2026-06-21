@@ -984,6 +984,8 @@ export default function PlayerProfile() {
         </div>
       </div>
 
+      {user?.is_admin && <SimilarPlayersSection playerId={player.player_id} playerName={player.player_name} accentColor={c.hex} />}
+
       <InsightsSection playerId={player.player_id} accentColor={c.hex} />
 
       {/* Scope toggle: Regular Season / Playoffs / All Games */}
@@ -1088,8 +1090,6 @@ export default function PlayerProfile() {
       <NgsSection playerId={player.player_id} pos={player.pos} accentColor={c.hex} />
       <SnapCountsSection playerId={player.player_id} pos={player.pos} accentColor={c.hex} playerName={player.player_name} />
 
-      {user?.is_admin && <SimilarPlayersSection playerId={player.player_id} playerName={player.player_name} accentColor={c.hex} />}
-
       {user?.is_admin && profile?.categories?.length > 0 && (
         <SocialPostGenerator
           data={profile.categories.flatMap(cat => cat.career ? [cat.career] : [])}
@@ -1112,11 +1112,13 @@ function SimilarPlayersSection({ playerId, playerName, accentColor }) {
   const [similar, setSimilar] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState(false)
+  const [expanded, setExpanded] = useState(null)
 
   useEffect(() => {
     setLoading(true)
     setSimilar(null)
     setError(false)
+    setExpanded(null)
     api.getSimilarPlayers(playerId)
       .then(data => setSimilar(data))
       .catch(() => setError(true))
@@ -1124,44 +1126,52 @@ function SimilarPlayersSection({ playerId, playerName, accentColor }) {
   }, [playerId])
 
   if (loading) return (
-    <div className="bg-slate-800/70 border border-slate-700/60 rounded-2xl p-5">
-      <h2 className="text-white font-bold flex items-center gap-2 mb-3">
-        <span className="w-1 h-5 rounded-full" style={{ background: accentColor }} />
-        Similar Players
-      </h2>
-      <p className="text-slate-500 text-sm animate-pulse">Finding similar players...</p>
+    <div className="bg-slate-800/70 border border-slate-700/60 rounded-2xl p-4">
+      <p className="text-slate-500 text-xs animate-pulse">Finding similar players...</p>
     </div>
   )
 
   if (error || !similar || similar.length === 0) return null
 
   return (
-    <div className="bg-slate-800/70 border border-slate-700/60 rounded-2xl p-5">
-      <h2 className="text-white font-bold flex items-center gap-2 mb-1">
-        <span className="w-1 h-5 rounded-full" style={{ background: accentColor }} />
-        Similar Players
-      </h2>
-      <p className="text-slate-500 text-xs mb-4">Based on per-game career statistical similarity</p>
-      <div className="space-y-2">
+    <div className="bg-slate-800/70 border border-slate-700/60 rounded-2xl p-4">
+      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Similar Players</p>
+      <div className="flex flex-wrap gap-2">
         {similar.map(p => (
-          <Link key={p.player_id} to={`/player/${p.player_id}`}
-            className="flex items-start gap-3 bg-slate-900/60 border border-slate-700/40 rounded-xl px-4 py-3 hover:border-slate-600 transition-colors group">
-            <div className="flex-1 min-w-0">
+          <button key={p.player_id} onClick={() => setExpanded(expanded === p.player_id ? null : p.player_id)}
+            className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
+              expanded === p.player_id
+                ? 'border-amber-500/40 text-amber-300 bg-amber-500/10'
+                : 'border-slate-700 text-slate-300 hover:text-white hover:border-slate-500'
+            }`}>
+            {p.player_name}
+            <span className="text-slate-500 ml-1.5">{(p.similarity_score * 100).toFixed(0)}%</span>
+          </button>
+        ))}
+      </div>
+      {expanded && (() => {
+        const p = similar.find(s => s.player_id === expanded)
+        if (!p) return null
+        return (
+          <div className="mt-3 bg-slate-900/60 border border-slate-700/40 rounded-xl p-4 space-y-2">
+            <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-white text-sm font-semibold group-hover:text-amber-300 transition-colors">{p.player_name}</span>
+                <span className="text-white font-semibold text-sm">{p.player_name}</span>
                 <span className="text-slate-500 text-xs">{p.pos}</span>
-                <span className="text-xs font-mono px-1.5 py-0.5 rounded bg-slate-700/60 text-slate-400">
+                <span className="text-xs font-mono px-1.5 py-0.5 rounded bg-slate-700/60 text-amber-400">
                   {(p.similarity_score * 100).toFixed(0)}% match
                 </span>
               </div>
-              {p.explanation && (
-                <p className="text-slate-400 text-xs mt-1 leading-relaxed">{p.explanation}</p>
-              )}
+              <Link to={`/player/${p.player_id}`} className="text-xs text-slate-500 hover:text-amber-400 transition-colors">
+                View profile →
+              </Link>
             </div>
-            <span className="text-slate-600 text-xs shrink-0 mt-1">→</span>
-          </Link>
-        ))}
-      </div>
+            {p.explanation && (
+              <p className="text-slate-400 text-xs leading-relaxed">{p.explanation}</p>
+            )}
+          </div>
+        )
+      })()}
     </div>
   )
 }
