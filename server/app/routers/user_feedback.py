@@ -171,11 +171,13 @@ def admin_list_users(admin: dict = Depends(_require_admin)):
     with engine.connect() as conn:
         rows = conn.execute(text("""
             SELECT u.id, u.username, u.email, u.is_admin, u.created_at,
-                   COUNT(v.id) AS visit_count
+                   COUNT(v.id) AS visit_count,
+                   MAX(v.visited_at) AS last_visit,
+                   COUNT(v.id) FILTER (WHERE v.visited_at > now() - INTERVAL '7 days') AS visits_7d
             FROM users u
             LEFT JOIN user_visits v ON v.user_id = u.id
             GROUP BY u.id, u.username, u.email, u.is_admin, u.created_at
-            ORDER BY u.created_at DESC
+            ORDER BY MAX(v.visited_at) DESC NULLS LAST
         """)).fetchall()
     return [dict(r._mapping) for r in rows]
 

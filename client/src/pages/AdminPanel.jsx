@@ -97,12 +97,20 @@ function VisitsTab() {
 }
 
 // ── Users management ──────────────────────────────────────────────────────────
+const SORT_OPTIONS = [
+  { key: 'last_visit',   label: 'Last Active' },
+  { key: 'visit_count',  label: 'Total Visits' },
+  { key: 'visits_7d',    label: 'Visits (7d)' },
+  { key: 'created_at',   label: 'Join Date' },
+]
+
 function UsersTab() {
   const { user: me } = useAuth()
   const [users,      setUsers]      = useState(null)
   const [confirming, setConfirming] = useState(null)
   const [deleting,   setDeleting]   = useState({})
   const [search,     setSearch]     = useState('')
+  const [sortBy,     setSortBy]     = useState('last_visit')
 
   useEffect(() => { api.getAdminUsers().then(setUsers).catch(() => {}) }, [])
 
@@ -121,16 +129,35 @@ function UsersTab() {
   if (!users) return <Spinner />
 
   const q = search.toLowerCase()
-  const visible = users.filter(u =>
-    !q || u.username.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
-  )
+  const visible = users
+    .filter(u => !q || u.username.toLowerCase().includes(q) || u.email.toLowerCase().includes(q))
+    .sort((a, b) => {
+      if (sortBy === 'last_visit') {
+        const av = a.last_visit ?? '', bv = b.last_visit ?? ''
+        return bv > av ? 1 : bv < av ? -1 : 0
+      }
+      if (sortBy === 'visit_count') return (b.visit_count ?? 0) - (a.visit_count ?? 0)
+      if (sortBy === 'visits_7d') return (b.visits_7d ?? 0) - (a.visits_7d ?? 0)
+      return (b.created_at ?? '') > (a.created_at ?? '') ? 1 : -1
+    })
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-wrap">
         <input value={search} onChange={e => setSearch(e.target.value)}
           placeholder="Search by username or email…"
-          className="flex-1 bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-slate-500 placeholder-slate-600" />
+          className="flex-1 min-w-40 bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-slate-500 placeholder-slate-600" />
+        <div className="flex items-center gap-1">
+          <span className="text-slate-500 text-xs">Sort:</span>
+          {SORT_OPTIONS.map(s => (
+            <button key={s.key} onClick={() => setSortBy(s.key)}
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
+                sortBy === s.key ? 'bg-slate-700 text-white' : 'text-slate-500 hover:text-slate-300'
+              }`}>
+              {s.label}
+            </button>
+          ))}
+        </div>
         <span className="text-slate-500 text-xs shrink-0">{visible.length} / {users.length}</span>
       </div>
       <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
@@ -142,6 +169,8 @@ function UsersTab() {
                 <th className="px-4 py-3 text-slate-400 font-medium">Email</th>
                 <th className="px-4 py-3 text-slate-400 font-medium">Role</th>
                 <th className="px-4 py-3 text-slate-400 font-medium">Visits</th>
+                <th className="px-4 py-3 text-slate-400 font-medium">7d</th>
+                <th className="px-4 py-3 text-slate-400 font-medium">Last Active</th>
                 <th className="px-4 py-3 text-slate-400 font-medium">Joined</th>
                 <th className="px-4 py-3"></th>
               </tr>
@@ -157,6 +186,8 @@ function UsersTab() {
                       : <span className="text-xs px-2 py-0.5 rounded-full bg-slate-700 text-slate-400">user</span>}
                   </td>
                   <td className="px-4 py-3 text-slate-300 text-sm font-medium">{u.visit_count ?? 0}</td>
+                  <td className="px-4 py-3 text-slate-300 text-sm">{u.visits_7d ?? 0}</td>
+                  <td className="px-4 py-3 text-slate-500 text-xs">{u.last_visit ? new Date(u.last_visit).toLocaleDateString() : '—'}</td>
                   <td className="px-4 py-3 text-slate-500 text-xs">{new Date(u.created_at).toLocaleDateString()}</td>
                   <td className="px-4 py-3 text-right">
                     {u.id !== me?.id && (
