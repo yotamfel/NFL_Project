@@ -2,6 +2,8 @@ import { useState, useRef, useEffect } from 'react'
 import { toPng } from 'html-to-image'
 import { exportTableAsCsv, csvFilename } from '../utils/exportCsv'
 import { useUser } from '../context/UserContext'
+import { useAuth } from '../context/AuthContext'
+import ProjectPicker from './ProjectPicker'
 
 function CsvIcon() {
   return (
@@ -162,6 +164,7 @@ function TableExportModal({ columns, rows, title, onClose }) {
 export function TableExportButtons({ columns, rows, title }) {
   const [modal, setModal] = useState(false)
   const { saveTable, removeTable, isTableSaved } = useUser() || {}
+  const { user: tblUser } = useAuth() || {}
 
   if (!rows?.length) return null
 
@@ -193,6 +196,11 @@ export function TableExportButtons({ columns, rows, title }) {
         >
           <BookmarkIcon filled={isSaved} />
         </button>
+      )}
+      {tblUser?.is_admin && title && (
+        <div className="absolute top-1 right-[88px] z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+          <ProjectPicker type="table" label={title} data={{ title, columns: columns.map(c => ({ key: c.key, label: c.label })), rows: rows.slice(0, 50) }} />
+        </div>
       )}
       <button
         onClick={() => setModal(true)}

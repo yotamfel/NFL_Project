@@ -7,6 +7,8 @@ import {
 } from 'recharts'
 import { exportChartAsPng } from '../utils/exportChart'
 import { useUser } from '../context/UserContext'
+import { useAuth } from '../context/AuthContext'
+import ProjectPicker from './ProjectPicker'
 
 const CHART_STYLE = {
   contentStyle: { backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px' },
@@ -68,6 +70,7 @@ function BookmarkIcon({ filled }) {
 export function CareerLineChart({ data, xKey, lines, injuryMap = {}, height = 260, exportPrefix, hideActions, fill }) {
   const wrapperRef = useRef(null)
   const { saveChart, removeChart, isChartSaved } = useUser() || {}
+  const { user } = useAuth() || {}
 
   const injurySeasons = Object.entries(injuryMap)
     .filter(([, missed]) => missed >= 4)
@@ -106,6 +109,11 @@ export function CareerLineChart({ data, xKey, lines, injuryMap = {}, height = 26
           >
             <BookmarkIcon filled={isSaved} />
           </button>
+          {user?.is_admin && (
+            <div className="absolute top-1 right-16 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+              <ProjectPicker type="chart" label={title} data={{ title, chartType: 'CareerLine', data, config: { xKey, lines, injuryMap } }} />
+            </div>
+          )}
           <button
             onClick={handleExport}
             title="Download chart as PNG"
@@ -149,6 +157,7 @@ export function CareerLineChart({ data, xKey, lines, injuryMap = {}, height = 26
 export function ExportableChart({ title, filename, children, chartData }) {
   const wrapperRef = useRef(null)
   const { saveChart, removeChart, isChartSaved } = useUser() || {}
+  const { user: ecUser } = useAuth() || {}
 
   const isSaved = chartData ? (isChartSaved?.(title) ?? false) : false
 
@@ -177,6 +186,11 @@ export function ExportableChart({ title, filename, children, chartData }) {
           }`}>
           <BookmarkIcon filled={isSaved} />
         </button>
+      )}
+      {ecUser?.is_admin && chartData && (
+        <div className="absolute top-1 right-16 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+          <ProjectPicker type="chart" label={title} data={{ title, ...chartData }} />
+        </div>
       )}
       <button onClick={handleExport} title="Download as PNG"
         className="absolute top-1 right-1 z-10 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity text-slate-500 hover:text-slate-200 hover:bg-slate-700/60">

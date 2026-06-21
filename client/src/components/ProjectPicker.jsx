@@ -9,6 +9,7 @@ export default function ProjectPicker({ type, label, data, onDone }) {
   const [newName, setNewName] = useState('')
   const [saving, setSaving] = useState(false)
   const [open, setOpen] = useState(false)
+  const [note, setNote] = useState('')
 
   useEffect(() => {
     if (open && user?.is_admin) {
@@ -41,7 +42,7 @@ export default function ProjectPicker({ type, label, data, onDone }) {
   const save = async () => {
     setSaving(true)
     try {
-      const item = await api.createSaved({ type, label, data })
+      const item = await api.createSaved({ type, label, data, note: note.trim() || undefined })
       if (selected.size > 0) {
         await api.assignToProjects(item.id, [...selected])
       }
@@ -50,6 +51,7 @@ export default function ProjectPicker({ type, label, data, onDone }) {
     setSaving(false)
     setOpen(false)
     setSelected(new Set())
+    setNote('')
   }
 
   if (!open) {
@@ -90,6 +92,11 @@ export default function ProjectPicker({ type, label, data, onDone }) {
           Create
         </button>
       </div>
+
+      <textarea value={note} onChange={e => setNote(e.target.value)}
+        placeholder="Add a note (optional)..."
+        rows={2}
+        className="w-full bg-slate-800 border border-slate-700 text-slate-300 text-xs rounded-lg px-3 py-2 focus:outline-none focus:border-amber-500/40 placeholder-slate-600 resize-none" />
 
       <div className="flex gap-2 pt-1">
         <button onClick={save} disabled={saving}
