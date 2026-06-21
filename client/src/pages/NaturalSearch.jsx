@@ -60,14 +60,18 @@ export default function NaturalSearch() {
   const [error,    setError]    = useState(null)
   const [loading,  setLoading]  = useState(false)
   const [saved,    setSaved]    = useState(false)
+  const [mode,     setMode]     = useState('basic') // 'basic' | 'pro'
   const { saveSearch } = useUser()
   const { user } = useAuth()
+
+  const isAdmin = !!user?.is_admin
+  const usePro = mode === 'pro' && isAdmin
 
   const ask = async text => {
     const q = (text ?? question).trim()
     if (!q) return
     setQuestion(q); setLoading(true); setError(null); setResult(null); setSaved(false)
-    try { setResult(await api.askQuestion(q, !!user?.is_admin)) }
+    try { setResult(await api.askQuestion(q, usePro)) }
     catch (e) { setError(e.message) }
     finally   { setLoading(false) }
   }
@@ -82,6 +86,23 @@ export default function NaturalSearch() {
         <p className="text-slate-400 text-sm mt-1">
           Ask any question about NFL stats in plain English.
         </p>
+      </div>
+
+      {/* Mode toggle */}
+      <div className="flex rounded-lg overflow-hidden border border-slate-700 w-fit">
+        <button onClick={() => setMode('basic')}
+          className={`px-4 py-1.5 text-xs font-medium transition-colors ${
+            mode === 'basic' ? 'bg-slate-700 text-white' : 'text-slate-500 hover:text-slate-300'
+          }`}>
+          Basic
+        </button>
+        <button onClick={() => isAdmin ? setMode('pro') : null}
+          className={`px-4 py-1.5 text-xs font-medium transition-colors flex items-center gap-1.5 ${
+            mode === 'pro' ? 'bg-violet-600 text-white' : isAdmin ? 'text-slate-500 hover:text-slate-300' : 'text-slate-600 cursor-not-allowed'
+          }`}>
+          Pro
+          {!isAdmin && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-slate-700 text-slate-500">Coming soon</span>}
+        </button>
       </div>
 
       {/* Search box */}
@@ -130,15 +151,15 @@ export default function NaturalSearch() {
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
           </svg>
-          Translating your question…
+          {usePro ? 'Analyzing your question…' : 'Translating your question…'}
         </div>
       )}
 
       {/* Results */}
       {result && (
         <div className="space-y-4">
-          {/* AI Insight (admin only) */}
-          {user?.is_admin && result.summary && (
+          {/* AI Insight (pro mode) */}
+          {usePro && result.summary && (
             <div className="rounded-2xl border border-violet-500/20 p-5 space-y-2"
               style={{ background: 'linear-gradient(160deg, #0f172a 0%, #1e1b2e 100%)' }}>
               <p className="text-xs font-bold uppercase tracking-widest text-violet-500">AI Insight</p>
@@ -146,8 +167,8 @@ export default function NaturalSearch() {
             </div>
           )}
 
-          {/* Chart (admin only) */}
-          {user?.is_admin && result.chart && <InsightChart spec={result.chart} />}
+          {/* Chart (pro mode) */}
+          {usePro && result.chart && <InsightChart spec={result.chart} />}
 
           {/* Save + Feedback row */}
           <div className="flex items-center justify-between">
