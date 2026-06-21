@@ -1,4 +1,6 @@
+import { useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
+import { api } from '../api'
 
 // ─── content ─────────────────────────────────────────────────────────────────
 
@@ -913,6 +915,7 @@ const CONTENT = {
 
 export default function Guide() {
   const { user } = useAuth()
+  useEffect(() => { api.trackPage('guide') }, [])
   const lang  = user?.guide_lang ?? 'en'
   const isHe = lang === 'he'
   const c = CONTENT[lang] ?? CONTENT['en']

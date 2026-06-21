@@ -122,6 +122,7 @@ export const api = {
   getAdminStats: ()                 => get('/admin/stats'),
   getAdminAi: ()                    => get('/admin/ai'),
   getFeatureUsage: ()               => get('/admin/feature-usage'),
+  trackPage: (page)                 => post('/track', { page }).catch(() => {}),
   getAdminUsers: ()                 => get('/admin/users'),
   deleteAdminUser: (id)             => del(`/admin/users/${id}`),
 

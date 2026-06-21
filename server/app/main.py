@@ -198,6 +198,17 @@ def _run_migrations():
                 ADD COLUMN IF NOT EXISTS regenerate_count INT DEFAULT 0,
                 ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT now()
         """))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS page_views (
+                id         BIGSERIAL PRIMARY KEY,
+                user_id    BIGINT REFERENCES users(id) ON DELETE CASCADE,
+                page       TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT now()
+            )
+        """))
+        conn.execute(text("""
+            CREATE INDEX IF NOT EXISTS idx_page_views_page_date ON page_views (page, created_at DESC)
+        """))
 
 
 _run_migrations()

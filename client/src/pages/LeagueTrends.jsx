@@ -177,6 +177,7 @@ function TrendTooltip({ active, payload, label, prevByKey, lineLabels }) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function LeagueTrends() {
   const { user } = useAuth()
+  useEffect(() => { api.trackPage('trends') }, [])
   const [category,   setCategory]   = useState('passing')
   const [stat,       setStat]       = useState('td')
   const [agg,        setAgg]        = useState('sum')

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { BarChart, Bar, LineChart, Line, ScatterChart, Scatter,
          XAxis, YAxis, CartesianGrid, Tooltip as RTooltip, ResponsiveContainer } from 'recharts'
 import { api } from '../api'
@@ -53,6 +53,7 @@ function InsightChart({ spec }) {
 }
 
 export default function NaturalSearch() {
+  useEffect(() => { api.trackPage('search') }, [])
   const [question, setQuestion] = useState('')
   const [result,   setResult]   = useState(null)
   const [error,    setError]    = useState(null)

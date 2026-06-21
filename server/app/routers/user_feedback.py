@@ -25,6 +25,13 @@ class AdminFeedbackPatch(BaseModel):
     resolved: Optional[bool] = None
 
 
+class TrackBody(BaseModel):
+    page: str
+
+
+VALID_PAGES = {"players", "profile", "comparison", "draft", "search", "trends", "anomalies", "saved", "guide"}
+
+
 # ── Helpers ────────────────────────────────────────────────────────────────────
 def _require_admin(current_user: dict = Depends(get_current_user)):
     if not current_user.get("is_admin"):
@@ -111,6 +118,19 @@ def user_reply_feedback(feedback_id: int, body: ReplyBody, current_user: dict = 
         preview = message[:80] + ('…' if len(message) > 80 else '')
         _notify_admin(conn, f"Reply from {current_user['username']}: {preview}", feedback_id)
     return {"ok": True}
+
+
+# ── Page tracking ──────────────────────────────────────────────────────────────
+@router.post("/track", status_code=204)
+def track_page(body: TrackBody, current_user: dict = Depends(get_current_user)):
+    if current_user.get("is_admin"):
+        return
+    if body.page not in VALID_PAGES:
+        return
+    with engine.begin() as conn:
+        conn.execute(text(
+            "INSERT INTO page_views (user_id, page) VALUES (:uid, :page)"
+        ), {"uid": int(current_user["sub"]), "page": body.page})
 
 
 # ── Admin endpoints ────────────────────────────────────────────────────────────
@@ -233,6 +253,19 @@ def admin_stats(admin: dict = Depends(_require_admin)):
 @router.get("/admin/feature-usage")
 def admin_feature_usage(admin: dict = Depends(_require_admin)):
     with engine.connect() as conn:
+        page_views_all = conn.execute(text("""
+            SELECT page, COUNT(*) as total,
+                   COUNT(*) FILTER (WHERE created_at > now() - INTERVAL '7 days') as views_7d,
+                   COUNT(*) FILTER (WHERE created_at > now() - INTERVAL '30 days') as views_30d
+            FROM page_views
+            GROUP BY page ORDER BY total DESC
+        """)).fetchall()
+        page_views_daily = conn.execute(text("""
+            SELECT DATE(created_at) as day, COUNT(*) as views
+            FROM page_views
+            WHERE created_at > now() - INTERVAL '30 days'
+            GROUP BY day ORDER BY day
+        """)).fetchall()
         features_7d = conn.execute(text("""
             SELECT feature, COUNT(*) as count,
                    COUNT(*) FILTER (WHERE success) as success_count,
@@ -250,26 +283,18 @@ def admin_feature_usage(admin: dict = Depends(_require_admin)):
         saved_counts = conn.execute(text("""
             SELECT type, COUNT(*) as count FROM saved_items GROUP BY type ORDER BY count DESC
         """)).fetchall()
-        search_count = conn.execute(text(
-            "SELECT COUNT(*) FROM ai_query_log WHERE feature = 'nl_search'"
-        )).scalar() or 0
-        comparison_count = conn.execute(text(
-            "SELECT COUNT(*) FROM ai_query_log WHERE feature = 'comparison_narrative'"
-        )).scalar() or 0
-        insight_count = conn.execute(text(
-            "SELECT COUNT(*) FROM ai_query_log WHERE feature = 'insights'"
-        )).scalar() or 0
         total_ai = conn.execute(text("SELECT COUNT(*) FROM ai_query_log")).scalar() or 0
         thumbs_up = conn.execute(text("SELECT COUNT(*) FROM ai_query_log WHERE thumbs = 1")).scalar() or 0
         thumbs_down = conn.execute(text("SELECT COUNT(*) FROM ai_query_log WHERE thumbs = -1")).scalar() or 0
+        total_page_views = conn.execute(text("SELECT COUNT(*) FROM page_views")).scalar() or 0
     return {
-        "features_7d":  [dict(r._mapping) for r in features_7d],
-        "features_30d": [dict(r._mapping) for r in features_30d],
-        "saved_by_type": [dict(r._mapping) for r in saved_counts],
+        "page_views":     [dict(r._mapping) for r in page_views_all],
+        "daily_views":    [dict(r._mapping) for r in page_views_daily],
+        "ai_features_7d": [dict(r._mapping) for r in features_7d],
+        "ai_features_30d":[dict(r._mapping) for r in features_30d],
+        "saved_by_type":  [dict(r._mapping) for r in saved_counts],
         "totals": {
-            "smart_search": search_count,
-            "comparisons": comparison_count,
-            "insights": insight_count,
+            "total_page_views": total_page_views,
             "total_ai_calls": total_ai,
             "thumbs_up": thumbs_up,
             "thumbs_down": thumbs_down,

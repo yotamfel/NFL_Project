@@ -786,6 +786,7 @@ function InsightsSection({ playerId, accentColor }) {
 export default function PlayerProfile() {
   const { user } = useAuth()
   const { id } = useParams()
+  useEffect(() => { api.trackPage('profile') }, [id])
   const { data: profile, loading, error } = useApi(() => api.getPlayer(id), [id])
   const { data: injData } = useApi(() => api.getInjuries(id), [id])
   const [advancedSections, setAdvancedSections] = useState(new Set())

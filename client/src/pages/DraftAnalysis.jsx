@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ScatterChart, Scatter, BarChart, Bar, LabelList,
@@ -894,6 +894,7 @@ function StealBustPanel({ mode }) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function DraftAnalysis() {
   const { user } = useAuth()
+  useEffect(() => { api.trackPage('draft') }, [])
   const [tab,     setTab]    = useState('picks')
   const [avInfo,  setAvInfo] = useState(false)
   const [filters, setFilters] = useState({ year: '', team: '', pos: '' })

@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../api'
 import { useApi } from '../hooks/useApi'
@@ -50,6 +51,7 @@ function fmtPlayers(n) {
 
 export default function PlayerSearch() {
   const navigate = useNavigate()
+  useEffect(() => { api.trackPage('players') }, [])
   const { data: meta, loading: metaLoading } = useApi(() => api.getMeta(), [])
 
   const playerLabel  = fmtPlayers(meta?.players)

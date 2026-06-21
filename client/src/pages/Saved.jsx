@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { toPng } from 'html-to-image'
 import {
@@ -251,6 +251,7 @@ function TableCard({ table, config, onUpdate, onRemove }) {
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function Saved() {
   const { user } = useAuth()
+  useEffect(() => { api.trackPage('saved') }, [])
   const {
     username, saved,
     removePlayer, removeComparison, removeSearch,

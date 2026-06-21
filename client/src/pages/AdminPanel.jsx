@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { api } from '../api'
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 
 export default function AdminPanel() {
   const { user } = useAuth()
@@ -419,56 +419,101 @@ function ChatBubble({ msg, username, isAdmin }) {
 }
 
 // ── Feature Usage ─────────────────────────────────────────────────────────────
+const PAGE_LABELS = {
+  players: 'Player Search', profile: 'Player Profile', comparison: 'Compare',
+  draft: 'Draft', search: 'Smart Search', trends: 'Trends',
+  anomalies: 'Anomalies', saved: 'Saved', guide: 'Guide',
+}
+
 function UsageTab() {
   const [data, setData] = useState(null)
   useEffect(() => { api.getFeatureUsage().then(setData).catch(() => {}) }, [])
   if (!data) return <Spinner />
 
   const totals = data.totals || {}
+  const pageViews = data.page_views || []
+  const dailyViews = (data.daily_views || []).map(d => ({ day: String(d.day).slice(5), views: d.views }))
+  const maxPageTotal = Math.max(...pageViews.map(p => p.total), 1)
 
   return (
     <div className="space-y-6">
-      {/* AI totals */}
+      {/* Top-level totals */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {[
-          { label: 'Smart Search', value: totals.smart_search },
-          { label: 'Comparisons', value: totals.comparisons },
-          { label: 'Player Insights', value: totals.insights },
-          { label: 'Total AI Calls', value: totals.total_ai_calls, highlight: true },
-        ].map(c => (
-          <div key={c.label} className={`rounded-xl p-5 border ${c.highlight ? 'bg-amber-500/10 border-amber-500/30' : 'bg-slate-900 border-slate-800'}`}>
-            <p className={`text-xs font-medium mb-1 ${c.highlight ? 'text-amber-400' : 'text-slate-400'}`}>{c.label}</p>
-            <p className={`text-3xl font-bold ${c.highlight ? 'text-amber-300' : 'text-white'}`}>{(c.value ?? 0).toLocaleString()}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Feedback quality */}
-      <div className="grid grid-cols-2 gap-4">
+        <div className="rounded-xl p-5 border bg-amber-500/10 border-amber-500/30">
+          <p className="text-xs font-medium mb-1 text-amber-400">Page Views</p>
+          <p className="text-3xl font-bold text-amber-300">{(totals.total_page_views ?? 0).toLocaleString()}</p>
+        </div>
+        <div className="rounded-xl p-5 border bg-violet-500/10 border-violet-500/30">
+          <p className="text-xs font-medium mb-1 text-violet-400">AI Calls</p>
+          <p className="text-3xl font-bold text-violet-300">{(totals.total_ai_calls ?? 0).toLocaleString()}</p>
+        </div>
         <div className="rounded-xl p-5 border border-emerald-800/40 bg-emerald-900/10">
-          <p className="text-xs font-medium mb-1 text-emerald-400">Thumbs Up</p>
+          <p className="text-xs font-medium mb-1 text-emerald-400">AI Thumbs Up</p>
           <p className="text-3xl font-bold text-emerald-300">{totals.thumbs_up ?? 0}</p>
         </div>
         <div className="rounded-xl p-5 border border-red-800/40 bg-red-900/10">
-          <p className="text-xs font-medium mb-1 text-red-400">Thumbs Down</p>
+          <p className="text-xs font-medium mb-1 text-red-400">AI Thumbs Down</p>
           <p className="text-3xl font-bold text-red-300">{totals.thumbs_down ?? 0}</p>
         </div>
       </div>
 
-      {/* Last 7 days breakdown */}
+      {/* Page views chart */}
+      {pageViews.length > 0 && (
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
+          <h3 className="text-white font-semibold text-sm mb-4">Page Popularity</h3>
+          <div className="space-y-2">
+            {pageViews.map(p => (
+              <div key={p.page} className="flex items-center gap-3">
+                <span className="text-slate-300 text-xs w-28 shrink-0">{PAGE_LABELS[p.page] || p.page}</span>
+                <div className="flex-1 h-6 bg-slate-800 rounded-full overflow-hidden">
+                  <div className="h-full rounded-full bg-amber-500/50" style={{ width: `${(p.total / maxPageTotal) * 100}%` }} />
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <span className="text-white font-bold text-sm w-12 text-right">{p.total}</span>
+                  <span className="text-slate-500 text-xs w-14 text-right">{p.views_7d ?? 0} / 7d</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Daily activity chart */}
+      {dailyViews.length > 0 && (
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
+          <h3 className="text-white font-semibold text-sm mb-4">Daily Page Views — last 30 days</h3>
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={dailyViews}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+              <XAxis dataKey="day" tick={{ fill: '#64748b', fontSize: 10 }} interval={4} />
+              <YAxis tick={{ fill: '#64748b', fontSize: 10 }} allowDecimals={false} />
+              <Tooltip contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: 8 }}
+                labelStyle={{ color: '#94a3b8' }} itemStyle={{ color: '#f59e0b' }} />
+              <Bar dataKey="views" fill="#f59e0b" radius={[2, 2, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      {/* AI features breakdown */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-        <h3 className="text-white font-semibold text-sm mb-3">Last 7 Days</h3>
-        {(data.features_7d || []).length === 0 ? (
+        <h3 className="text-white font-semibold text-sm mb-3">AI Features — Last 7 Days</h3>
+        {(data.ai_features_7d || []).length === 0 ? (
           <p className="text-slate-500 text-sm text-center py-4">No AI usage in the last 7 days</p>
         ) : (
           <div className="space-y-2">
-            {(data.features_7d || []).map(f => (
+            {(data.ai_features_7d || []).map(f => (
               <div key={f.feature} className="flex items-center justify-between py-2 border-b border-slate-800/60 last:border-0">
                 <span className="text-slate-300 text-sm">{f.feature}</span>
                 <div className="flex items-center gap-3">
                   <span className="text-white font-bold">{f.count}</span>
+                  {f.success_count != null && f.count > 0 && (
+                    <span className={`text-xs ${f.success_count === f.count ? 'text-emerald-400' : 'text-amber-400'}`}>
+                      {Math.round(100 * f.success_count / f.count)}% success
+                    </span>
+                  )}
                   {f.avg_ms != null && (
-                    <span className="text-slate-500 text-xs">{Math.round(f.avg_ms)}ms avg</span>
+                    <span className="text-slate-500 text-xs">{Math.round(f.avg_ms)}ms</span>
                   )}
                 </div>
               </div>
@@ -477,14 +522,14 @@ function UsageTab() {
         )}
       </div>
 
-      {/* Last 30 days */}
+      {/* AI features 30 days */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-        <h3 className="text-white font-semibold text-sm mb-3">Last 30 Days</h3>
-        {(data.features_30d || []).length === 0 ? (
+        <h3 className="text-white font-semibold text-sm mb-3">AI Features — Last 30 Days</h3>
+        {(data.ai_features_30d || []).length === 0 ? (
           <p className="text-slate-500 text-sm text-center py-4">No AI usage in the last 30 days</p>
         ) : (
           <div className="space-y-2">
-            {(data.features_30d || []).map(f => (
+            {(data.ai_features_30d || []).map(f => (
               <div key={f.feature} className="flex items-center justify-between py-2 border-b border-slate-800/60 last:border-0">
                 <span className="text-slate-300 text-sm">{f.feature}</span>
                 <span className="text-white font-bold">{f.count}</span>
@@ -494,7 +539,7 @@ function UsageTab() {
         )}
       </div>
 
-      {/* Saved items by type */}
+      {/* Saved items */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
         <h3 className="text-white font-semibold text-sm mb-3">Saved Items by Type</h3>
         {(data.saved_by_type || []).length === 0 ? (

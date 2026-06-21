@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApi } from '../hooks/useApi'
 import { api } from '../api'
@@ -7,6 +7,7 @@ import { fmtSeason } from '../utils'
 
 export default function Anomalies() {
   const navigate = useNavigate()
+  useEffect(() => { api.trackPage('anomalies') }, [])
   const [season, setSeason] = useState(null)
 
   const { data: seasons } = useApi(() => api.getAnomalySeasons(), [])

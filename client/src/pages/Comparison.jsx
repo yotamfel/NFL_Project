@@ -307,6 +307,7 @@ function shortName(full = '') {
 export default function Comparison() {
   const { user } = useAuth()
   const [searchParams] = useSearchParams()
+  useEffect(() => { api.trackPage('comparison') }, [])
 
   const [category,      setCategory]      = useState(() => searchParams.get('category') || 'passing')
   const [playerIds,     setPlayerIds]     = useState(() => {
