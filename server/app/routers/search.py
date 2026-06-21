@@ -20,12 +20,13 @@ _AI_UNAVAILABLE = "AI features are temporarily unavailable. Other features work 
 
 class NaturalLanguageQuery(BaseModel):
     question: str
+    include_insights: bool = False
 
 
 @router.post("/natural", response_model=NaturalLanguageResult)
 def natural_language_search(query: NaturalLanguageQuery):
     try:
-        return answer_question(query.question)
+        return answer_question(query.question, include_insights=query.include_insights)
     except TranslationError as exc:
         msg = str(exc)
         # Surface AI-unavailability errors as 503 so clients can distinguish

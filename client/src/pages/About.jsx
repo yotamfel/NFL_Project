@@ -37,14 +37,14 @@ export default function About() {
         <div className="space-y-4">
           {[
             {
+              icon: '🧠',
+              title: 'Smart Search Pro',
+              desc: 'AI-powered insights, auto-generated charts, and deep analysis on top of every Smart Search query — going beyond the raw results.',
+            },
+            {
               icon: '🔬',
               title: 'Player Similarity',
               desc: 'Find players with similar statistical profiles — see who your favorite player compares to across eras, powered by machine learning.',
-            },
-            {
-              icon: '🧠',
-              title: 'AI Scout',
-              desc: 'Ask complex analytical questions in plain English and get instant answers with charts, summaries, and deep statistical insights.',
             },
             {
               icon: '📁',

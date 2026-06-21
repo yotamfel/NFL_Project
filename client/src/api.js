@@ -236,7 +236,7 @@ export const api = {
     return get(`/players/${id}/ngs?${p}`)
   },
 
-  askQuestion: question => post('/search/natural', { question }),
+  askQuestion: (question, includeInsights = false) => post('/search/natural', { question, include_insights: includeInsights }),
   submitFeedback: (log_id, thumbs) => post('/ai/feedback', { log_id, thumbs }),
 
   getPlayerInsights: id => get(`/players/${id}/insights`),

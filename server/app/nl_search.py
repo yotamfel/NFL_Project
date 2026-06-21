@@ -323,7 +323,7 @@ def _run_readonly(sql: str) -> list[dict[str, Any]]:
         return [dict(row._mapping) for row in result]
 
 
-def answer_question(question: str) -> dict[str, Any]:
+def answer_question(question: str, include_insights: bool = False) -> dict[str, Any]:
     """
     Translates `question` to SQL, validates and runs it, and returns
     {"sql": ..., "rows": [...], "log_id": ...}. Raises TranslationError
@@ -358,7 +358,10 @@ def answer_question(question: str) -> dict[str, Any]:
                   success=False, error_msg=err)
         raise TranslationError(f"the generated query failed to run: {getattr(exc, 'orig', exc)}") from exc
 
-    summary, chart, tokens2 = _generate_insights(question, rows)
+    if include_insights:
+        summary, chart, tokens2 = _generate_insights(question, rows)
+    else:
+        summary, chart, tokens2 = None, None, 0
 
     ms = int((time.monotonic() - t0) * 1000)
     log_id = _safe_log(feature="nl_search", input_text=question, sql_generated=sql,

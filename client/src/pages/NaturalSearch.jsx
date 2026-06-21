@@ -66,7 +66,7 @@ export default function NaturalSearch() {
     const q = (text ?? question).trim()
     if (!q) return
     setQuestion(q); setLoading(true); setError(null); setResult(null); setSaved(false)
-    try { setResult(await api.askQuestion(q)) }
+    try { setResult(await api.askQuestion(q, !!user?.is_admin)) }
     catch (e) { setError(e.message) }
     finally   { setLoading(false) }
   }
@@ -79,7 +79,7 @@ export default function NaturalSearch() {
         <p className="text-xs font-bold uppercase tracking-widest text-violet-500 mb-1">Powered by Claude</p>
         <h1 className="text-3xl font-black text-white tracking-tight">Smart Search</h1>
         <p className="text-slate-400 text-sm mt-1">
-          Ask any question about NFL stats in plain English — get answers, insights, and charts.
+          Ask any question about NFL stats in plain English.
         </p>
       </div>
 
@@ -129,15 +129,15 @@ export default function NaturalSearch() {
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
           </svg>
-          Analyzing your question…
+          Translating your question…
         </div>
       )}
 
       {/* Results */}
       {result && (
         <div className="space-y-4">
-          {/* AI Insight */}
-          {result.summary && (
+          {/* AI Insight (admin only) */}
+          {user?.is_admin && result.summary && (
             <div className="rounded-2xl border border-violet-500/20 p-5 space-y-2"
               style={{ background: 'linear-gradient(160deg, #0f172a 0%, #1e1b2e 100%)' }}>
               <p className="text-xs font-bold uppercase tracking-widest text-violet-500">AI Insight</p>
@@ -145,8 +145,8 @@ export default function NaturalSearch() {
             </div>
           )}
 
-          {/* Chart */}
-          {result.chart && <InsightChart spec={result.chart} />}
+          {/* Chart (admin only) */}
+          {user?.is_admin && result.chart && <InsightChart spec={result.chart} />}
 
           {/* Save + Feedback row */}
           <div className="flex items-center justify-between">
