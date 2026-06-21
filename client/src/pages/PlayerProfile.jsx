@@ -1086,9 +1086,7 @@ export default function PlayerProfile() {
       <NgsSection playerId={player.player_id} pos={player.pos} accentColor={c.hex} />
       <SnapCountsSection playerId={player.player_id} pos={player.pos} accentColor={c.hex} playerName={player.player_name} />
 
-      {/* Premium — hidden until launch
       {user?.is_admin && <SimilarPlayersSection playerId={player.player_id} playerName={player.player_name} accentColor={c.hex} />}
-      */}
 
       <div className="text-center pb-4">
         <Link to="/comparison" className="text-sm transition-colors hover:opacity-80"

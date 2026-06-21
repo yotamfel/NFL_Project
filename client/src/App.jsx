@@ -22,7 +22,7 @@ import About from './pages/About'
 import Privacy from './pages/Privacy'
 import FdvPage from './pages/FdvPage'
 import SourcesPage from './pages/SourcesPage'
-// import Scout from './pages/Scout'  // Premium — not yet accessible
+import Scout from './pages/Scout'
 import Onboarding from './components/Onboarding'
 import Footer from './components/Footer'
 
@@ -81,7 +81,7 @@ function AppInner() {
             <Route path="/about"           element={<About />} />
             <Route path="/privacy"         element={<Privacy />} />
             <Route path="/methodology"     element={<FdvPage />} />
-            {/* <Route path="/scout" element={<Scout />} /> — Premium, not yet accessible */}
+            {user?.is_admin && <Route path="/scout" element={<Scout />} />}
             <Route path="/sources"          element={<SourcesPage />} />
           </Routes>
         </main>

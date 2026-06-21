@@ -313,8 +313,7 @@ export default function Saved() {
 
       {/* Tabs */}
       <div className="flex gap-1 flex-wrap">
-        {/* Projects tab hidden until premium launch */}
-      {TABS.map(t => (
+      {[...TABS, ...(user?.is_admin ? [{ id: 'projects', label: 'Projects', icon: '📁' }] : [])].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
             className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
               tab === t.id ? 'bg-slate-700 text-white' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/60'
@@ -546,9 +545,7 @@ export default function Saved() {
           ))}
         </div>
       )}
-      {/* Projects tab hidden until premium launch
       {tab === 'projects' && user?.is_admin && <ProjectsTab />}
-      */}
     </div>
   )
 }
