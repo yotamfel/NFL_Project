@@ -10,6 +10,7 @@ pooler does not support BEGIN READ ONLY transactions, so
 `postgresql_readonly=True` is not used; the regex pre-filter is the sole
 safety gate, which is sufficient for this schema.
 """
+import json
 import re
 import time
 from typing import Any, Optional
@@ -357,7 +358,60 @@ def answer_question(question: str) -> dict[str, Any]:
                   success=False, error_msg=err)
         raise TranslationError(f"the generated query failed to run: {getattr(exc, 'orig', exc)}") from exc
 
+    summary, chart, tokens2 = _generate_insights(question, rows)
+
     ms = int((time.monotonic() - t0) * 1000)
     log_id = _safe_log(feature="nl_search", input_text=question, sql_generated=sql,
-                       model_used=MODEL, tokens_used=tokens, response_ms=ms, success=True)
-    return {"sql": sql, "rows": rows, "log_id": log_id}
+                       model_used=MODEL, tokens_used=tokens + tokens2, response_ms=ms, success=True)
+    return {"sql": sql, "rows": rows, "log_id": log_id,
+            "summary": summary, "chart": chart}
+
+
+_INSIGHT_PROMPT = """\
+You are an NFL analyst. The user asked: "{question}"
+
+Here is the query result (JSON): {data}
+
+Respond with ONLY valid JSON in this exact shape, no other text:
+{{
+  "summary": "A 2-4 sentence analysis of what this data shows. Be specific with numbers. Highlight interesting patterns, surprises, or context an NFL fan would find valuable.",
+  "chart": {{
+    "type": "bar" | "line" | "scatter",
+    "data": [...],
+    "x_key": "field_name",
+    "y_key": "field_name",
+    "title": "short chart title"
+  }} | null
+}}
+
+Set "chart" to null if the data is a single value, under 3 rows, or not naturally chartable."""
+
+
+def _generate_insights(question: str, rows: list[dict]) -> tuple[str, dict | None, int]:
+    if not rows or not ANTHROPIC_API_KEY:
+        return "", None, 0
+
+    data_sample = rows[:100]
+    for r in data_sample:
+        for k, v in r.items():
+            if hasattr(v, 'isoformat'):
+                r[k] = str(v)
+            elif isinstance(v, (bytes, memoryview)):
+                r[k] = str(v)
+
+    try:
+        prompt = _INSIGHT_PROMPT.format(
+            question=question,
+            data=json.dumps(data_sample, default=str)[:8000],
+        )
+        resp = _client().messages.create(
+            model=MODEL, max_tokens=1500,
+            messages=[{"role": "user", "content": prompt}],
+            timeout=20,
+        )
+        raw = "".join(b.text for b in resp.content if b.type == "text").strip()
+        tokens = resp.usage.input_tokens + resp.usage.output_tokens
+        parsed = json.loads(raw)
+        return parsed.get("summary", ""), parsed.get("chart"), tokens
+    except Exception:
+        return f"Query returned {len(rows)} results.", None, 0

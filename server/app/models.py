@@ -49,3 +49,5 @@ class NaturalLanguageResult(BaseModel):
     sql: str
     rows: list[dict[str, Any]]
     log_id: Optional[int] = None
+    summary: Optional[str] = None
+    chart: Optional[dict[str, Any]] = None
