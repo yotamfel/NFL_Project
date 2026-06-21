@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 const PLATFORM_URL = 'https://fourth-and-data.up.railway.app'
@@ -27,6 +28,11 @@ const Decision = ({ title, why }) => (
 
 export default function Portfolio() {
   const navigate = useNavigate()
+
+  useEffect(() => {
+    document.title = 'Fourth & Data — Portfolio'
+    return () => { document.title = 'Fourth & Data' }
+  }, [])
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-300">
