@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext'
 import AiFeedback from '../components/AiFeedback'
 import SocialPostGenerator from '../components/SocialPostGenerator'
 import { CsvDownloadButton } from '../components/StatTable'
+import ProjectPicker from '../components/ProjectPicker'
 
 const EXAMPLES = [
   'Who had the most passing touchdowns between 2015 and 2020?',
@@ -162,6 +163,11 @@ export default function NaturalSearch() {
             >
               {saved ? '✓ Saved' : '💾 Save result'}
             </button>
+            <ProjectPicker
+              type="search"
+              label={question}
+              data={{ question, sql: result.sql, rows: result.rows.slice(0, 10) }}
+            />
           </div>
 
           {/* Content Creator (admin only) */}

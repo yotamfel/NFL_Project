@@ -9,6 +9,7 @@ import { useUser } from '../context/UserContext'
 import { STAT_DEFS } from '../utils/statDefinitions'
 import AiFeedback from '../components/AiFeedback'
 import SocialPostGenerator from '../components/SocialPostGenerator'
+import ProjectPicker from '../components/ProjectPicker'
 import { useAuth } from '../context/AuthContext'
 
 const CATEGORIES = ['passing', 'offense', 'defense', 'kicking', 'punting', 'returns']
@@ -748,7 +749,7 @@ export default function Comparison() {
       {data && (
         <>
           {/* Save */}
-          <div className="flex justify-end">
+          <div className="flex justify-end items-center">
             <button onClick={handleSave} disabled={saved}
               className={`text-sm font-medium px-4 py-1.5 rounded-lg transition-colors border ${
                 saved
@@ -757,6 +758,11 @@ export default function Comparison() {
               }`}>
               {saved ? '✓ Saved' : '💾 Save comparison'}
             </button>
+            <ProjectPicker
+              type="comparison"
+              label={data.players.map(p => p.player_name).join(' vs ')}
+              data={{ playerIds, playerNames: data.players.map(p => p.player_name), category }}
+            />
           </div>
 
           {/* AI Narrative */}
