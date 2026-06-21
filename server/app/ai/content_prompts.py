@@ -1,13 +1,14 @@
 """Prompt templates for Content Creator Mode — social media post generation."""
 
 TWITTER_PROMPT = """\
-You are a sharp NFL analyst on Twitter/X. Turn this data into a tweet that makes people stop scrolling.
+You are a sharp NFL analyst on Twitter/X. You have the data below, but your job is NOT to summarize it —
+your job is to find the ONE insight that isn't obvious and tweet THAT.
 
 Rules:
 - Under 280 characters, hard limit
-- Lead with the most surprising or counterintuitive insight from the data — not the obvious headline
-- Use specific numbers but weave them into a narrative, not a stat dump
-- Write like you're making an argument, not reading a box score
+- Don't restate what the data shows — find what it IMPLIES (a trend, a comparison, a prediction, an irony)
+- Use 1-2 specific numbers as evidence, not as the point
+- Write like you're making an argument a friend would disagree with
 - No hashtags unless genuinely clever (max 1)
 - If the context mentions a language, write the entire tweet in that language
 
@@ -17,43 +18,50 @@ Context: {context}
 Return only the tweet text, nothing else."""
 
 REDDIT_PROMPT = """\
-You are writing a Reddit post for r/nfl that will actually get upvotes and discussion.
+You are writing a Reddit post for r/nfl. You have the data below, but DON'T just present it —
+use it as evidence for a larger argument, comparison, or insight that goes BEYOND the raw numbers.
 
 Rules:
-- Title: make a specific claim or ask a provocative question backed by the data — NOT "interesting stats about X"
-- Body: 3-4 paragraphs that build an argument, not just list facts. Start with the insight, then use data to support it, then give context or a counterpoint
-- Include a markdown table or formatted stat comparison if the data supports it (use Reddit markdown: | col1 | col2 |)
-- End with a genuine question that invites disagreement, not just "what do you think?"
-- Tone: knowledgeable fan who did the research, not a robot reading a spreadsheet
+- Title: make a specific claim or ask a provocative question — NOT "stats about X"
+- Body structure:
+  1. Open with the insight or argument (not the data)
+  2. Present a markdown table (| col | col |) comparing key stats that support your point
+  3. Add context the data alone doesn't show — era differences, rule changes, team systems, injuries
+  4. Present a counterargument or caveat honestly
+  5. End with a genuine question that invites disagreement
+- Tone: knowledgeable fan making a case, not a report
+- Add your own analytical takes — what does this data PREDICT or IMPLY?
 - If the context mentions a language, write everything in that language (including table headers)
 
 Data: {data}
 Context: {context}
 
-Return valid JSON only:
+Return valid JSON only (no markdown fences):
 {{
-  "title": "specific claim or question backed by data",
-  "body": "3-4 paragraphs with markdown table where appropriate, ending with a discussion question"
+  "title": "specific claim or provocative question",
+  "body": "4-5 paragraphs with markdown table, context beyond the data, and discussion question"
 }}"""
 
 YOUTUBE_PROMPT = """\
-You are scripting an NFL analysis video that keeps viewers watching. Turn this data into talking points
-that tell a story, not just recite stats.
+You are scripting an NFL analysis video. You have the data below, but viewers don't want a stat
+lecture — they want to understand what the numbers MEAN and what they miss.
 
 Rules:
-- 5 talking points, each 2-3 sentences
-- Each point should make an argument or reveal a surprise — not just state a fact
-- Build a narrative arc: setup → evidence → twist or implication
-- Use specific numbers but explain what they MEAN in context
-- The 5th point should be the "so what" — why this matters going forward
+- 5 talking points, each 2-3 sentences that flow as a narrative
+- Point 1: the hook — what's surprising or counterintuitive in this data
+- Points 2-3: the evidence — dig into specific numbers but explain WHY they matter
+- Point 4: context the data doesn't show — era, injuries, system, competition
+- Point 5: the "so what" — what this predicts, changes, or reveals about the game
+- Each point should feel like it's building on the previous one, not a separate bullet
+- Add original analysis — don't just describe, interpret
 - If the context mentions a language, write all points in that language
 
 Data: {data}
 Context: {context}
 
-Return valid JSON only:
+Return valid JSON only (no markdown fences):
 {{
-  "talking_points": ["point 1 (2-3 sentences)", "point 2", "point 3", "point 4", "point 5 - the bigger picture"]
+  "talking_points": ["point 1 - the hook", "point 2 - evidence", "point 3 - deeper", "point 4 - context", "point 5 - so what"]
 }}"""
 
 PROMPTS = {
