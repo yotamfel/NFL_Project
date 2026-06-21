@@ -206,7 +206,8 @@ def _build_passing(stats: pd.DataFrame) -> pd.DataFrame:
     out["ny_per_a"] = _ratio(out["yds"] - out["sack_yds_lost"], sk_att)
     out["any_per_a"] = _ratio(out["yds"] - out["sack_yds_lost"] + 20 * out["td"] - 45 * out["int"], sk_att)
     # y_per_g needs `g`, which is itself out of scope (see _bio) - nulled together.
-    _null(out, ["rk", "g", "gs", "qbrec", "succ_pct", "lng", "y_per_g", "_4qc", "gwd", "awards", "qbr", "_1d"])
+    _null(out, ["rk", "gs", "qbrec", "succ_pct", "y_per_g", "_4qc", "gwd", "awards", "qbr", "_1d",
+                "g", "lng"])
     return out
 
 
@@ -234,9 +235,9 @@ def _build_offense(stats: pd.DataFrame) -> pd.DataFrame:
     out["y_per_tch"] = _ratio(out["yscm"], out["touch"])
     out["rrtd"] = out["rec_td"] + out["rush_td"]
     # r_per_g/rec_y_per_g/rush_y_per_g/a_per_g need `g`, out of scope (see _bio).
-    _null(out, ["rk", "g", "gs", "fmb", "rec_first_downs", "rush_first_downs",
-                "r_per_g", "rec_y_per_g", "rush_y_per_g", "a_per_g",
-                "rec_succ_pct", "rec_lng", "rush_succ_pct", "rush_lng", "awards"])
+    _null(out, ["rk", "gs", "fmb", "rec_first_downs", "rush_first_downs",
+                "rec_succ_pct", "rush_succ_pct", "awards",
+                "g", "rec_lng", "rush_lng", "r_per_g", "rec_y_per_g", "rush_y_per_g", "a_per_g"])
     return out
 
 
@@ -271,7 +272,7 @@ def _build_defense(stats: pd.DataFrame) -> pd.DataFrame:
     # table's fumble_recovery_yards_own/_opp split doesn't reassemble into
     # PFR's fum_ret_yds any more reliably than the *_fumbles phase-buckets did
     # for fmb (see _fumble_return_yards_from_pbp).
-    _null(out, ["rk", "g", "gs", "int_td", "lng", "fr_td", "fmb", "fum_ret_yds", "awards"])
+    _null(out, ["rk", "gs", "int_td", "lng", "fr_td", "fmb", "fum_ret_yds", "awards", "g"])
     return out
 
 
@@ -321,7 +322,7 @@ def _build_kicking(stats: pd.DataFrame) -> pd.DataFrame:
     out["xp_pct"] = _pct(out["xpm"], out["xpa"])
     # ko/koyds/tb/tb_pct/koavg: filled in from play-by-play below - entirely
     # absent from the wide table (see module docstring).
-    _null(out, ["rk", "g", "gs", "ko", "koyds", "tb", "tb_pct", "koavg", "awards"])
+    _null(out, ["rk", "gs", "ko", "koyds", "tb", "tb_pct", "koavg", "awards", "g"])
     return out
 
 
@@ -336,8 +337,8 @@ def _build_returns(stats: pd.DataFrame) -> pd.DataFrame:
     # play breakdown is entirely absent from the wide table (it has counts and
     # yardage only); apyd needs a PBP-derived input too (fum_ret_yds -
     # see _all_purpose_yards) so it's finished there alongside them.
-    _null(out, ["rk", "g", "gs", "punt_ret_td", "punt_ret_lng", "kick_ret_td",
-                "kick_ret_lng", "apyd", "awards"])
+    _null(out, ["rk", "gs", "punt_ret_td", "punt_ret_lng", "kick_ret_td",
+                "kick_ret_lng", "apyd", "awards", "g"])
     return out
 
 
@@ -401,7 +402,7 @@ def _punting_from_pbp(pbp: pl.DataFrame, lookup: pl.DataFrame, stats: pd.DataFra
     df["ny_per_p"] = _ratio(df["netyds"], df["pnt"])
     df["tb_pct"] = _pct(df["tb"], df["pnt"])
     df["in20_pct"] = _pct(df["pnt20"], df["pnt"])
-    _null(df, ["rk", "g", "gs", "awards"])
+    _null(df, ["rk", "gs", "awards", "g"])
     return df
 
 
@@ -556,6 +557,73 @@ def _defense_turnover_tds_from_pbp(pbp: pl.DataFrame, lookup: pl.DataFrame):
     return int_out, fr_out
 
 
+def _games_from_pbp(pbp: pl.DataFrame, lookup: pl.DataFrame):
+    """Derive per-category games played (g) from play-by-play: count distinct
+    game_id values where the player recorded at least one play in that role.
+    This is category-specific (a player who only rushed gets g on offense but
+    not passing), matching PFR's convention better than the wide table's single
+    'games' figure which is offense-centric."""
+    def _count(id_col, alias):
+        return (_resolve(
+            pbp.filter(pl.col(id_col).is_not_null())
+            .group_by([id_col, "season"])
+            .agg(pl.col("game_id").n_unique().alias("g")),
+            lookup, id_col,
+        ).to_pandas().rename(columns={"g": alias}))
+
+    passing = _count("passer_player_id", "g")
+    rusher  = _count("rusher_player_id", "g")
+    receiver = _count("receiver_player_id", "g")
+    tackler = pl.concat([
+        pbp.filter(pl.col(c).is_not_null()).select(pl.col(c).alias("gsis_id"), "season", "game_id")
+        for c in ["tackle_for_loss_1_player_id", "solo_tackle_1_player_id",
+                   "assist_tackle_1_player_id", "interception_player_id",
+                   "sack_player_id", "forced_fumble_player_1_player_id",
+                   "pass_defense_1_player_id"]
+    ])
+    defense = (_resolve(
+        tackler.group_by(["gsis_id", "season"]).agg(pl.col("game_id").n_unique().alias("g")),
+        lookup, "gsis_id",
+    ).to_pandas())
+    offense = (pd.concat([
+        rusher[["player_id", "season", "g"]],
+        receiver[["player_id", "season", "g"]],
+    ]).groupby(["player_id", "season"], as_index=False)["g"].max())
+
+    return {
+        "passing": passing,
+        "offense": offense,
+        "defense": defense,
+    }
+
+
+def _longest_plays_from_pbp(pbp: pl.DataFrame, lookup: pl.DataFrame):
+    """Derive longest-play columns from play-by-play: passing lng, rush_lng,
+    rec_lng."""
+    pass_lng = _resolve(
+        pbp.filter(pl.col("passer_player_id").is_not_null() & (pl.col("sack") == 0))
+        .group_by(["passer_player_id", "season"])
+        .agg(pl.col("passing_yards").max().alias("lng")),
+        lookup, "passer_player_id",
+    ).to_pandas()
+
+    rush_lng = _resolve(
+        pbp.filter(pl.col("rusher_player_id").is_not_null())
+        .group_by(["rusher_player_id", "season"])
+        .agg(pl.col("rushing_yards").max().alias("rush_lng")),
+        lookup, "rusher_player_id",
+    ).to_pandas()
+
+    rec_lng = _resolve(
+        pbp.filter(pl.col("receiver_player_id").is_not_null())
+        .group_by(["receiver_player_id", "season"])
+        .agg(pl.col("receiving_yards").max().alias("rec_lng")),
+        lookup, "receiver_player_id",
+    ).to_pandas()
+
+    return pass_lng, rush_lng, rec_lng
+
+
 def _return_tds_from_pbp(pbp: pl.DataFrame, lookup: pl.DataFrame):
     """punt_ret_td/punt_ret_lng and kick_ret_td/kick_ret_lng - the same per-
     play attribution as punting/kickoffs, just keyed to the returner instead
@@ -666,6 +734,60 @@ def build_seasons(years=YEARS) -> dict[str, pd.DataFrame]:
         .merge(kick_rets, on=["player_id", "season"], how="left") \
         .merge(apyd, on=["player_id", "season"], how="left")
     tables["returns"][["punt_ret_td", "kick_ret_td"]] = tables["returns"][["punt_ret_td", "kick_ret_td"]].fillna(0)
+
+    # Games played (g) from PBP — category-specific distinct game counts
+    games = _games_from_pbp(pbp, lookup)
+    for cat in ["passing", "offense", "defense"]:
+        tables[cat] = tables[cat].drop(columns=["g"]) \
+            .merge(games[cat][["player_id", "season", "g"]], on=["player_id", "season"], how="left")
+    # Kicking/punting/returns: derive g from their PBP-specific role columns
+    kick_g = _resolve(
+        pbp.filter(pl.col("kicker_player_id").is_not_null())
+        .group_by(["kicker_player_id", "season"])
+        .agg(pl.col("game_id").n_unique().alias("g")),
+        lookup, "kicker_player_id",
+    ).to_pandas()
+    tables["kicking"] = tables["kicking"].drop(columns=["g"]) \
+        .merge(kick_g[["player_id", "season", "g"]], on=["player_id", "season"], how="left")
+    punt_g = _resolve(
+        pbp.filter(pl.col("punter_player_id").is_not_null())
+        .group_by(["punter_player_id", "season"])
+        .agg(pl.col("game_id").n_unique().alias("g")),
+        lookup, "punter_player_id",
+    ).to_pandas()
+    tables["punting"] = tables["punting"].drop(columns=["g"]) \
+        .merge(punt_g[["player_id", "season", "g"]], on=["player_id", "season"], how="left")
+    ret_g = pl.concat([
+        pbp.filter(pl.col("punt_returner_player_id").is_not_null())
+        .select(pl.col("punt_returner_player_id").alias("gsis_id"), "season", "game_id"),
+        pbp.filter(pl.col("kickoff_returner_player_id").is_not_null())
+        .select(pl.col("kickoff_returner_player_id").alias("gsis_id"), "season", "game_id"),
+    ])
+    ret_g = _resolve(
+        ret_g.group_by(["gsis_id", "season"]).agg(pl.col("game_id").n_unique().alias("g")),
+        lookup, "gsis_id",
+    ).to_pandas()
+    tables["returns"] = tables["returns"].drop(columns=["g"]) \
+        .merge(ret_g[["player_id", "season", "g"]], on=["player_id", "season"], how="left")
+
+    # Longest plays from PBP — passing lng, rush_lng, rec_lng
+    pass_lng, rush_lng, rec_lng = _longest_plays_from_pbp(pbp, lookup)
+    tables["passing"] = tables["passing"].drop(columns=["lng"]) \
+        .merge(pass_lng[["player_id", "season", "lng"]], on=["player_id", "season"], how="left")
+    tables["offense"] = tables["offense"].drop(columns=["rec_lng", "rush_lng"]) \
+        .merge(rush_lng, on=["player_id", "season"], how="left") \
+        .merge(rec_lng, on=["player_id", "season"], how="left")
+
+    # Per-game stats derived from g
+    for cat in ["passing"]:
+        t = tables[cat]
+        t["y_per_g"] = _ratio(t["yds"], t["g"])
+    for cat in ["offense"]:
+        t = tables[cat]
+        t["r_per_g"] = _ratio(t["rec"], t["g"])
+        t["rec_y_per_g"] = _ratio(t["rec_yds"], t["g"])
+        t["rush_y_per_g"] = _ratio(t["rush_yds"], t["g"])
+        t["a_per_g"] = _ratio(t["att"], t["g"])
 
     return {cat: df[_OUR_COLUMNS[cat]] for cat, df in tables.items()}
 
