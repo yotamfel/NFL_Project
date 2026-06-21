@@ -3,6 +3,14 @@ import { useNavigate } from 'react-router-dom'
 
 const PLATFORM_URL = 'https://fourth-and-data.up.railway.app'
 
+const P = PLATFORM_URL
+const SeeIt = ({ to, label }) => (
+  <a href={`${P}${to}`} target="_blank" rel="noopener noreferrer"
+    className="inline-flex items-center gap-1 text-[10px] text-amber-500/70 hover:text-amber-400 transition-colors mt-1">
+    See it live: {label} &rarr;
+  </a>
+)
+
 const Arrow = () => <div className="text-amber-500 text-xl font-bold text-center py-1">&#8595;</div>
 
 const FlowBox = ({ title, sub, color = 'slate' }) => (
@@ -355,6 +363,7 @@ export default function Portfolio() {
                 step is documented and auditable. It also improves on AV by using position-specific formulas rather than
                 a one-size-fits-all approach, and by incorporating era adjustment so historical players are compared fairly.
               </p>
+              <SeeIt to="/methodology" label="Full FDV methodology" />
             </div>
           </div>
         </section>
@@ -404,6 +413,7 @@ export default function Portfolio() {
               <p className="text-slate-600 text-[10px] text-center">
                 Safety filter rejects INSERT, UPDATE, DELETE, DROP, ALTER, TRUNCATE, and multi-statement queries. Only single SELECT/WITH passes through.
               </p>
+              <div className="text-center mt-1"><SeeIt to="/search" label="Smart Search" /></div>
             </div>
           </div>
 
@@ -506,18 +516,22 @@ export default function Portfolio() {
                 {
                   title: 'Multi-dimensional player comparison',
                   desc: 'Compare up to 4 players across any stat category with visual bar charts, full stat tables (basic + advanced), and AI-written narrative analysis — in career or single-season mode.',
+                  link: '/comparison', linkLabel: 'Player Comparison',
                 },
                 {
                   title: 'Draft ROI analysis',
                   desc: 'Steals/busts identification using composite z-scores across multiple criteria. Position filtering uses career position (not draft-day), with statistical distribution context (percentile thresholds per round cohort).',
+                  link: '/draft', linkLabel: 'Draft Analysis',
                 },
                 {
                   title: 'League-wide trend detection',
                   desc: 'Track any stat\'s evolution across 56 seasons with sum or per-player averages. Historical reference lines mark rule changes (1978 schedule expansion, 2004 illegal contact enforcement) that explain inflection points.',
+                  link: '/trends', linkLabel: 'League Trends',
                 },
                 {
                   title: 'Statistical anomaly detection',
                   desc: 'Automated engine flags career highs, year-over-year surges (40%+), efficiency peaks (1.5σ above career mean), and dual-threat versatility — with severity scoring and volume thresholds to filter noise.',
+                  link: '/anomalies', linkLabel: 'Season Highlights',
                 },
                 {
                   title: 'Injury impact analysis',
@@ -527,6 +541,7 @@ export default function Portfolio() {
                 <div key={c.title} className="border-l-2 border-slate-700 pl-4">
                   <p className="text-white font-semibold text-sm">{c.title}</p>
                   <p className="text-slate-500 text-xs leading-relaxed mt-1">{c.desc}</p>
+                  {c.link && <SeeIt to={c.link} label={c.linkLabel} />}
                 </div>
               ))}
             </div>
