@@ -70,7 +70,7 @@ export default function Portfolio() {
         <section className="bg-slate-900/60 border border-slate-800 rounded-2xl p-8">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
             <Stat value="19,000+" label="Players tracked" />
-            <Stat value="440K+" label="Data rows" />
+            <Stat value="875K+" label="Data rows" />
             <Stat value="56" label="Seasons covered (1970-2025)" />
             <Stat value="66" label="API endpoints" />
           </div>
@@ -114,7 +114,7 @@ export default function Portfolio() {
                 <p className="text-white font-bold">PostgreSQL 17 (Neon)</p>
                 <ul className="text-xs text-slate-400 space-y-1.5">
                   <li>14 base tables + 6 career views</li>
-                  <li>440K+ rows, fully normalized</li>
+                  <li>875K+ rows, fully normalized</li>
                   <li>nflverse ETL pipeline (Polars)</li>
                   <li>Automated via run_etl.py</li>
                   <li>Serverless cloud DB</li>
@@ -172,7 +172,7 @@ export default function Portfolio() {
             <Arrow />
             <div className="rounded-xl border px-4 py-3 text-center" style={{ background: 'rgba(5,46,22,0.3)', borderColor: 'rgba(21,128,61,0.3)' }}>
               <p className="text-green-400 font-bold text-sm">PostgreSQL (Neon Cloud)</p>
-              <p className="text-slate-500 text-xs mt-0.5">14 tables &middot; 6 career views &middot; 440K+ rows &middot; Ready for API</p>
+              <p className="text-slate-500 text-xs mt-0.5">14 tables &middot; 6 career views &middot; 875K+ rows &middot; Ready for API</p>
             </div>
           </div>
 
