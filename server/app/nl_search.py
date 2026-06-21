@@ -176,7 +176,7 @@ injuries(player_id, season, week, game_type, team,
 ## How to respond
 
 Respond with ONLY the SQL — no prose, no markdown fences. PostgreSQL dialect,
-a single SELECT or WITH...SELECT, always ending with a LIMIT clause (50 unless
+a single SELECT or WITH...SELECT, always ending with a LIMIT clause (10 unless
 the question clearly implies a different count).
 
 If the question cannot be answered from this database — it isn't about the data
@@ -200,7 +200,7 @@ SELECT player_name, team, rec
 FROM offense_seasons
 WHERE pos = 'WR' AND season = 2019 AND rec >= 100
 ORDER BY rec DESC
-LIMIT 50
+LIMIT 10
 
 Question: What were Jerry Rice's career receiving stats?
 SQL:
@@ -375,9 +375,15 @@ You are an NFL analyst. The user asked: "{question}"
 
 Here is the query result (JSON): {data}
 
-Respond with ONLY valid JSON in this exact shape, no other text:
+Write a cohesive 3-5 sentence analytical paragraph about what this data reveals. Don't just
+restate the numbers — explain what they MEAN: patterns, surprises, historical context, or
+implications. Be specific with numbers but weave them into a narrative.
+
+Then decide if this data would be well-represented as a chart.
+
+Respond with ONLY valid JSON (no markdown fences, no backticks):
 {{
-  "summary": "A 2-4 sentence analysis of what this data shows. Be specific with numbers. Highlight interesting patterns, surprises, or context an NFL fan would find valuable.",
+  "summary": "your analytical paragraph here",
   "chart": {{
     "type": "bar" | "line" | "scatter",
     "data": [...],
@@ -414,7 +420,13 @@ def _generate_insights(question: str, rows: list[dict]) -> tuple[str, dict | Non
         )
         raw = "".join(b.text for b in resp.content if b.type == "text").strip()
         tokens = resp.usage.input_tokens + resp.usage.output_tokens
-        parsed = json.loads(raw)
+        cleaned = raw
+        if cleaned.startswith("```"):
+            cleaned = cleaned.split("\n", 1)[-1]
+        if cleaned.endswith("```"):
+            cleaned = cleaned.rsplit("```", 1)[0]
+        cleaned = cleaned.strip()
+        parsed = json.loads(cleaned)
         return parsed.get("summary", ""), parsed.get("chart"), tokens
     except Exception:
-        return f"Query returned {len(rows)} results.", None, 0
+        return "", None, 0
