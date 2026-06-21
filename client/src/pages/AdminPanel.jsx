@@ -539,6 +539,28 @@ function UsageTab() {
         )}
       </div>
 
+      {/* Feedback by category */}
+      <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
+        <h3 className="text-white font-semibold text-sm mb-3">Feedback by Category</h3>
+        {(data.feedback_by_category || []).length === 0 ? (
+          <p className="text-slate-500 text-sm text-center py-4">No feedback yet</p>
+        ) : (
+          <div className="space-y-2">
+            {(data.feedback_by_category || []).map(f => (
+              <div key={f.category} className="flex items-center justify-between py-2 border-b border-slate-800/60 last:border-0">
+                <span className="text-slate-300 text-sm capitalize">{f.category}</span>
+                <div className="flex items-center gap-3">
+                  <span className="text-white font-bold">{f.count}</span>
+                  {f.open > 0 && (
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400">{f.open} open</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Saved items */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
         <h3 className="text-white font-semibold text-sm mb-3">Saved Items by Type</h3>

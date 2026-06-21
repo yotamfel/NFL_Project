@@ -287,12 +287,19 @@ def admin_feature_usage(admin: dict = Depends(_require_admin)):
         thumbs_up = conn.execute(text("SELECT COUNT(*) FROM ai_query_log WHERE thumbs = 1")).scalar() or 0
         thumbs_down = conn.execute(text("SELECT COUNT(*) FROM ai_query_log WHERE thumbs = -1")).scalar() or 0
         total_page_views = conn.execute(text("SELECT COUNT(*) FROM page_views")).scalar() or 0
+        feedback_by_cat = conn.execute(text("""
+            SELECT category, COUNT(*) as count,
+                   COUNT(*) FILTER (WHERE resolved = FALSE) as open
+            FROM feedback
+            GROUP BY category ORDER BY count DESC
+        """)).fetchall()
     return {
         "page_views":     [dict(r._mapping) for r in page_views_all],
         "daily_views":    [dict(r._mapping) for r in page_views_daily],
         "ai_features_7d": [dict(r._mapping) for r in features_7d],
         "ai_features_30d":[dict(r._mapping) for r in features_30d],
         "saved_by_type":  [dict(r._mapping) for r in saved_counts],
+        "feedback_by_category": [dict(r._mapping) for r in feedback_by_cat],
         "totals": {
             "total_page_views": total_page_views,
             "total_ai_calls": total_ai,
