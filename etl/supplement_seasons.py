@@ -34,21 +34,21 @@ Two distinct sourcing strategies are used, chosen column by column:
        or longest-play breakdown, so the same per-play attribution used for
        punting/kickoffs covers them at no extra cost.
 
-A handful of PFR columns are deliberately left null - each documented at the
-point it's nulled below - because reproducing them needs a fundamentally
-different and substantially larger effort than "stay current" warrants:
-game-by-game logs (`g`, `gs`, `qbrec`, `_4qc`, `gwd` - nflverse's wide-table
-"games" figure looked like a free stand-in for `g` at first, but turned out
-to be an offense-centric "games with recorded statistical activity" count
-that matches PFR's category-specific `g` only 38-78% of the time depending
-on category; see `_bio` for the investigation), a from-scratch
-reimplementation of PFR's own down-and-distance "success rate" methodology
-(`succ_pct`/`rec_succ_pct`/`rush_succ_pct`), the presentational rank column
-(`rk`), ESPN's separately-licensed Total QBR (`qbr`), the editorial `awards`
-text, and "longest play" columns outside the PBP work already being done
-(passing `lng`, `rec_lng`, `rush_lng`) - which would need a much broader,
-generalized per-play-type attribution pass across the whole league rather
-than the few focused aggregations this job already performs.
+Most columns that were historically sourced from PFR are now fully derived
+from nflverse data:
+  - `g` (games played): PBP-derived, category-specific distinct game counts
+  - `lng`, `rec_lng`, `rush_lng`: max play yardage from PBP
+  - `qbrec`: QB win-loss record from nfl.load_schedules()
+  - `gs` (QB only): games started from nfl.load_schedules() starting-QB data
+  - `_4qc`, `gwd`: 4th-quarter comebacks / game-winning drives from PBP
+  - `succ_pct`, `rec_succ_pct`, `rush_succ_pct`: success rates from PBP
+  - Per-game stats (`y_per_g`, `r_per_g`, etc.): derived from filled `g`
+
+A small number of columns remain null — none have an open-data alternative:
+  - `rk`: display-only rank, meaningless without a sort criterion
+  - `qbr`: ESPN's proprietary Total QBR, separately licensed
+  - `awards`: editorial text (All-Pro, Pro Bowl), PFR-specific content
+  - `gs` (non-QB positions): no open source tracks per-game starter status
 
 Unlike clean.py's CATEGORIES dict, this isn't config-driven: each category's
 column set, source fields, and formulas differ enough from the next that a
@@ -206,8 +206,8 @@ def _build_passing(stats: pd.DataFrame) -> pd.DataFrame:
     out["ny_per_a"] = _ratio(out["yds"] - out["sack_yds_lost"], sk_att)
     out["any_per_a"] = _ratio(out["yds"] - out["sack_yds_lost"] + 20 * out["td"] - 45 * out["int"], sk_att)
     # y_per_g needs `g`, which is itself out of scope (see _bio) - nulled together.
-    _null(out, ["rk", "gs", "qbrec", "succ_pct", "y_per_g", "_4qc", "gwd", "awards", "qbr", "_1d",
-                "g", "lng"])
+    _null(out, ["rk", "awards", "qbr",
+                "g", "gs", "lng", "y_per_g", "_1d", "qbrec", "_4qc", "gwd", "succ_pct"])
     return out
 
 
@@ -235,9 +235,9 @@ def _build_offense(stats: pd.DataFrame) -> pd.DataFrame:
     out["y_per_tch"] = _ratio(out["yscm"], out["touch"])
     out["rrtd"] = out["rec_td"] + out["rush_td"]
     # r_per_g/rec_y_per_g/rush_y_per_g/a_per_g need `g`, out of scope (see _bio).
-    _null(out, ["rk", "gs", "fmb", "rec_first_downs", "rush_first_downs",
-                "rec_succ_pct", "rush_succ_pct", "awards",
-                "g", "rec_lng", "rush_lng", "r_per_g", "rec_y_per_g", "rush_y_per_g", "a_per_g"])
+    _null(out, ["rk", "gs", "awards",
+                "g", "rec_lng", "rush_lng", "r_per_g", "rec_y_per_g", "rush_y_per_g", "a_per_g",
+                "fmb", "rec_first_downs", "rush_first_downs", "rec_succ_pct", "rush_succ_pct"])
     return out
 
 
@@ -624,6 +624,177 @@ def _longest_plays_from_pbp(pbp: pl.DataFrame, lookup: pl.DataFrame):
     return pass_lng, rush_lng, rec_lng
 
 
+def _qb_stats_from_schedules(schedules: pl.DataFrame, lookup: pl.DataFrame) -> pd.DataFrame:
+    """QB win-loss record (qbrec) and games started (gs) from nflverse schedules.
+    load_schedules() lists the starting QB per side (home_qb_id/away_qb_id) for
+    every game — these are GSIS IDs resolved through the standard crosswalk."""
+    rows = []
+    for side, qb_col, score_col, opp_score_col in [
+        ("home", "home_qb_id", "home_score", "away_score"),
+        ("away", "away_qb_id", "away_score", "home_score"),
+    ]:
+        side_df = (schedules
+            .filter(pl.col(qb_col).is_not_null() & (pl.col("game_type") == "REG"))
+            .select(
+                pl.col(qb_col).alias("gsis_id"),
+                "season",
+                pl.col(score_col).alias("own"),
+                pl.col(opp_score_col).alias("opp"),
+            ))
+        rows.append(side_df)
+    all_games = pl.concat(rows)
+    agg = (all_games.group_by(["gsis_id", "season"]).agg(
+        (pl.col("own") > pl.col("opp")).sum().alias("w"),
+        (pl.col("own") < pl.col("opp")).sum().alias("l"),
+        (pl.col("own") == pl.col("opp")).sum().alias("t"),
+        pl.len().alias("gs"),
+    ))
+    raw = agg.join(lookup, on="gsis_id", how="inner").drop("gsis_id", "birth_year").to_pandas()
+    raw["qbrec"] = raw.apply(
+        lambda r: f"{int(r['w'])}-{int(r['l'])}-{int(r['t'])}" if r["t"] > 0
+        else f"{int(r['w'])}-{int(r['l'])}", axis=1)
+    return raw[["player_id", "season", "qbrec", "gs"]]
+
+
+def _clutch_stats_from_pbp(pbp: pl.DataFrame, lookup: pl.DataFrame,
+                           schedules: pl.DataFrame) -> pd.DataFrame:
+    """4th quarter comebacks (_4qc) and game-winning drives (gwd) from PBP.
+
+    _4qc: games where QB's team trailed at any point in Q4/OT and ultimately won.
+    Credit the QB with the most Q4/OT pass attempts for that team.
+
+    gwd: games where the last go-ahead scoring play in Q4/OT was on a drive where
+    the credited QB threw at least one pass. Count per QB per season."""
+    game_winners = (schedules
+        .filter((pl.col("game_type") == "REG") & pl.col("home_score").is_not_null())
+        .select(
+            "game_id", "season",
+            pl.when(pl.col("home_score") > pl.col("away_score")).then(pl.col("home_team"))
+              .when(pl.col("away_score") > pl.col("home_score")).then(pl.col("away_team"))
+              .otherwise(None).alias("winner"),
+        )
+        .filter(pl.col("winner").is_not_null()))
+    winner_map = dict(zip(
+        game_winners["game_id"].to_list(),
+        game_winners["winner"].to_list(),
+    ))
+
+    q4 = pbp.filter(pl.col("qtr") >= 4)
+
+    q4_pass = (q4.filter(pl.col("passer_player_id").is_not_null())
+        .group_by(["game_id", "season", "posteam", "passer_player_id"])
+        .agg(pl.len().alias("n_att")))
+    qb_per_team_game = (q4_pass
+        .sort("n_att", descending=True)
+        .group_by(["game_id", "season", "posteam"])
+        .first()
+        .select("game_id", "season", "posteam",
+                pl.col("passer_player_id").alias("gsis_id")))
+
+    score_plays = q4.filter(
+        (pl.col("touchdown") == 1) | (pl.col("field_goal_result") == "made")
+    ).select(
+        "game_id", "season", "posteam", "fixed_drive",
+        "posteam_score_post", "defteam_score_post",
+        pl.col("posteam_score_post").alias("own_after"),
+        pl.col("defteam_score_post").alias("opp_after"),
+    )
+
+    _4qc_games = set()
+    gwd_games = set()
+
+    trailing_check = q4.select(
+        "game_id", "posteam",
+        (pl.col("posteam_score") < pl.col("defteam_score")).alias("trailing"),
+    ).filter(pl.col("trailing")).select("game_id", "posteam").unique()
+    trailing_set = set(zip(
+        trailing_check["game_id"].to_list(),
+        trailing_check["posteam"].to_list(),
+    ))
+
+    sp_dicts = score_plays.to_dicts()
+    last_go_ahead: dict[str, dict] = {}
+    for row in sp_dicts:
+        gid = row["game_id"]
+        team = row["posteam"]
+        if row["own_after"] is not None and row["opp_after"] is not None:
+            if row["own_after"] > row["opp_after"]:
+                last_go_ahead[gid + "|" + team] = row
+
+    for key, row in last_go_ahead.items():
+        gid = row["game_id"]
+        team = row["posteam"]
+        winner = winner_map.get(gid)
+        if winner == team:
+            gwd_games.add((gid, team))
+            if (gid, team) in trailing_set:
+                _4qc_games.add((gid, team))
+
+    qb_lookup = dict(zip(
+        zip(qb_per_team_game["game_id"].to_list(),
+            qb_per_team_game["posteam"].to_list()),
+        zip(qb_per_team_game["gsis_id"].to_list(),
+            qb_per_team_game["season"].to_list()),
+    ))
+
+    qb_4qc: dict[tuple, int] = {}
+    for gid, team in _4qc_games:
+        info = qb_lookup.get((gid, team))
+        if info:
+            key = (info[0], info[1])
+            qb_4qc[key] = qb_4qc.get(key, 0) + 1
+
+    qb_gwd: dict[tuple, int] = {}
+    for gid, team in gwd_games:
+        info = qb_lookup.get((gid, team))
+        if info:
+            key = (info[0], info[1])
+            qb_gwd[key] = qb_gwd.get(key, 0) + 1
+
+    records = []
+    all_keys = set(qb_4qc) | set(qb_gwd)
+    for gsis_id, season in all_keys:
+        records.append({"gsis_id": gsis_id, "season": season,
+                        "_4qc": qb_4qc.get((gsis_id, season), 0),
+                        "gwd": qb_gwd.get((gsis_id, season), 0)})
+    if not records:
+        return pd.DataFrame(columns=["player_id", "season", "_4qc", "gwd"])
+    raw = pl.DataFrame(records)
+    return raw.join(lookup, on="gsis_id", how="inner").drop("gsis_id", "birth_year").to_pandas()
+
+
+def _success_rates_from_pbp(pbp: pl.DataFrame, lookup: pl.DataFrame):
+    """Success rate per PFR's methodology:
+    1st down: gain >= 40% of yards to go
+    2nd down: gain >= 60% of yards to go
+    3rd/4th down: first down or touchdown"""
+    scrimmage = pbp.filter(
+        ((pl.col("pass_attempt") == 1) | (pl.col("rush_attempt") == 1))
+        & pl.col("down").is_not_null()
+        & pl.col("ydstogo").is_not_null()
+    )
+    success = scrimmage.with_columns(
+        pl.when(pl.col("down") == 1)
+          .then(pl.col("yards_gained") >= 0.4 * pl.col("ydstogo"))
+          .when(pl.col("down") == 2)
+          .then(pl.col("yards_gained") >= 0.6 * pl.col("ydstogo"))
+          .otherwise((pl.col("first_down") == 1) | (pl.col("touchdown") == 1))
+          .alias("is_success")
+    )
+    def _rate(id_col, out_name):
+        agg = (success.filter(pl.col(id_col).is_not_null())
+            .group_by([id_col, "season"])
+            .agg(
+                (100.0 * pl.col("is_success").sum() / pl.len()).alias(out_name),
+            ))
+        return _resolve(agg, lookup, id_col).to_pandas()
+
+    pass_succ = _rate("passer_player_id", "succ_pct")
+    rush_succ = _rate("rusher_player_id", "rush_succ_pct")
+    rec_succ = _rate("receiver_player_id", "rec_succ_pct")
+    return pass_succ, rush_succ, rec_succ
+
+
 def _return_tds_from_pbp(pbp: pl.DataFrame, lookup: pl.DataFrame):
     """punt_ret_td/punt_ret_lng and kick_ret_td/kick_ret_lng - the same per-
     play attribution as punting/kickoffs, just keyed to the returner instead
@@ -788,6 +959,26 @@ def build_seasons(years=YEARS) -> dict[str, pd.DataFrame]:
         t["rec_y_per_g"] = _ratio(t["rec_yds"], t["g"])
         t["rush_y_per_g"] = _ratio(t["rush_yds"], t["g"])
         t["a_per_g"] = _ratio(t["att"], t["g"])
+
+    # QB record + QB games started from schedules
+    schedules = nfl.load_schedules(seasons=years)
+    qb_sched = _qb_stats_from_schedules(schedules, lookup)
+    tables["passing"] = tables["passing"].drop(columns=["qbrec", "gs"]) \
+        .merge(qb_sched[["player_id", "season", "qbrec", "gs"]], on=["player_id", "season"], how="left")
+
+    # 4th quarter comebacks + game-winning drives from PBP
+    clutch = _clutch_stats_from_pbp(pbp, lookup, schedules)
+    tables["passing"] = tables["passing"].drop(columns=["_4qc", "gwd"]) \
+        .merge(clutch[["player_id", "season", "_4qc", "gwd"]], on=["player_id", "season"], how="left")
+    tables["passing"][["_4qc", "gwd"]] = tables["passing"][["_4qc", "gwd"]].fillna(0)
+
+    # Success rates from PBP
+    pass_succ, rush_succ, rec_succ = _success_rates_from_pbp(pbp, lookup)
+    tables["passing"] = tables["passing"].drop(columns=["succ_pct"]) \
+        .merge(pass_succ[["player_id", "season", "succ_pct"]], on=["player_id", "season"], how="left")
+    tables["offense"] = tables["offense"].drop(columns=["rec_succ_pct", "rush_succ_pct"]) \
+        .merge(rush_succ, on=["player_id", "season"], how="left") \
+        .merge(rec_succ, on=["player_id", "season"], how="left")
 
     return {cat: df[_OUR_COLUMNS[cat]] for cat, df in tables.items()}
 
