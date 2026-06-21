@@ -111,7 +111,8 @@ def get_custom_draft_rank(
 
         if category == "fdv":
             sql = text(f"""
-                SELECT d.draft_year, d.round, d.pick, d.player_name, d.pos, d.team,
+                SELECT d.draft_year, d.round, d.pick, d.player_name,
+                       p.pos, d.pos AS draft_pos, d.team,
                        p.fdv, p.fdv AS stat_value
                 FROM draft d
                 LEFT JOIN players p ON p.player_id = d.player_id
@@ -119,7 +120,7 @@ def get_custom_draft_rank(
                   AND p.fdv IS NOT NULL
                   AND p.fdv {stat_sql} :stat_val
                   AND d.draft_year <= :cutoff
-                  AND (:pos IS NULL OR UPPER(d.pos) = UPPER(:pos))
+                  AND (:pos IS NULL OR UPPER(p.pos) = UPPER(:pos))
                   AND (:year_from IS NULL OR d.draft_year >= :year_from)
                   AND (:year_to   IS NULL OR d.draft_year <= :year_to)
                 ORDER BY stat_value {order}
@@ -132,7 +133,8 @@ def get_custom_draft_rank(
 
             if scope == "career":
                 sql = text(f"""
-                    SELECT d.draft_year, d.round, d.pick, d.player_name, d.pos, d.team,
+                    SELECT d.draft_year, d.round, d.pick, d.player_name,
+                           p.pos, d.pos AS draft_pos, d.team,
                            p.fdv, c.{stat} AS stat_value
                     FROM draft d
                     LEFT JOIN players p ON p.player_id = d.player_id
@@ -141,22 +143,23 @@ def get_custom_draft_rank(
                       AND c.{stat} IS NOT NULL
                       AND c.{stat} {stat_sql} :stat_val
                       AND d.draft_year <= :cutoff
-                      AND (:pos IS NULL OR UPPER(d.pos) = UPPER(:pos))
+                      AND (:pos IS NULL OR UPPER(p.pos) = UPPER(:pos))
                     ORDER BY stat_value {order}
                     LIMIT :limit
                 """)
             else:
                 sql = text(f"""
-                    SELECT d.draft_year, d.round, d.pick, d.player_name, d.pos, d.team,
+                    SELECT d.draft_year, d.round, d.pick, d.player_name,
+                           p.pos, d.pos AS draft_pos, d.team,
                            p.fdv, MAX(s.{stat}) AS stat_value
                     FROM draft d
                     LEFT JOIN players p ON p.player_id = d.player_id
                     JOIN {category}_seasons s ON s.player_id = d.player_id
                     WHERE d.round {round_sql} :round_val
                       AND d.draft_year <= :cutoff
-                      AND (:pos IS NULL OR UPPER(d.pos) = UPPER(:pos))
+                      AND (:pos IS NULL OR UPPER(p.pos) = UPPER(:pos))
                     GROUP BY d.draft_year, d.round, d.pick, d.player_name,
-                             d.pos, d.team, p.fdv
+                             p.pos, d.pos, d.team, p.fdv
                     HAVING MAX(s.{stat}) IS NOT NULL
                        AND MAX(s.{stat}) {stat_sql} :stat_val
                     ORDER BY stat_value {order}
@@ -204,7 +207,7 @@ def get_draft_round_stats(
                 WHERE d.round {round_sql} :round_val
                   AND p.fdv IS NOT NULL AND p.fdv > 0
                   AND d.draft_year <= :cutoff
-                  AND (:pos IS NULL OR UPPER(d.pos) = UPPER(:pos))
+                  AND (:pos IS NULL OR UPPER(p.pos) = UPPER(:pos))
                   AND (:year_from IS NULL OR d.draft_year >= :year_from)
                   AND (:year_to   IS NULL OR d.draft_year <= :year_to)
             """)
@@ -229,12 +232,13 @@ def get_draft_round_stats(
                         ROUND(PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY c.{stat}::numeric / c.g)::numeric, 2) AS p75_pg,
                         ROUND(PERCENTILE_CONT(0.90) WITHIN GROUP (ORDER BY c.{stat}::numeric / c.g)::numeric, 2) AS p90_pg
                     FROM draft d
+                    JOIN players p ON p.player_id = d.player_id
                     JOIN {category}_career c ON c.player_id = d.player_id
                     WHERE d.round {round_sql} :round_val
                       AND c.{stat} IS NOT NULL AND c.{stat} > 0
                       AND c.g >= :min_games
                       AND d.draft_year <= :cutoff
-                      AND (:pos IS NULL OR UPPER(d.pos) = UPPER(:pos))
+                      AND (:pos IS NULL OR UPPER(p.pos) = UPPER(:pos))
                       AND (:year_from IS NULL OR d.draft_year >= :year_from)
                       AND (:year_to   IS NULL OR d.draft_year <= :year_to)
                 """)
@@ -250,10 +254,11 @@ def get_draft_round_stats(
                     FROM (
                         SELECT d.player_id, MAX(s.{stat}) AS best_stat
                         FROM draft d
+                        JOIN players p ON p.player_id = d.player_id
                         JOIN {category}_seasons s ON s.player_id = d.player_id
                         WHERE d.round {round_sql} :round_val
                           AND d.draft_year <= :cutoff
-                          AND (:pos IS NULL OR UPPER(d.pos) = UPPER(:pos))
+                          AND (:pos IS NULL OR UPPER(p.pos) = UPPER(:pos))
                           AND (:year_from IS NULL OR d.draft_year >= :year_from)
                           AND (:year_to   IS NULL OR d.draft_year <= :year_to)
                         GROUP BY d.player_id
@@ -330,13 +335,14 @@ def get_combined_draft(
     where_extra  = "\n          ".join(extra_where)
 
     sql = text(f"""
-        SELECT d.draft_year, d.round, d.pick, d.player_name, d.pos, d.team,
+        SELECT d.draft_year, d.round, d.pick, d.player_name,
+               p.pos, d.pos AS draft_pos, d.team,
                p.fdv, d.player_id
                {select_extra}
         FROM draft d
         LEFT JOIN players p ON p.player_id = d.player_id
         WHERE d.round {round_sql} :round_val
-          AND UPPER(d.pos) = UPPER(:pos)
+          AND UPPER(p.pos) = UPPER(:pos)
           AND p.fdv IS NOT NULL
           AND d.draft_year <= :cutoff
           AND (:year_from IS NULL OR d.draft_year >= :year_from)
@@ -360,7 +366,8 @@ def find_steals(min_round: int = 4, min_fdv: float = 40,
     with engine.connect() as conn:
         cutoff = _latest_draft_year(conn) - min_seasoning_years
         sql = text("""
-            SELECT d.draft_year, d.round, d.pick, d.team, d.player_name, d.pos, d.college,
+            SELECT d.draft_year, d.round, d.pick, d.team, d.player_name,
+                   p.pos, d.pos AS draft_pos, d.college,
                    p.fdv, d.g, d.player_id
             FROM draft d
             LEFT JOIN players p ON p.player_id = d.player_id
@@ -380,7 +387,8 @@ def find_busts(max_round: int = 1, max_fdv: float = 20,
     with engine.connect() as conn:
         cutoff = _latest_draft_year(conn) - min_seasoning_years
         sql = text("""
-            SELECT d.draft_year, d.round, d.pick, d.team, d.player_name, d.pos, d.college,
+            SELECT d.draft_year, d.round, d.pick, d.team, d.player_name,
+                   p.pos, d.pos AS draft_pos, d.college,
                    p.fdv, d.g, d.player_id
             FROM draft d
             LEFT JOIN players p ON p.player_id = d.player_id

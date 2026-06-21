@@ -16,7 +16,8 @@ const DRAFT_COLS = [
   { key: 'round',       label: 'Rd' },
   { key: 'pick',        label: 'Pick' },
   { key: 'player_name', label: 'Player' },
-  { key: 'pos',         label: 'Pos' },
+  { key: 'pos',         label: 'Pos',
+    format: (v, row) => row.draft_pos && row.draft_pos !== v ? `${v} (${row.draft_pos})` : v },
   { key: 'team',        label: 'Team' },
   { key: 'fdv',         label: 'FDV' },
 ]
@@ -558,7 +559,7 @@ function RankingChart({ ranked, isSteal, selectedCriteria }) {
                 <div className="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs shadow-xl space-y-1">
                   <p className="text-white font-semibold">{p.player_name}</p>
                   <p className="text-slate-400">
-                    {p.pos} · Rd {p.round}, Pick {p.pick} · {p.draft_year} · {p.team}
+                    {p.pos}{p.draft_pos && p.draft_pos !== p.pos ? ` (drafted ${p.draft_pos})` : ''} · Rd {p.round}, Pick {p.pick} · {p.draft_year} · {p.team}
                   </p>
                   <p className="text-slate-400">
                     FDV: <span className="text-white font-semibold">{p.fdv != null ? Math.round(p.fdv) : '—'}</span>
