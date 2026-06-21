@@ -40,10 +40,11 @@ export default function Portfolio() {
 
         {/* Hero */}
         <header className="text-center space-y-4 pt-8">
-          <p className="text-amber-500 text-xs font-bold uppercase tracking-[0.25em]">Data Engineering Portfolio</p>
+          <p className="text-amber-500 text-xs font-bold uppercase tracking-[0.25em]">Technical Portfolio</p>
           <h1 className="text-5xl font-black text-white tracking-tight leading-tight">Fourth & Data</h1>
           <p className="text-slate-400 text-lg max-w-2xl mx-auto leading-relaxed">
-            A full-stack NFL analytics platform built from scratch — from raw data recovery and ETL pipeline design to AI-powered natural language search and a proprietary career value metric.
+            A full-stack NFL analytics platform built from scratch — from data recovery and pipeline design
+            to statistical modeling, AI-powered analysis, and a proprietary career value metric serving 19,000+ players across 56 seasons.
           </p>
           <div className="flex justify-center gap-4 pt-2">
             <a href={PLATFORM_URL} target="_blank" rel="noopener noreferrer"
@@ -295,54 +296,170 @@ export default function Portfolio() {
         <section className="space-y-6">
           <div>
             <p className="text-amber-500 text-xs font-bold uppercase tracking-widest mb-1">AI Integration</p>
-            <h2 className="text-2xl font-black text-white">Claude-Powered Features</h2>
+            <h2 className="text-2xl font-black text-white">AI-Powered Analysis</h2>
             <p className="text-slate-400 text-sm mt-2">
-              Five AI-powered features, all using Claude Sonnet 4.6 via the Anthropic API with structured safety layers.
+              Five AI features built on Claude Sonnet 4.6 — each solving a specific analytical problem
+              that would be impractical to address with traditional queries or static reports.
             </p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {[
-              {
-                title: 'Smart Search',
-                desc: 'Natural language (English or Hebrew) translated to SQL via Claude. A regex safety layer rejects writes, DDL, and multi-statement queries before they reach the database. Returns results + AI-generated insight + auto-chart.',
-                detail: 'Full schema provided to Claude as system prompt. Row limit 200. All queries logged with tokens, latency, and user feedback.',
-              },
-              {
-                title: 'Player Similarity',
-                desc: 'Cosine similarity on per-game career stat vectors, grouped by position (QB, RB, WR, TE, DEF). Uses sklearn StandardScaler for normalization.',
-                detail: 'AI generates one-sentence explanations for each similar player, covering shared strengths and key differences.',
-              },
-              {
-                title: 'Career Insights',
-                desc: 'Claude writes a 3-5 sentence analytical paragraph about any player\'s career. Covers trajectory, peak seasons, and historical context.',
-                detail: 'Results cached 24 hours in-memory. User 👍/👎 feedback stored in ai_query_log for quality tracking.',
-              },
-              {
-                title: 'Comparison Narrative',
-                desc: 'When comparing 2-4 players, Claude writes a 4-6 sentence analysis highlighting who leads in each metric, stylistic differences, and an overall verdict.',
-                detail: 'Works across all 6 stat categories and in both career and single-season modes.',
-              },
-            ].map(f => (
-              <div key={f.title} className="bg-slate-900/60 border border-slate-800 rounded-xl p-5 space-y-2">
-                <p className="text-white font-bold text-sm">{f.title}</p>
-                <p className="text-slate-400 text-xs leading-relaxed">{f.desc}</p>
-                <p className="text-slate-600 text-xs leading-relaxed">{f.detail}</p>
+
+          {/* Smart Search — deep dive */}
+          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 space-y-4">
+            <div>
+              <p className="text-white font-bold">Smart Search — Natural Language to SQL</p>
+              <p className="text-slate-400 text-xs leading-relaxed mt-1">
+                <span className="text-white font-medium">The problem:</span> A database with 14 tables, 100+ columns, and complex join paths
+                is inaccessible to anyone who doesn't write SQL. Even analysts spend time looking up column names and table relationships.
+              </p>
+              <p className="text-slate-400 text-xs leading-relaxed mt-2">
+                <span className="text-white font-medium">The solution:</span> Users type questions in plain English (or Hebrew). Claude receives
+                the full database schema as a system prompt — every table, column, coverage window, and data quirk — and generates a single
+                read-only SQL query. The query runs, and a second AI pass analyzes the results: generating a 2-4 sentence insight summary
+                and an auto-fitted chart (bar, line, or scatter) when the data shape fits.
+              </p>
+              <p className="text-slate-400 text-xs leading-relaxed mt-2">
+                <span className="text-white font-medium">Why this approach:</span> Rather than building a rigid form-based query builder
+                (which constrains users to predefined questions), NL-to-SQL lets users ask anything the data can answer — including complex
+                multi-join, GROUP BY, and HAVING queries they might not know how to formulate. The schema prompt includes rules that prevent
+                common mistakes (e.g., "never average a career rate column — recompute from summed counts").
+              </p>
+            </div>
+            <div className="bg-slate-800/60 rounded-xl p-4 space-y-2">
+              <p className="text-slate-300 text-xs font-semibold">Two-step flow:</p>
+              <div className="flex flex-wrap gap-2 items-center justify-center">
+                {['User question', 'Claude generates SQL', 'Regex safety filter', 'Execute read-only', 'Claude analyzes results', 'Return insight + chart'].map((s, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <span className="text-[10px] bg-slate-900 border border-slate-700 text-slate-300 px-2.5 py-1.5 rounded-lg">{s}</span>
+                    {i < 5 && <span className="text-amber-500 font-bold text-xs">&rarr;</span>}
+                  </div>
+                ))}
               </div>
-            ))}
+              <p className="text-slate-600 text-[10px] text-center">
+                Safety filter rejects INSERT, UPDATE, DELETE, DROP, ALTER, TRUNCATE, and multi-statement queries. Only single SELECT/WITH passes through.
+              </p>
+            </div>
           </div>
-          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 space-y-3">
-            <p className="text-white font-bold text-sm">AI Safety Architecture</p>
-            <div className="flex flex-wrap gap-2 items-center justify-center">
-              {['User question', 'Claude generates SQL', 'Regex safety filter', 'Execute read-only', 'Claude analyzes results', 'Return insight + chart'].map((s, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <span className="text-xs bg-slate-800 border border-slate-700 text-slate-300 px-3 py-1.5 rounded-lg">{s}</span>
-                  {i < 5 && <span className="text-amber-500 font-bold">&rarr;</span>}
+
+          {/* Other AI features */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-5 space-y-2">
+              <p className="text-white font-bold text-sm">Player Similarity</p>
+              <p className="text-slate-400 text-xs leading-relaxed">
+                <span className="text-slate-200">Problem:</span> "Who plays like Patrick Mahomes?" can't be answered with a single stat lookup — it requires
+                multi-dimensional comparison across an entire position group.
+              </p>
+              <p className="text-slate-400 text-xs leading-relaxed">
+                <span className="text-slate-200">Approach:</span> Cosine similarity on per-game career stat vectors, z-score normalized within position
+                groups (QB, RB, WR, TE, DEF). Each group uses position-relevant stats only. sklearn StandardScaler prevents high-magnitude
+                stats from dominating. Claude then generates natural-language explanations for each match — what aligns, what differs, and why.
+              </p>
+            </div>
+            <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-5 space-y-2">
+              <p className="text-white font-bold text-sm">Career Insights</p>
+              <p className="text-slate-400 text-xs leading-relaxed">
+                <span className="text-slate-200">Problem:</span> A stat table shows what happened, not what it means. Users want narrative context —
+                was this career arc typical? Was the decline injury-related? How does this compare to peers?
+              </p>
+              <p className="text-slate-400 text-xs leading-relaxed">
+                <span className="text-slate-200">Approach:</span> Claude receives the player's full career stats across all categories and writes a
+                3-5 sentence analytical paragraph. Results are cached 24 hours. Users rate with thumbs up/down — feedback stored in ai_query_log
+                for ongoing quality monitoring and prompt iteration.
+              </p>
+            </div>
+            <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-5 space-y-2">
+              <p className="text-white font-bold text-sm">Comparison Narrative</p>
+              <p className="text-slate-400 text-xs leading-relaxed">
+                <span className="text-slate-200">Problem:</span> Comparing 4 players across 15+ columns is information overload.
+                Users need someone to synthesize the key differences.
+              </p>
+              <p className="text-slate-400 text-xs leading-relaxed">
+                <span className="text-slate-200">Approach:</span> After loading comparison data, Claude writes a 4-6 sentence analysis:
+                who leads in each metric, stylistic contrasts, and an overall verdict. Works across all 6 stat categories
+                in both career and single-season modes.
+              </p>
+            </div>
+            <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-5 space-y-2">
+              <p className="text-white font-bold text-sm">Content Creator</p>
+              <p className="text-slate-400 text-xs leading-relaxed">
+                <span className="text-slate-200">Problem:</span> Turning data analysis into shareable content (tweets, Reddit posts, YouTube scripts)
+                requires reformatting the same data for different audiences and character limits.
+              </p>
+              <p className="text-slate-400 text-xs leading-relaxed">
+                <span className="text-slate-200">Approach:</span> Platform-specific prompts (Twitter: 280-char limit, Reddit: discussion format,
+                YouTube: 5 talking points). Language selection for multilingual output. Content is persisted in a generated_content table
+                with edit, regenerate (max 3), and history tracking.
+              </p>
+            </div>
+          </div>
+
+          {/* AI Architecture decisions */}
+          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 space-y-4">
+            <p className="text-white font-bold text-sm">AI Engineering Decisions</p>
+            <div className="space-y-3">
+              <Decision
+                title="Why Claude Sonnet 4.6 for everything"
+                why="Sonnet balances quality and cost — accurate enough for SQL generation and narrative writing, fast enough for interactive use (typically under 3 seconds). Opus would be more accurate but 5x the cost and 3x the latency. Haiku is too imprecise for SQL generation where a wrong column name breaks the query."
+              />
+              <Decision
+                title="Full schema in every system prompt"
+                why="Rather than training a model or using RAG, we inject the complete schema (table names, columns, data types, coverage windows, and known quirks) directly into the system prompt. This ensures Claude always has current, accurate metadata — no stale embeddings, no retrieval misses. The schema is small enough (~4K tokens) that the cost is negligible."
+              />
+              <Decision
+                title="Thumbs feedback loop over automated evaluation"
+                why="AI output quality is subjective — a factually correct but boring insight is worse than a slightly imprecise but engaging one. User thumbs up/down feedback, stored with the full query context in ai_query_log, provides real signal for prompt iteration. Token counts and latency are also logged for cost monitoring."
+              />
+              <Decision
+                title="Two-pass Smart Search (SQL + analysis)"
+                why="Generating SQL and analyzing results are fundamentally different tasks. Combining them in one prompt degraded both: Claude would hedge on SQL or skip the analysis. Splitting into two sequential calls — SQL generation, then result analysis — improved quality on both steps."
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* Analytical Capabilities */}
+        <section className="space-y-6">
+          <div>
+            <p className="text-amber-500 text-xs font-bold uppercase tracking-widest mb-1">Analysis</p>
+            <h2 className="text-2xl font-black text-white">What The Platform Enables</h2>
+            <p className="text-slate-400 text-sm mt-2">
+              Beyond storing data, the platform is designed for interactive analysis — combining statistical methods,
+              visualization, and AI to surface insights that raw tables can't show.
+            </p>
+          </div>
+          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-8 space-y-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {[
+                {
+                  title: 'Cross-era comparison',
+                  desc: 'FDV\'s era-normalized z-scoring lets users meaningfully compare a 1978 player to a 2023 player — something raw stats can\'t do because the game changed (rule changes, schedule length, passing evolution).',
+                },
+                {
+                  title: 'Multi-dimensional player comparison',
+                  desc: 'Compare up to 4 players across any stat category with visual bar charts, full stat tables (basic + advanced), and AI-written narrative analysis — in career or single-season mode.',
+                },
+                {
+                  title: 'Draft ROI analysis',
+                  desc: 'Steals/busts identification using composite z-scores across multiple criteria. Position filtering uses career position (not draft-day), with statistical distribution context (percentile thresholds per round cohort).',
+                },
+                {
+                  title: 'League-wide trend detection',
+                  desc: 'Track any stat\'s evolution across 56 seasons with sum or per-player averages. Historical reference lines mark rule changes (1978 schedule expansion, 2004 illegal contact enforcement) that explain inflection points.',
+                },
+                {
+                  title: 'Statistical anomaly detection',
+                  desc: 'Automated engine flags career highs, year-over-year surges (40%+), efficiency peaks (1.5σ above career mean), and dual-threat versatility — with severity scoring and volume thresholds to filter noise.',
+                },
+                {
+                  title: 'Injury impact analysis',
+                  desc: 'Career charts overlay red injury bands on stat trend lines, making it visually obvious when a decline coincides with missed games. The IR estimation algorithm fills gaps the official injury report leaves.',
+                },
+              ].map(c => (
+                <div key={c.title} className="border-l-2 border-slate-700 pl-4">
+                  <p className="text-white font-semibold text-sm">{c.title}</p>
+                  <p className="text-slate-500 text-xs leading-relaxed mt-1">{c.desc}</p>
                 </div>
               ))}
             </div>
-            <p className="text-slate-500 text-xs text-center">
-              The safety filter rejects INSERT, UPDATE, DELETE, DROP, ALTER, TRUNCATE, and multi-statement queries. Only single SELECT/WITH statements pass through.
-            </p>
           </div>
         </section>
 
