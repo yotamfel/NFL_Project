@@ -8,6 +8,7 @@ import {
 import { useUser } from '../context/UserContext'
 import { useAuth } from '../context/AuthContext'
 import { api } from '../api'
+import ProjectPicker from '../components/ProjectPicker'
 import { posColor } from '../utils/posColors'
 import { CsvDownloadButton } from '../components/StatTable'
 import { CareerLineChart } from '../components/StatChart'
@@ -449,12 +450,16 @@ export default function Saved() {
                       className="text-slate-600 hover:text-red-400 transition-colors text-lg leading-none">×</button>
                   </div>
                 </div>
-                <NoteField
-                  value={p.note} editing={isEditingNote('player', p.player_id)}
-                  noteText={noteText} setNoteText={setNoteText}
-                  onStart={() => startEditNote('player', p.player_id, p.note)}
-                  onCommit={commitNote} onCancel={() => setEditingNote(null)}
-                />
+                <div className="flex items-center gap-2">
+                  <NoteField
+                    value={p.note} editing={isEditingNote('player', p.player_id)}
+                    noteText={noteText} setNoteText={setNoteText}
+                    onStart={() => startEditNote('player', p.player_id, p.note)}
+                    onCommit={commitNote} onCancel={() => setEditingNote(null)}
+                  />
+                  <ProjectPicker type="player" label={p.player_name}
+                    data={{ player_id: p.player_id, player_name: p.player_name, pos: p.pos }} />
+                </div>
               </div>
             )
           })}
@@ -477,12 +482,16 @@ export default function Saved() {
                 <button onClick={() => removeComparison(i)}
                   className="text-slate-600 hover:text-red-400 transition-colors text-lg leading-none shrink-0">×</button>
               </div>
-              <NoteField
-                value={c.note} editing={isEditingNote('comparison', i)}
-                noteText={noteText} setNoteText={setNoteText}
-                onStart={() => startEditNote('comparison', i, c.note)}
-                onCommit={commitNote} onCancel={() => setEditingNote(null)}
-              />
+              <div className="flex items-center gap-2">
+                <NoteField
+                  value={c.note} editing={isEditingNote('comparison', i)}
+                  noteText={noteText} setNoteText={setNoteText}
+                  onStart={() => startEditNote('comparison', i, c.note)}
+                  onCommit={commitNote} onCancel={() => setEditingNote(null)}
+                />
+                <ProjectPicker type="comparison" label={c.playerNames.join(' vs ')}
+                  data={{ playerIds: c.playerIds, playerNames: c.playerNames, category: c.category }} />
+              </div>
             </div>
           ))}
         </div>
@@ -498,13 +507,15 @@ export default function Saved() {
                 <div className="flex-1 min-w-0">
                   <p className="text-white font-medium text-sm truncate">{s.question}</p>
                   <p className="text-slate-500 text-xs">{s.rows.length} rows preview · {fmt(s.saved_at)}</p>
-                  <div onClick={e => e.preventDefault()}>
+                  <div onClick={e => e.preventDefault()} className="flex items-center gap-2">
                     <NoteField
                       value={s.note} editing={isEditingNote('search', i)}
                       noteText={noteText} setNoteText={setNoteText}
                       onStart={() => startEditNote('search', i, s.note)}
                       onCommit={commitNote} onCancel={() => setEditingNote(null)}
                     />
+                    <ProjectPicker type="search" label={s.question}
+                      data={{ question: s.question, sql: s.sql, rows: s.rows }} />
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">

@@ -931,11 +931,6 @@ export default function PlayerProfile() {
             >
               {saved ? '★' : '☆'}
             </button>
-            <ProjectPicker
-              type="player"
-              label={player.player_name}
-              data={{ player_id: player.player_id, player_name: player.player_name, pos: player.pos }}
-            />
 
             <div className="sm:text-right shrink-0 bg-black/20 rounded-xl px-4 py-3">
               {draft ? (
@@ -989,6 +984,16 @@ export default function PlayerProfile() {
           )}
         </div>
       </div>
+
+      {user?.is_admin && (
+        <div className="flex justify-end">
+          <ProjectPicker
+            type="player"
+            label={player.player_name}
+            data={{ player_id: player.player_id, player_name: player.player_name, pos: player.pos }}
+          />
+        </div>
+      )}
 
       {user?.is_admin && <SimilarPlayersSection playerId={player.player_id} playerName={player.player_name} accentColor={c.hex} />}
 
