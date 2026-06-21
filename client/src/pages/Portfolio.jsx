@@ -175,6 +175,25 @@ export default function Portfolio() {
               <p className="text-slate-500 text-xs mt-0.5">14 tables &middot; 6 career views &middot; 440K+ rows &middot; Ready for API</p>
             </div>
           </div>
+
+          {/* Pipeline deep-dive */}
+          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 space-y-4">
+            <p className="text-white font-bold text-sm">Behind the scenes: what the pipeline actually does</p>
+            <div className="space-y-3">
+              <Decision
+                title="supplement_seasons.py — the core transform (1,000+ lines)"
+                why="This single script is the backbone of the entire data layer. It pulls raw per-player season stats from nflverse's wide table, but the wide table is incomplete — it's missing games played, longest plays, QB records, success rates, and several touchdown/fumble counts. So the script also loads the full play-by-play (~50K plays per season), and derives 15+ fields by aggregating individual plays. Each derived field was verified against published reference values to 99%+ accuracy. The script handles a circular dependency: new players must exist in the players table before their season rows can be inserted (foreign key), but the players table is built from season data. It breaks the cycle by seeding new players before writing seasons."
+              />
+              <Decision
+                title="run_etl.py — orchestration with dependency order"
+                why="The 6 pipeline steps must run in strict order: seasons first (creates the base data), then career views (aggregates seasons), then FDV (needs career views), then secondary loaders (injuries, NGS, snaps — all depend on the players table). The runner wraps each step in error handling so a failure in step 4 doesn't prevent step 5 from running if they're independent. Each step reports timing and row counts."
+              />
+              <Decision
+                title="Idempotent re-runs"
+                why="Every ETL step can be safely re-run without duplicating data. Season loaders delete-then-insert for the target years. Career views are SQL views (recreated on each run). FDV writes to a single column on the players table. This means recovery from a partial failure is: just run it again."
+              />
+            </div>
+          </div>
         </section>
 
         {/* Database Schema */}
@@ -756,6 +775,73 @@ export default function Portfolio() {
           </div>
         </section>
 
+        {/* Logging & Monitoring */}
+        <section className="space-y-6">
+          <div>
+            <p className="text-amber-500 text-xs font-bold uppercase tracking-widest mb-1">Observability</p>
+            <h2 className="text-2xl font-black text-white">Logging & Monitoring</h2>
+          </div>
+          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-8 space-y-4">
+            <p className="text-slate-400 text-sm leading-relaxed">
+              Every AI call, user action, and system event is tracked — not for surveillance, but for debugging,
+              cost control, and quality iteration.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="bg-slate-800/60 rounded-xl p-4 space-y-2">
+                <p className="text-white text-sm font-semibold">ai_query_log</p>
+                <p className="text-slate-500 text-xs leading-relaxed">
+                  Every AI call logged with: feature name, input text, generated SQL, model used, token count,
+                  response latency (ms), success/failure, error message, and user feedback (thumbs up/down).
+                  Used for: cost tracking, prompt quality iteration, and identifying failure patterns.
+                </p>
+              </div>
+              <div className="bg-slate-800/60 rounded-xl p-4 space-y-2">
+                <p className="text-white text-sm font-semibold">user_visits</p>
+                <p className="text-slate-500 text-xs leading-relaxed">
+                  Every login and token refresh records a timestamped visit. Powers the admin dashboard:
+                  daily visit charts, 7-day/30-day activity, per-user engagement tracking. Used for
+                  understanding usage patterns and identifying inactive accounts.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Mobile Admin App */}
+        <section className="space-y-6">
+          <div>
+            <p className="text-amber-500 text-xs font-bold uppercase tracking-widest mb-1">Mobile</p>
+            <h2 className="text-2xl font-black text-white">Admin Mobile App</h2>
+            <p className="text-slate-400 text-sm mt-2">
+              A companion Android app for platform monitoring — built so the admin dashboard is always one tap away,
+              not buried behind a browser login.
+            </p>
+          </div>
+          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-8 space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {[
+                { title: 'Dashboard', desc: 'Real-time stats: total users, visits today/7d/30d, unresolved feedback count. Pull-to-refresh on every screen.' },
+                { title: 'Users', desc: 'Full user list with sort options (last active, total visits, 7d visits, join date) and search. Same data as the web admin panel.' },
+                { title: 'Feedback', desc: 'Threaded chat interface — read feedback, reply directly from the phone, mark as resolved or delete. Notifications push through the same API.' },
+              ].map(s => (
+                <div key={s.title} className="bg-slate-800/60 rounded-xl p-4">
+                  <p className="text-white text-sm font-semibold mb-1">{s.title}</p>
+                  <p className="text-slate-500 text-xs leading-relaxed">{s.desc}</p>
+                </div>
+              ))}
+            </div>
+            <div className="bg-slate-800/60 rounded-xl p-4 space-y-2">
+              <p className="text-white text-sm font-semibold">Technical approach</p>
+              <p className="text-slate-500 text-xs leading-relaxed">
+                Built with React Native (Expo). Calls the exact same REST API as the web admin — no separate backend.
+                JWT auth with admin-only gate (non-admin login is rejected at the app level). Over-the-air updates
+                via EAS Update + GitHub Actions: pushing code to the repo automatically publishes an update that the
+                app downloads on next launch — no reinstall needed.
+              </p>
+            </div>
+          </div>
+        </section>
+
         {/* Tech Stack Summary */}
         <section className="space-y-6">
           <div>
@@ -763,11 +849,12 @@ export default function Portfolio() {
             <h2 className="text-2xl font-black text-white">Full Technology Stack</h2>
           </div>
           <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-8">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
               {[
                 { cat: 'Frontend', items: ['React 19', 'Vite 8', 'Tailwind CSS 4', 'Recharts 3.8', 'React Router 7'] },
                 { cat: 'Backend', items: ['Python / FastAPI', 'SQLAlchemy 2', 'Pydantic 2', 'Uvicorn', 'JWT (python-jose)'] },
                 { cat: 'AI / ML', items: ['Claude Sonnet 4.6', 'Anthropic SDK', 'scikit-learn', 'NL-to-SQL', 'Prompt engineering'] },
+                { cat: 'Mobile', items: ['React Native', 'Expo + EAS Build', 'OTA Updates', 'GitHub Actions'] },
                 { cat: 'Data / Infra', items: ['PostgreSQL 17', 'Neon (serverless)', 'nflreadpy / Polars', 'Docker', 'Railway'] },
               ].map(g => (
                 <div key={g.cat}>
