@@ -289,6 +289,15 @@ const POS_CATEGORY = {
   P: 'punting',
 }
 
+const FDV_SCALE = [
+  { range: '0–20',    label: 'Minimal NFL impact',           color: '#475569' },
+  { range: '20–50',   label: 'Backup / role player',         color: '#64748b' },
+  { range: '50–90',   label: 'Solid multi-year starter',     color: '#3b82f6' },
+  { range: '90–130',  label: 'Star (probable Pro Bowls)',     color: '#f59e0b' },
+  { range: '130–180', label: 'Elite (borderline HOF)',        color: '#f97316' },
+  { range: '180+',    label: 'Hall of Fame level',           color: '#a78bfa' },
+]
+
 const SUFFIXES = new Set(['II', 'III', 'IV', 'V', 'Jr.', 'Sr.', 'Jr', 'Sr'])
 function shortName(full = '') {
   const parts = full.trim().split(/\s+/).filter(p => !SUFFIXES.has(p))
@@ -321,6 +330,7 @@ export default function Comparison() {
   const [narState,      setNarState]      = useState('idle')  // idle | loading | done | error
   const [narrative,     setNarrative]     = useState(null)
   const [narLogId,      setNarLogId]      = useState(null)
+  const [fdvInfo,       setFdvInfo]       = useState(false)
 
   // Filters
   const [filterPos,    setFilterPos]    = useState('')
@@ -699,11 +709,57 @@ export default function Comparison() {
               style={{ background: 'linear-gradient(160deg, #0f172a 0%, #1e293b 100%)' }}>
               <div className="flex items-center justify-between">
                 <h2 className="text-white font-bold">FDV — Fourth &amp; Data Value</h2>
-                <a href="/methodology"
-                  className="text-slate-500 text-xs hover:text-slate-300 transition-colors">
-                  What is FDV?
-                </a>
+                <button onClick={() => setFdvInfo(v => !v)}
+                  className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
+                    fdvInfo ? 'border-violet-500/40 text-violet-300 bg-violet-500/10'
+                             : 'border-slate-700 text-slate-500 hover:text-slate-300'
+                  }`}>
+                  {fdvInfo ? '▲' : '▼'} What is FDV?
+                </button>
               </div>
+              {fdvInfo && (
+                <div className="rounded-xl border border-slate-700/40 bg-slate-900/40 p-4 space-y-4">
+                  <div>
+                    <p className="text-slate-400 text-sm leading-relaxed">
+                      FDV is our proprietary, position-neutral career value metric built entirely
+                      from the statistics in this platform. It uses era-adjusted z-scores so a
+                      great season in 1978 counts the same as a great season in 2018 — an FDV
+                      of 90 means roughly the same thing for a QB, a DE, or a kicker.
+                    </p>
+                    <p className="text-violet-400 text-xs mt-2">
+                      <a href="/methodology" className="hover:text-violet-300 transition-colors underline underline-offset-2">
+                        Full methodology →
+                      </a>
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Scale</p>
+                    <div className="flex flex-col gap-1.5">
+                      {FDV_SCALE.map(({ range, label, color }) => (
+                        <div key={range} className="flex items-center gap-3">
+                          <span className="text-xs font-mono font-bold w-20 shrink-0" style={{ color }}>{range}</span>
+                          <div className="flex-1 h-px" style={{ background: `${color}40` }} />
+                          <span className="text-xs text-slate-400">{label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Approximate reference points</p>
+                    <div className="flex flex-wrap gap-2">
+                      {[['Tom Brady', '~280'], ['Peyton Manning', '~240'], ['Jerry Rice', '~220'],
+                        ['Lawrence Taylor', '~190'], ['Quality 10-yr starter', '~100'], ['Average rookie season', '4–7/season']
+                      ].map(([name, fdv]) => (
+                        <div key={name} className="rounded-lg px-3 py-1.5 border border-slate-700/60 bg-slate-800/40">
+                          <span className="text-slate-400 text-xs">{name}: </span>
+                          <span className="text-white text-xs font-semibold">{fdv}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="flex items-end gap-3 justify-center py-2">
                 {data.players.map((p, i) => {
                   const maxFdv = Math.max(...data.players.map(pl => pl.fdv ?? 0))
