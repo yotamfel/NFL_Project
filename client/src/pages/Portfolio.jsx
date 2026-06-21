@@ -374,7 +374,7 @@ export default function Portfolio() {
             <p className="text-amber-500 text-xs font-bold uppercase tracking-widest mb-1">AI Integration</p>
             <h2 className="text-2xl font-black text-white">AI-Powered Analysis</h2>
             <p className="text-slate-400 text-sm mt-2">
-              Five AI features built on Claude Sonnet 4.6 — each solving a specific analytical problem
+              AI features built on Claude Sonnet 4.6 — each solving a specific analytical problem
               that would be impractical to address with traditional queries or static reports.
             </p>
           </div>
@@ -419,21 +419,6 @@ export default function Portfolio() {
 
           {/* Other AI features */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-5 space-y-3">
-              <p className="text-white font-bold text-sm">Player Similarity</p>
-              <p className="text-slate-400 text-xs leading-relaxed">
-                <span className="text-slate-200">Problem:</span> "Who plays like Patrick Mahomes?" can't be answered with a single stat lookup — it requires
-                multi-dimensional comparison across an entire position group.
-              </p>
-              <div className="flex flex-wrap items-center gap-1.5 py-1">
-                {['Career stats', 'Per-game normalize', 'Z-score (StandardScaler)', 'Cosine similarity', 'Top 5 matches', 'AI explanation'].map((s, i) => (
-                  <div key={i} className="flex items-center gap-1.5">
-                    <span className="text-[9px] bg-slate-800 border border-slate-700 text-slate-400 px-2 py-1 rounded">{s}</span>
-                    {i < 5 && <span className="text-amber-500/60 text-[9px]">&rarr;</span>}
-                  </div>
-                ))}
-              </div>
-            </div>
             <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-5 space-y-2">
               <p className="text-white font-bold text-sm">Career Insights</p>
               <p className="text-slate-400 text-xs leading-relaxed">
@@ -456,18 +441,6 @@ export default function Portfolio() {
                 <span className="text-slate-200">Approach:</span> After loading comparison data, Claude writes a 4-6 sentence analysis:
                 who leads in each metric, stylistic contrasts, and an overall verdict. Works across all 6 stat categories
                 in both career and single-season modes.
-              </p>
-            </div>
-            <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-5 space-y-2">
-              <p className="text-white font-bold text-sm">Content Creator</p>
-              <p className="text-slate-400 text-xs leading-relaxed">
-                <span className="text-slate-200">Problem:</span> Turning data analysis into shareable content (tweets, Reddit posts, YouTube scripts)
-                requires reformatting the same data for different audiences and character limits.
-              </p>
-              <p className="text-slate-400 text-xs leading-relaxed">
-                <span className="text-slate-200">Approach:</span> Platform-specific prompts (Twitter: 280-char limit, Reddit: discussion format,
-                YouTube: 5 talking points). Language selection for multilingual output. Content is persisted in a generated_content table
-                with edit, regenerate (max 3), and history tracking.
               </p>
             </div>
           </div>
@@ -772,7 +745,7 @@ export default function Portfolio() {
                 { title: 'JWT authentication', desc: 'Access tokens (short-lived) + refresh tokens (persistent, stored server-side). Bcrypt password hashing. Admin role gating for premium features.' },
                 { title: 'SQL injection prevention', desc: 'AI-generated queries pass through a regex safety filter that rejects all write operations, DDL, and multi-statement queries before execution. Only single SELECT/WITH statements reach the database.' },
                 { title: 'Rate limiting', desc: 'Login endpoint tracks failed attempts per username. After repeated failures, the account is temporarily locked to prevent brute-force attacks.' },
-                { title: 'Admin-only features', desc: 'Premium features (Player Similarity, Content Creator, Research Projects) are gated behind require_admin — returning 403 for non-admin users. UI elements are conditionally rendered.' },
+                { title: 'Role-based access', desc: 'Admin features are gated behind a require_admin dependency — returning 403 for non-admin users. Frontend components are conditionally rendered based on the is_admin flag in the JWT payload.' },
               ].map(s => (
                 <div key={s.title} className="bg-slate-800/60 rounded-xl p-4">
                   <p className="text-white text-sm font-semibold mb-1">{s.title}</p>
@@ -783,35 +756,6 @@ export default function Portfolio() {
           </div>
         </section>
 
-        {/* Mobile Admin App */}
-        <section className="space-y-6">
-          <div>
-            <p className="text-amber-500 text-xs font-bold uppercase tracking-widest mb-1">Mobile</p>
-            <h2 className="text-2xl font-black text-white">Admin Mobile App</h2>
-          </div>
-          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-8 space-y-3">
-            <p className="text-slate-400 text-sm leading-relaxed">
-              A companion Android app built with React Native (Expo) that mirrors the web admin panel — users, visits, and
-              feedback management with reply capability. Connects to the same API as the web platform.
-            </p>
-            <div className="grid grid-cols-3 gap-3">
-              {[
-                { title: 'Dashboard', desc: 'Live stats: users, visits today/7d/30d, unresolved feedback' },
-                { title: 'Users', desc: 'Sortable user list with visit counts, 7d activity, last active date' },
-                { title: 'Feedback', desc: 'Threaded chat interface — view, reply, resolve, delete feedback' },
-              ].map(s => (
-                <div key={s.title} className="bg-slate-800/60 rounded-xl p-3">
-                  <p className="text-white text-xs font-semibold mb-1">{s.title}</p>
-                  <p className="text-slate-600 text-[10px] leading-relaxed">{s.desc}</p>
-                </div>
-              ))}
-            </div>
-            <p className="text-slate-600 text-xs">
-              Over-the-air updates via EAS Update + GitHub Actions — code changes push automatically without reinstalling.
-            </p>
-          </div>
-        </section>
-
         {/* Tech Stack Summary */}
         <section className="space-y-6">
           <div>
@@ -819,12 +763,11 @@ export default function Portfolio() {
             <h2 className="text-2xl font-black text-white">Full Technology Stack</h2>
           </div>
           <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-8">
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {[
                 { cat: 'Frontend', items: ['React 19', 'Vite 8', 'Tailwind CSS 4', 'Recharts 3.8', 'React Router 7'] },
                 { cat: 'Backend', items: ['Python / FastAPI', 'SQLAlchemy 2', 'Pydantic 2', 'Uvicorn', 'JWT (python-jose)'] },
-                { cat: 'AI / ML', items: ['Claude Sonnet 4.6', 'Anthropic SDK', 'scikit-learn', 'Cosine similarity', 'NL-to-SQL'] },
-                { cat: 'Mobile', items: ['React Native (Expo)', 'EAS Build + OTA', 'GitHub Actions CI'] },
+                { cat: 'AI / ML', items: ['Claude Sonnet 4.6', 'Anthropic SDK', 'scikit-learn', 'NL-to-SQL', 'Prompt engineering'] },
                 { cat: 'Data / Infra', items: ['PostgreSQL 17', 'Neon (serverless)', 'nflreadpy / Polars', 'Docker', 'Railway'] },
               ].map(g => (
                 <div key={g.cat}>
