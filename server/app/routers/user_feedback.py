@@ -215,6 +215,9 @@ def admin_stats(admin: dict = Depends(_require_admin)):
         visits_30d    = conn.execute(text("SELECT COUNT(*) FROM user_visits WHERE visited_at > now() - INTERVAL '30 days'")).scalar() or 0
         total_fb      = conn.execute(text("SELECT COUNT(*) FROM feedback")).scalar() or 0
         unresolved_fb = conn.execute(text("SELECT COUNT(*) FROM feedback WHERE resolved = FALSE")).scalar() or 0
+        unread_notifs = conn.execute(text(
+            "SELECT COUNT(*) FROM notifications WHERE user_id = :uid AND is_read = FALSE"
+        ), {"uid": int(admin["sub"])}).scalar() or 0
     return {
         "total_users":         total_users,
         "total_visits":        total_visits,
@@ -223,4 +226,52 @@ def admin_stats(admin: dict = Depends(_require_admin)):
         "visits_30d":          visits_30d,
         "total_feedback":      total_fb,
         "unresolved_feedback": unresolved_fb,
+        "unread_notifications": unread_notifs,
+    }
+
+
+@router.get("/admin/feature-usage")
+def admin_feature_usage(admin: dict = Depends(_require_admin)):
+    with engine.connect() as conn:
+        features_7d = conn.execute(text("""
+            SELECT feature, COUNT(*) as count,
+                   COUNT(*) FILTER (WHERE success) as success_count,
+                   ROUND(AVG(response_ms) FILTER (WHERE success)) as avg_ms
+            FROM ai_query_log
+            WHERE created_at > now() - INTERVAL '7 days'
+            GROUP BY feature ORDER BY count DESC
+        """)).fetchall()
+        features_30d = conn.execute(text("""
+            SELECT feature, COUNT(*) as count
+            FROM ai_query_log
+            WHERE created_at > now() - INTERVAL '30 days'
+            GROUP BY feature ORDER BY count DESC
+        """)).fetchall()
+        saved_counts = conn.execute(text("""
+            SELECT type, COUNT(*) as count FROM saved_items GROUP BY type ORDER BY count DESC
+        """)).fetchall()
+        search_count = conn.execute(text(
+            "SELECT COUNT(*) FROM ai_query_log WHERE feature = 'nl_search'"
+        )).scalar() or 0
+        comparison_count = conn.execute(text(
+            "SELECT COUNT(*) FROM ai_query_log WHERE feature = 'comparison_narrative'"
+        )).scalar() or 0
+        insight_count = conn.execute(text(
+            "SELECT COUNT(*) FROM ai_query_log WHERE feature = 'insights'"
+        )).scalar() or 0
+        total_ai = conn.execute(text("SELECT COUNT(*) FROM ai_query_log")).scalar() or 0
+        thumbs_up = conn.execute(text("SELECT COUNT(*) FROM ai_query_log WHERE thumbs = 1")).scalar() or 0
+        thumbs_down = conn.execute(text("SELECT COUNT(*) FROM ai_query_log WHERE thumbs = -1")).scalar() or 0
+    return {
+        "features_7d":  [dict(r._mapping) for r in features_7d],
+        "features_30d": [dict(r._mapping) for r in features_30d],
+        "saved_by_type": [dict(r._mapping) for r in saved_counts],
+        "totals": {
+            "smart_search": search_count,
+            "comparisons": comparison_count,
+            "insights": insight_count,
+            "total_ai_calls": total_ai,
+            "thumbs_up": thumbs_up,
+            "thumbs_down": thumbs_down,
+        },
     }
