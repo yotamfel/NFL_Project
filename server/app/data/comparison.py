@@ -7,7 +7,7 @@ from app.data.players import CATEGORIES
 
 def _player_info(conn, player_ids: list[str]) -> list[dict]:
     rows = conn.execute(
-        text("SELECT player_id, player_name, pos FROM players WHERE player_id = ANY(:pids)"),
+        text("SELECT player_id, player_name, pos, fdv FROM players WHERE player_id = ANY(:pids)"),
         {"pids": player_ids},
     ).fetchall()
     # Preserve the caller's order so the frontend can pair colours with players

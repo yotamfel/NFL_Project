@@ -478,6 +478,12 @@ export default function Comparison() {
               <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: BAR_COLORS[i] }} />
               <span className="text-white font-semibold">{p.player_name}</span>
               {p.pos && <span className="text-xs" style={{ color: BAR_COLORS[i], opacity: 0.8 }}>{p.pos}</span>}
+              {p.fdv != null && (
+                <span className="text-xs font-bold px-1.5 py-0.5 rounded"
+                  style={{ background: `${BAR_COLORS[i]}20`, color: BAR_COLORS[i] }}>
+                  FDV: {Math.round(p.fdv)}
+                </span>
+              )}
               {(p.team || p.teams) && (
                 <span className="text-xs font-mono px-1.5 py-0.5 rounded"
                   style={{ background: `${BAR_COLORS[i]}20`, color: BAR_COLORS[i] }}>
@@ -686,6 +692,47 @@ export default function Comparison() {
               {saved ? '✓ Saved' : '💾 Save comparison'}
             </button>
           </div>
+
+          {/* FDV comparison */}
+          {data.players.some(p => p.fdv != null) && (
+            <div className="rounded-2xl border border-slate-700/60 p-5 space-y-3"
+              style={{ background: 'linear-gradient(160deg, #0f172a 0%, #1e293b 100%)' }}>
+              <div className="flex items-center justify-between">
+                <h2 className="text-white font-bold">FDV — Fourth &amp; Data Value</h2>
+                <a href="/methodology"
+                  className="text-slate-500 text-xs hover:text-slate-300 transition-colors">
+                  What is FDV?
+                </a>
+              </div>
+              <div className="flex items-end gap-3 justify-center py-2">
+                {data.players.map((p, i) => {
+                  const maxFdv = Math.max(...data.players.map(pl => pl.fdv ?? 0))
+                  const pct = maxFdv > 0 ? ((p.fdv ?? 0) / maxFdv) * 100 : 0
+                  return (
+                    <div key={p.player_id} className="flex flex-col items-center gap-1.5 flex-1 max-w-[140px]">
+                      <span className="text-white font-bold text-lg">{p.fdv != null ? Math.round(p.fdv) : '—'}</span>
+                      <div className="w-full rounded-t-lg" style={{
+                        background: BAR_COLORS[i],
+                        height: `${Math.max(pct * 1.2, 8)}px`,
+                        opacity: p.fdv != null ? 1 : 0.2,
+                      }} />
+                      <span className="text-xs text-slate-400 text-center truncate w-full">{shortName(p.player_name)}</span>
+                      {p.fdv != null && (
+                        <span className="text-xs text-slate-600">
+                          {p.fdv >= 180 ? 'All-time great' :
+                           p.fdv >= 130 ? 'HOF level' :
+                           p.fdv >= 90  ? 'Star / borderline HOF' :
+                           p.fdv >= 70  ? 'Pro Bowl level' :
+                           p.fdv >= 50  ? 'Solid starter' :
+                           p.fdv >= 30  ? 'Backup / role player' : 'Depth'}
+                        </span>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
 
           {/* AI Narrative */}
           {narState === 'idle' && (
