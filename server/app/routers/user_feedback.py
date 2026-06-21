@@ -288,26 +288,38 @@ def admin_feature_usage(admin: dict = Depends(_require_admin)):
             WHERE created_at > now() - INTERVAL '30 days'
             GROUP BY feature ORDER BY count DESC
         """)).fetchall()
-        saved_counts = conn.execute(text("""
-            SELECT type, COUNT(*) as count FROM saved_items GROUP BY type ORDER BY count DESC
+        saved_raw = conn.execute(text("""
+            SELECT type, COUNT(*) as count FROM saved_items GROUP BY type
         """)).fetchall()
+        saved_map = {r.type: dict(r._mapping) for r in saved_raw}
+        all_saved_types = ['player', 'comparison', 'search', 'chart', 'table']
+        saved_counts = [
+            saved_map.get(t, {"type": t, "count": 0})
+            for t in all_saved_types
+        ]
         total_ai = conn.execute(text("SELECT COUNT(*) FROM ai_query_log")).scalar() or 0
         thumbs_up = conn.execute(text("SELECT COUNT(*) FROM ai_query_log WHERE thumbs = 1")).scalar() or 0
         thumbs_down = conn.execute(text("SELECT COUNT(*) FROM ai_query_log WHERE thumbs = -1")).scalar() or 0
         total_page_views = conn.execute(text("SELECT COUNT(*) FROM page_views")).scalar() or 0
-        feedback_by_cat = conn.execute(text("""
+        feedback_raw = conn.execute(text("""
             SELECT category, COUNT(*) as count,
                    COUNT(*) FILTER (WHERE resolved = FALSE) as open
             FROM feedback
-            GROUP BY category ORDER BY count DESC
+            GROUP BY category
         """)).fetchall()
+        fb_map = {r.category: dict(r._mapping) for r in feedback_raw}
+        all_cats = ['bug', 'feature', 'data', 'general']
+        feedback_by_cat = [
+            fb_map.get(c, {"category": c, "count": 0, "open": 0})
+            for c in all_cats
+        ]
     return {
         "page_views":     page_views_all,
         "daily_views":    [dict(r._mapping) for r in page_views_daily],
         "ai_features_7d": [dict(r._mapping) for r in features_7d],
         "ai_features_30d":[dict(r._mapping) for r in features_30d],
-        "saved_by_type":  [dict(r._mapping) for r in saved_counts],
-        "feedback_by_category": [dict(r._mapping) for r in feedback_by_cat],
+        "saved_by_type":  saved_counts,
+        "feedback_by_category": feedback_by_cat,
         "totals": {
             "total_page_views": total_page_views,
             "total_ai_calls": total_ai,
