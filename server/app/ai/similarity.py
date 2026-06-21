@@ -128,23 +128,26 @@ def explain_similarities(target: dict, similar: list[dict], pos_group: str) -> l
         for i, p in enumerate(similar)
     )
 
-    prompt = f"""You are an NFL analyst. A cosine-similarity algorithm compared per-game career stats
-and found these players statistically similar to {target["player_name"]} ({target["pos"]}).
+    prompt = f"""You are an NFL analyst writing for a knowledgeable audience. A cosine-similarity
+algorithm compared per-game career stats and found these players statistically similar to
+{target["player_name"]} ({target["pos"]}).
 
-Target player stats (per game averages): {target_stats}
+Target player per-game averages: {target_stats}
 
-Similar players (ranked by similarity score):
+Similar players (ranked by similarity score, 1.0 = identical):
 {players_text}
 
-For each similar player, write 2-3 sentences covering:
-1. Which specific stats are closest and drive the high similarity score
-2. Style or role similarities beyond the numbers (playing style, era, role in offense/defense)
-3. One key difference — where they diverge most
+For each similar player, write a short cohesive paragraph (3-4 sentences that flow naturally
+together, not a bullet list). Cover:
+- Which specific per-game stats are closest and why that drives the similarity score
+- What style, role, or era similarities exist beyond raw numbers
+- One honest difference — where they diverge most
 
-Be specific with numbers. Explain WHY this player matched at this percentage.
+Use specific numbers from the stats. Explain WHY this player matched at this percentage —
+what makes a 99% match different from a 95% match. Write in an engaging, analytical tone.
 
-Return ONLY a valid JSON array of strings, same order as listed, no other text:
-["explanation for player 1", "explanation for player 2", ...]"""
+Return ONLY a valid JSON array of strings (one paragraph per player, same order):
+["paragraph for player 1", "paragraph for player 2", ...]"""
 
     with Timer() as t:
         try:
@@ -169,10 +172,17 @@ Return ONLY a valid JSON array of strings, same order as listed, no other text:
         success=True,
     )
 
+    cleaned = raw.strip()
+    if cleaned.startswith("```"):
+        cleaned = cleaned.split("\n", 1)[-1]
+    if cleaned.endswith("```"):
+        cleaned = cleaned.rsplit("```", 1)[0]
+    cleaned = cleaned.strip()
+
     try:
-        explanations = json.loads(raw)
-        if isinstance(explanations, list) and len(explanations) == len(similar):
-            return explanations
+        explanations = json.loads(cleaned)
+        if isinstance(explanations, list) and len(explanations) >= len(similar):
+            return explanations[:len(similar)]
     except (json.JSONDecodeError, TypeError):
         pass
 
