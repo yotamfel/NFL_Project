@@ -461,19 +461,35 @@ function UsageTab() {
       {pageViews.length > 0 && (
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
           <h3 className="text-white font-semibold text-sm mb-4">Page Popularity</h3>
-          <div className="space-y-2">
-            {pageViews.map(p => (
-              <div key={p.page} className="flex items-center gap-3">
-                <span className="text-slate-300 text-xs w-28 shrink-0">{PAGE_LABELS[p.page] || p.page}</span>
-                <div className="flex-1 h-6 bg-slate-800 rounded-full overflow-hidden">
-                  <div className="h-full rounded-full bg-amber-500/50" style={{ width: `${(p.total / maxPageTotal) * 100}%` }} />
-                </div>
-                <div className="flex items-center gap-3 shrink-0">
-                  <span className="text-white font-bold text-sm w-12 text-right">{p.total}</span>
-                  <span className="text-slate-500 text-xs w-14 text-right">{p.views_7d ?? 0} / 7d</span>
-                </div>
-              </div>
-            ))}
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-slate-500 text-xs border-b border-slate-800">
+                  <th className="text-left py-2 pr-4 font-medium">Page</th>
+                  <th className="text-right py-2 px-2 font-medium">Today</th>
+                  <th className="text-right py-2 px-2 font-medium">7d</th>
+                  <th className="text-right py-2 px-2 font-medium">30d</th>
+                  <th className="text-right py-2 pl-2 font-medium">Total</th>
+                  <th className="py-2 pl-3 w-32"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {pageViews.map(p => (
+                  <tr key={p.page} className="border-b border-slate-800/40">
+                    <td className="py-2.5 pr-4 text-slate-300 font-medium">{PAGE_LABELS[p.page] || p.page}</td>
+                    <td className="py-2.5 px-2 text-right text-amber-400 font-semibold">{p.views_today ?? 0}</td>
+                    <td className="py-2.5 px-2 text-right text-slate-300">{p.views_7d ?? 0}</td>
+                    <td className="py-2.5 px-2 text-right text-slate-400">{p.views_30d ?? 0}</td>
+                    <td className="py-2.5 pl-2 text-right text-white font-bold">{p.total}</td>
+                    <td className="py-2.5 pl-3">
+                      <div className="h-3 bg-slate-800 rounded-full overflow-hidden">
+                        <div className="h-full rounded-full bg-amber-500/50" style={{ width: `${maxPageTotal > 0 ? (p.total / maxPageTotal) * 100 : 0}%` }} />
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}

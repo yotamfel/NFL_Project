@@ -255,6 +255,7 @@ def admin_feature_usage(admin: dict = Depends(_require_admin)):
     with engine.connect() as conn:
         page_views_raw = conn.execute(text("""
             SELECT page, COUNT(*) as total,
+                   COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE) as views_today,
                    COUNT(*) FILTER (WHERE created_at > now() - INTERVAL '7 days') as views_7d,
                    COUNT(*) FILTER (WHERE created_at > now() - INTERVAL '30 days') as views_30d
             FROM page_views
@@ -263,7 +264,7 @@ def admin_feature_usage(admin: dict = Depends(_require_admin)):
         pv_map = {r.page: dict(r._mapping) for r in page_views_raw}
         all_pages = ['players', 'profile', 'comparison', 'draft', 'search', 'trends', 'anomalies', 'saved', 'guide']
         page_views_all = [
-            pv_map.get(p, {"page": p, "total": 0, "views_7d": 0, "views_30d": 0})
+            pv_map.get(p, {"page": p, "total": 0, "views_today": 0, "views_7d": 0, "views_30d": 0})
             for p in all_pages
         ]
         page_views_all.sort(key=lambda x: x["total"], reverse=True)
