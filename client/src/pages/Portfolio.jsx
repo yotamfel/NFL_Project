@@ -438,6 +438,172 @@ export default function Portfolio() {
           </div>
         </section>
 
+        {/* Validation & Accuracy */}
+        <section className="space-y-6">
+          <div>
+            <p className="text-amber-500 text-xs font-bold uppercase tracking-widest mb-1">Data Quality</p>
+            <h2 className="text-2xl font-black text-white">Validation & Accuracy</h2>
+            <p className="text-slate-400 text-sm mt-2">
+              Every derived field is verified against published reference data. When the source and our derivation disagree,
+              we investigate the root cause and document it — rather than silently accepting the discrepancy.
+            </p>
+          </div>
+          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-8 space-y-4">
+            <p className="text-white font-bold text-sm">Verified accuracy (PBP-derived vs. PFR published values):</p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-slate-500 border-b border-slate-800">
+                    <th className="text-left py-2 pr-4 font-medium">Field</th>
+                    <th className="text-right py-2 pr-4 font-medium">Match rate</th>
+                    <th className="text-left py-2 font-medium">Residual cause</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60">
+                  {[
+                    ['Passing first downs (_1d)', '100.0%', 'Exact match'],
+                    ['Rushing first downs', '99.8%', 'Single-play charting disagreement league-wide'],
+                    ['Receiving first downs', '99.5%', 'Same single-play family (e.g. Amon-Ra St. Brown: 75 vs PFR 73)'],
+                    ['Passer rating formula', '100.0%', 'Verified: Joe Burrow 2024 = 108.5, AY/A = 8.24, NY/A = 6.67'],
+                    ['INT return TDs', '100.0%', 'PBP derivation more accurate than wide-table aggregate'],
+                    ['Fumbles (fmb)', '99.8%', 'Baker Mayfield: 12 vs PFR 13 (single irreducible disagreement)'],
+                    ['Kickoff stats (ko/koyds/tb)', '100.0%', '44/45 kickers exact; 1 rounding quirk (Boswell)'],
+                    ['Punting (pnt/yds/lng/tb)', '100.0%', '9 of 11 columns exact match'],
+                    ['Combined tackles', '~97%', 'Cross-tracker tackle-crediting noise (industry-known issue)'],
+                  ].map(([field, rate, cause]) => (
+                    <tr key={field}>
+                      <td className="py-2 pr-4 text-slate-300">{field}</td>
+                      <td className="py-2 pr-4 text-right font-mono text-green-400">{rate}</td>
+                      <td className="py-2 text-slate-500">{cause}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="bg-slate-800/60 rounded-xl p-4 space-y-2">
+              <p className="text-white font-semibold text-sm">Known cross-tracker discrepancies (documented, not hidden):</p>
+              <ul className="space-y-1.5 text-xs text-slate-400 leading-relaxed">
+                <li><span className="text-slate-300 font-medium">Penalty-affected return yardage:</span> nflverse records post-penalty enforcement spot, not play-text distance. 76 affected plays, +434 yards league-wide in 2024. Irreducible without free-text parsing.</li>
+                <li><span className="text-slate-300 font-medium">Targets (tgt):</span> Off by exactly 1 for ~40 players. PFR doesn't credit targets on plays nullified by offensive penalties; nflverse does.</li>
+                <li><span className="text-slate-300 font-medium">Defensive TDs:</span> The wide table's def_tds aggregate is provably wrong — Taron Johnson 2024 had 2 real defensive TDs (confirmed in play text), wide table reported 1. Our PBP derivation is correct.</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        {/* Anomaly Detection */}
+        <section className="space-y-6">
+          <div>
+            <p className="text-amber-500 text-xs font-bold uppercase tracking-widest mb-1">Analytics Engine</p>
+            <h2 className="text-2xl font-black text-white">Statistical Anomaly Detection</h2>
+            <p className="text-slate-400 text-sm mt-2">
+              An automated system that flags statistically unusual seasons by comparing each player's current stats
+              against their own career baseline — surfacing breakout years, decline signals, and efficiency peaks.
+            </p>
+          </div>
+          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-8">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+              {[
+                { type: 'Career High', desc: 'Cumulative season stats surpass previous career best. Can trigger mid-season if player is on record pace.' },
+                { type: 'YoY Surge', desc: '40%+ improvement over same player\'s previous season. Catches breakout years and comebacks.' },
+                { type: 'Efficiency Peak', desc: 'Rate stat (passer rating, Y/A, Y/Rec) 1.5+ standard deviations above career mean. Highlights quality, not just volume.' },
+              ].map(a => (
+                <div key={a.type} className="bg-slate-800/60 rounded-xl p-4">
+                  <p className="text-white text-sm font-semibold mb-1">{a.type}</p>
+                  <p className="text-slate-500 text-xs leading-relaxed">{a.desc}</p>
+                </div>
+              ))}
+            </div>
+            <p className="text-slate-500 text-xs leading-relaxed">
+              Also detects: <span className="text-slate-300">dual-threat versatility</span> (300+ yards in two categories),
+              <span className="text-slate-300"> above-average surges</span> (1.5&sigma; above career mean on counting stats),
+              and <span className="text-slate-300">decline signals</span> (1.5&sigma; below). Severity scored on a 3-star scale
+              based on magnitude. Volume thresholds (e.g. 200+ pass attempts for QBs) filter out small-sample noise.
+            </p>
+          </div>
+        </section>
+
+        {/* Injury Estimation */}
+        <section className="space-y-6">
+          <div>
+            <p className="text-amber-500 text-xs font-bold uppercase tracking-widest mb-1">Domain Logic</p>
+            <h2 className="text-2xl font-black text-white">Injury Tracking & IR Estimation</h2>
+          </div>
+          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-8 space-y-4">
+            <p className="text-slate-400 text-sm leading-relaxed">
+              The NFL's weekly injury report has a blind spot: players placed on Injured Reserve (IR) disappear from the report
+              entirely. A player who misses 12 games on IR shows fewer "Out" entries than one who misses 4 games week-by-week.
+              The platform solves this with a dual-source estimation:
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="bg-slate-800/60 rounded-xl p-4">
+                <p className="text-white text-sm font-semibold mb-1">Official count</p>
+                <p className="text-slate-500 text-xs leading-relaxed">Games listed as "Out" on the weekly injury report. Accurate for week-to-week injuries but undercounts IR absences.</p>
+              </div>
+              <div className="bg-slate-800/60 rounded-xl p-4">
+                <p className="text-white text-sm font-semibold mb-1">Estimated count</p>
+                <p className="text-slate-500 text-xs leading-relaxed">Calculated from: expected games in season minus actual games played. Catches IR stints that the weekly report misses. Marked with a &dagger; symbol.</p>
+              </div>
+            </div>
+            <p className="text-slate-500 text-xs">
+              The higher of the two values is displayed. Career charts show red bands for seasons with 4+ missed games (official or estimated), giving a visual injury history at a glance.
+            </p>
+          </div>
+        </section>
+
+        {/* Auth & Security */}
+        <section className="space-y-6">
+          <div>
+            <p className="text-amber-500 text-xs font-bold uppercase tracking-widest mb-1">Security</p>
+            <h2 className="text-2xl font-black text-white">Authentication & Safety</h2>
+          </div>
+          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {[
+                { title: 'JWT authentication', desc: 'Access tokens (short-lived) + refresh tokens (persistent, stored server-side). Bcrypt password hashing. Admin role gating for premium features.' },
+                { title: 'SQL injection prevention', desc: 'AI-generated queries pass through a regex safety filter that rejects all write operations, DDL, and multi-statement queries before execution. Only single SELECT/WITH statements reach the database.' },
+                { title: 'Rate limiting', desc: 'Login endpoint tracks failed attempts per username. After repeated failures, the account is temporarily locked to prevent brute-force attacks.' },
+                { title: 'Admin-only features', desc: 'Premium features (Player Similarity, Content Creator, Research Projects) are gated behind require_admin — returning 403 for non-admin users. UI elements are conditionally rendered.' },
+              ].map(s => (
+                <div key={s.title} className="bg-slate-800/60 rounded-xl p-4">
+                  <p className="text-white text-sm font-semibold mb-1">{s.title}</p>
+                  <p className="text-slate-500 text-xs leading-relaxed">{s.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Mobile Admin App */}
+        <section className="space-y-6">
+          <div>
+            <p className="text-amber-500 text-xs font-bold uppercase tracking-widest mb-1">Mobile</p>
+            <h2 className="text-2xl font-black text-white">Admin Mobile App</h2>
+          </div>
+          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-8 space-y-3">
+            <p className="text-slate-400 text-sm leading-relaxed">
+              A companion Android app built with React Native (Expo) that mirrors the web admin panel — users, visits, and
+              feedback management with reply capability. Connects to the same API as the web platform.
+            </p>
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { title: 'Dashboard', desc: 'Live stats: users, visits today/7d/30d, unresolved feedback' },
+                { title: 'Users', desc: 'Sortable user list with visit counts, 7d activity, last active date' },
+                { title: 'Feedback', desc: 'Threaded chat interface — view, reply, resolve, delete feedback' },
+              ].map(s => (
+                <div key={s.title} className="bg-slate-800/60 rounded-xl p-3">
+                  <p className="text-white text-xs font-semibold mb-1">{s.title}</p>
+                  <p className="text-slate-600 text-[10px] leading-relaxed">{s.desc}</p>
+                </div>
+              ))}
+            </div>
+            <p className="text-slate-600 text-xs">
+              Over-the-air updates via EAS Update + GitHub Actions — code changes push automatically without reinstalling.
+            </p>
+          </div>
+        </section>
+
         {/* Tech Stack Summary */}
         <section className="space-y-6">
           <div>
@@ -445,11 +611,12 @@ export default function Portfolio() {
             <h2 className="text-2xl font-black text-white">Full Technology Stack</h2>
           </div>
           <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-8">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
               {[
                 { cat: 'Frontend', items: ['React 19', 'Vite 8', 'Tailwind CSS 4', 'Recharts 3.8', 'React Router 7'] },
                 { cat: 'Backend', items: ['Python / FastAPI', 'SQLAlchemy 2', 'Pydantic 2', 'Uvicorn', 'JWT (python-jose)'] },
                 { cat: 'AI / ML', items: ['Claude Sonnet 4.6', 'Anthropic SDK', 'scikit-learn', 'Cosine similarity', 'NL-to-SQL'] },
+                { cat: 'Mobile', items: ['React Native (Expo)', 'EAS Build + OTA', 'GitHub Actions CI'] },
                 { cat: 'Data / Infra', items: ['PostgreSQL 17', 'Neon (serverless)', 'nflreadpy / Polars', 'Docker', 'Railway'] },
               ].map(g => (
                 <div key={g.cat}>
