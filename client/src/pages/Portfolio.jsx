@@ -216,6 +216,44 @@ export default function Portfolio() {
               </tbody>
             </table>
           </div>
+          {/* Coverage timeline */}
+          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 space-y-3">
+            <p className="text-white font-bold text-sm">Data coverage timeline:</p>
+            <div className="space-y-1.5">
+              {[
+                { label: 'Box-score stats (6 categories)', from: 1970, to: 2025, color: '#f59e0b' },
+                { label: 'Draft picks', from: 1970, to: 2025, color: '#f59e0b' },
+                { label: 'Combine measurements', from: 2000, to: 2025, color: '#60a5fa' },
+                { label: 'Injury reports', from: 2009, to: 2025, color: '#4ade80' },
+                { label: 'Snap counts (weekly)', from: 2013, to: 2025, color: '#4ade80' },
+                { label: 'Next Gen Stats (NGS)', from: 2016, to: 2025, color: '#a78bfa' },
+                { label: 'Advanced receiving (PFR)', from: 2018, to: 2025, color: '#a78bfa' },
+              ].map(d => {
+                const span = 2025 - 1970
+                const left = ((d.from - 1970) / span) * 100
+                const width = ((d.to - d.from) / span) * 100
+                return (
+                  <div key={d.label} className="flex items-center gap-3">
+                    <span className="text-[10px] text-slate-400 w-40 shrink-0 text-right">{d.label}</span>
+                    <div className="flex-1 h-3 bg-slate-800 rounded-full relative overflow-hidden">
+                      <div className="absolute h-full rounded-full" style={{ left: `${left}%`, width: `${width}%`, background: d.color, opacity: 0.6 }} />
+                    </div>
+                    <span className="text-[10px] text-slate-600 w-20 shrink-0">{d.from}–{d.to}</span>
+                  </div>
+                )
+              })}
+              <div className="flex items-center gap-3">
+                <span className="w-40 shrink-0" />
+                <div className="flex-1 flex justify-between px-1">
+                  {[1970, 1980, 1990, 2000, 2010, 2020].map(y => (
+                    <span key={y} className="text-[9px] text-slate-700">{y}</span>
+                  ))}
+                </div>
+                <span className="w-20 shrink-0" />
+              </div>
+            </div>
+          </div>
+
           <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 space-y-3">
             <p className="text-white font-bold text-sm">Career Views — Why Not Store Rates?</p>
             <p className="text-slate-400 text-xs leading-relaxed">
@@ -255,6 +293,35 @@ export default function Portfolio() {
                       <p className="text-white text-sm font-semibold">{s.title}</p>
                       <p className="text-slate-500 text-xs leading-relaxed">{s.desc}</p>
                     </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Draft multipliers visual */}
+            <div>
+              <p className="text-white font-bold text-sm mb-3">Draft-derived positional value multipliers:</p>
+              <p className="text-slate-500 text-xs mb-3">Based on 55 years of NFL draft data (average pick + round-1 frequency). Higher = more draft capital invested in the position historically.</p>
+              <div className="space-y-1.5">
+                {[
+                  { pos: 'EDGE', mult: 1.20, color: '#f59e0b' },
+                  { pos: 'QB',   mult: 1.14, color: '#f59e0b' },
+                  { pos: 'S',    mult: 1.09, color: '#f59e0b' },
+                  { pos: 'DT',   mult: 1.07, color: '#f59e0b' },
+                  { pos: 'WR',   mult: 0.98, color: '#94a3b8' },
+                  { pos: 'RB',   mult: 0.96, color: '#94a3b8' },
+                  { pos: 'CB',   mult: 0.95, color: '#94a3b8' },
+                  { pos: 'TE',   mult: 0.91, color: '#64748b' },
+                  { pos: 'LB',   mult: 0.89, color: '#64748b' },
+                  { pos: 'K',    mult: 0.72, color: '#475569' },
+                  { pos: 'P',    mult: 0.70, color: '#475569' },
+                ].map(p => (
+                  <div key={p.pos} className="flex items-center gap-2">
+                    <span className="text-xs font-mono font-bold w-10 text-slate-300 shrink-0">{p.pos}</span>
+                    <div className="flex-1 h-4 rounded-full bg-slate-800 overflow-hidden">
+                      <div className="h-full rounded-full" style={{ width: `${(p.mult / 1.20) * 100}%`, background: p.color, opacity: 0.7 }} />
+                    </div>
+                    <span className="text-xs font-mono w-10 text-right" style={{ color: p.color }}>{p.mult.toFixed(2)}</span>
                   </div>
                 ))}
               </div>
@@ -342,17 +409,20 @@ export default function Portfolio() {
 
           {/* Other AI features */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-5 space-y-2">
+            <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-5 space-y-3">
               <p className="text-white font-bold text-sm">Player Similarity</p>
               <p className="text-slate-400 text-xs leading-relaxed">
                 <span className="text-slate-200">Problem:</span> "Who plays like Patrick Mahomes?" can't be answered with a single stat lookup — it requires
                 multi-dimensional comparison across an entire position group.
               </p>
-              <p className="text-slate-400 text-xs leading-relaxed">
-                <span className="text-slate-200">Approach:</span> Cosine similarity on per-game career stat vectors, z-score normalized within position
-                groups (QB, RB, WR, TE, DEF). Each group uses position-relevant stats only. sklearn StandardScaler prevents high-magnitude
-                stats from dominating. Claude then generates natural-language explanations for each match — what aligns, what differs, and why.
-              </p>
+              <div className="flex flex-wrap items-center gap-1.5 py-1">
+                {['Career stats', 'Per-game normalize', 'Z-score (StandardScaler)', 'Cosine similarity', 'Top 5 matches', 'AI explanation'].map((s, i) => (
+                  <div key={i} className="flex items-center gap-1.5">
+                    <span className="text-[9px] bg-slate-800 border border-slate-700 text-slate-400 px-2 py-1 rounded">{s}</span>
+                    {i < 5 && <span className="text-amber-500/60 text-[9px]">&rarr;</span>}
+                  </div>
+                ))}
+              </div>
             </div>
             <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-5 space-y-2">
               <p className="text-white font-bold text-sm">Career Insights</p>
