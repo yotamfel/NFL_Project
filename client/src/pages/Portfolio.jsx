@@ -1,0 +1,481 @@
+import { useNavigate } from 'react-router-dom'
+
+const PLATFORM_URL = 'https://fourth-and-data.up.railway.app'
+
+const Arrow = () => <div className="text-amber-500 text-xl font-bold text-center py-1">&#8595;</div>
+
+const FlowBox = ({ title, sub, color = 'slate' }) => (
+  <div className={`rounded-xl border px-4 py-3 text-center bg-${color}-900/40 border-${color}-700/60`}>
+    <p className="text-white font-bold text-sm">{title}</p>
+    {sub && <p className="text-slate-400 text-xs mt-0.5">{sub}</p>}
+  </div>
+)
+
+const Stat = ({ value, label }) => (
+  <div className="text-center">
+    <p className="text-2xl font-black text-amber-400">{value}</p>
+    <p className="text-slate-500 text-xs mt-1">{label}</p>
+  </div>
+)
+
+const Decision = ({ title, why }) => (
+  <div className="border-l-2 border-amber-500/40 pl-4 py-1">
+    <p className="text-white font-semibold text-sm">{title}</p>
+    <p className="text-slate-400 text-xs leading-relaxed mt-1">{why}</p>
+  </div>
+)
+
+export default function Portfolio() {
+  const navigate = useNavigate()
+
+  return (
+    <div className="min-h-screen bg-slate-950 text-slate-300">
+      <div className="max-w-4xl mx-auto px-6 py-12 space-y-16">
+
+        {/* Hero */}
+        <header className="text-center space-y-4 pt-8">
+          <p className="text-amber-500 text-xs font-bold uppercase tracking-[0.25em]">Data Engineering Portfolio</p>
+          <h1 className="text-5xl font-black text-white tracking-tight leading-tight">Fourth & Data</h1>
+          <p className="text-slate-400 text-lg max-w-2xl mx-auto leading-relaxed">
+            A full-stack NFL analytics platform built from scratch — from raw data recovery and ETL pipeline design to AI-powered natural language search and a proprietary career value metric.
+          </p>
+          <div className="flex justify-center gap-4 pt-2">
+            <a href={PLATFORM_URL} target="_blank" rel="noopener noreferrer"
+              className="px-6 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-sm transition-colors">
+              View Live Platform
+            </a>
+            <a href="https://github.com/yotamfel/NFL_Project" target="_blank" rel="noopener noreferrer"
+              className="px-6 py-2.5 border border-slate-700 hover:border-slate-500 text-slate-300 rounded-xl text-sm transition-colors">
+              GitHub
+            </a>
+          </div>
+        </header>
+
+        {/* Key Numbers */}
+        <section className="bg-slate-900/60 border border-slate-800 rounded-2xl p-8">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
+            <Stat value="19,000+" label="Players tracked" />
+            <Stat value="440K+" label="Data rows" />
+            <Stat value="56" label="Seasons covered (1970-2025)" />
+            <Stat value="66" label="API endpoints" />
+          </div>
+        </section>
+
+        {/* Architecture */}
+        <section className="space-y-6">
+          <div>
+            <p className="text-amber-500 text-xs font-bold uppercase tracking-widest mb-1">Architecture</p>
+            <h2 className="text-2xl font-black text-white">System Overview</h2>
+          </div>
+          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-8">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {/* Frontend */}
+              <div className="rounded-xl bg-blue-950/40 border border-blue-800/40 p-5 space-y-3">
+                <p className="text-blue-400 text-xs font-bold uppercase tracking-wider">Frontend</p>
+                <p className="text-white font-bold">React 19 + Vite 8</p>
+                <ul className="text-xs text-slate-400 space-y-1.5">
+                  <li>Tailwind CSS v4 for styling</li>
+                  <li>Recharts for interactive charts</li>
+                  <li>React Router v7 for navigation</li>
+                  <li>html-to-image for PNG export</li>
+                  <li>Bilingual UI (English + Hebrew)</li>
+                </ul>
+              </div>
+              {/* Backend */}
+              <div className="rounded-xl bg-green-950/40 border border-green-800/40 p-5 space-y-3">
+                <p className="text-green-400 text-xs font-bold uppercase tracking-wider">Backend</p>
+                <p className="text-white font-bold">FastAPI + Python</p>
+                <ul className="text-xs text-slate-400 space-y-1.5">
+                  <li>SQLAlchemy ORM + raw SQL</li>
+                  <li>JWT auth with refresh tokens</li>
+                  <li>Claude API (Anthropic SDK)</li>
+                  <li>scikit-learn for ML models</li>
+                  <li>17 router modules, 66 endpoints</li>
+                </ul>
+              </div>
+              {/* Data */}
+              <div className="rounded-xl bg-violet-950/40 border border-violet-800/40 p-5 space-y-3">
+                <p className="text-violet-400 text-xs font-bold uppercase tracking-wider">Data Layer</p>
+                <p className="text-white font-bold">PostgreSQL 17 (Neon)</p>
+                <ul className="text-xs text-slate-400 space-y-1.5">
+                  <li>14 base tables + 6 career views</li>
+                  <li>440K+ rows, fully normalized</li>
+                  <li>nflverse ETL pipeline (Polars)</li>
+                  <li>Automated via run_etl.py</li>
+                  <li>Serverless cloud DB</li>
+                </ul>
+              </div>
+            </div>
+            <p className="text-xs text-slate-600 text-center mt-4">
+              Single Docker container on Railway — FastAPI serves the React SPA from the same process.
+            </p>
+          </div>
+        </section>
+
+        {/* Data Pipeline */}
+        <section className="space-y-6">
+          <div>
+            <p className="text-amber-500 text-xs font-bold uppercase tracking-widest mb-1">ETL Pipeline</p>
+            <h2 className="text-2xl font-black text-white">Data Flow</h2>
+            <p className="text-slate-400 text-sm mt-2">
+              All data originates from nflverse — an open-source NFL data ecosystem. The pipeline transforms raw play-by-play
+              and seasonal statistics into clean, analysis-ready tables through a multi-stage process.
+            </p>
+          </div>
+          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-8 space-y-3">
+            {/* Pipeline flow */}
+            <div className="rounded-xl bg-amber-950/30 border border-amber-700/30 px-4 py-3 text-center">
+              <p className="text-amber-400 font-bold text-sm">nflverse Data Sources</p>
+              <p className="text-slate-500 text-xs mt-0.5">load_player_stats() &middot; load_pbp() &middot; load_schedules() &middot; load_rosters()</p>
+            </div>
+            <Arrow />
+            <div className="rounded-xl bg-slate-800/60 border border-slate-700/40 px-4 py-3 text-center">
+              <p className="text-white font-bold text-sm">Step 1: supplement_seasons.py</p>
+              <p className="text-slate-500 text-xs mt-0.5">
+                Compute formulas (passer rating, ANY/A, success rates) &middot; Derive games, longest plays, QB records from play-by-play &middot; Seed new players
+              </p>
+            </div>
+            <Arrow />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="rounded-xl bg-slate-800/60 border border-slate-700/40 px-4 py-3 text-center">
+                <p className="text-white font-bold text-sm">Step 2: Career Views</p>
+                <p className="text-slate-500 text-xs mt-0.5">SUM counting stats &middot; MAX for longest plays &middot; Exclude rate columns</p>
+              </div>
+              <div className="rounded-xl bg-slate-800/60 border border-slate-700/40 px-4 py-3 text-center">
+                <p className="text-white font-bold text-sm">Step 3: FDV Scoring</p>
+                <p className="text-slate-500 text-xs mt-0.5">11 position formulas &middot; Era z-scoring &middot; Longevity decay &middot; Cross-position normalization</p>
+              </div>
+            </div>
+            <Arrow />
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {['Injuries\n2009+', 'Snap Counts\n2013+', 'NGS Stats\n2016+', 'Adv Receiving\n2016+'].map(t => (
+                <div key={t} className="rounded-xl bg-slate-800/60 border border-slate-700/40 px-3 py-2.5 text-center">
+                  <p className="text-slate-300 text-xs font-semibold whitespace-pre-line">{t}</p>
+                </div>
+              ))}
+            </div>
+            <Arrow />
+            <div className="rounded-xl bg-green-950/30 border border-green-700/30 px-4 py-3 text-center">
+              <p className="text-green-400 font-bold text-sm">PostgreSQL (Neon Cloud)</p>
+              <p className="text-slate-500 text-xs mt-0.5">14 tables &middot; 6 career views &middot; 440K+ rows &middot; Ready for API</p>
+            </div>
+          </div>
+        </section>
+
+        {/* Database Schema */}
+        <section className="space-y-6">
+          <div>
+            <p className="text-amber-500 text-xs font-bold uppercase tracking-widest mb-1">Database</p>
+            <h2 className="text-2xl font-black text-white">Schema Design</h2>
+            <p className="text-slate-400 text-sm mt-2">
+              Star schema centered on the <code className="text-amber-400/80">players</code> table. Six stat categories each have
+              a season-level table and a derived career view. All supplementary tables link back via player_id.
+            </p>
+          </div>
+          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl overflow-hidden">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="bg-slate-800/80 text-slate-400">
+                  <th className="text-left px-5 py-3 font-medium">Table</th>
+                  <th className="text-right px-5 py-3 font-medium">Rows</th>
+                  <th className="text-left px-5 py-3 font-medium">Coverage</th>
+                  <th className="text-left px-5 py-3 font-medium">Purpose</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/60">
+                {[
+                  ['players', '19,000+', '1970-2025', 'Canonical identity hub + FDV score'],
+                  ['passing_seasons', '5,800+', '1970-2025', 'Per-season QB stats with passer rating, ANY/A, 4QC, GWD'],
+                  ['offense_seasons', '15,300+', '1970-2025', 'Combined rushing + receiving per player per season'],
+                  ['defense_seasons', '38,800+', '1970-2025', 'Tackles, sacks, INTs, PD, FF per season'],
+                  ['kicking_seasons', '1,600+', '1970-2025', 'FG/XP by distance bucket, kickoff stats'],
+                  ['punting_seasons', '1,100+', '1970-2025', 'Gross/net yards, inside-20, touchbacks'],
+                  ['returns_seasons', '5,900+', '1970-2025', 'Punt/kick returns + all-purpose yards'],
+                  ['injuries', '59,000+', '2009-2025', 'Weekly injury report status per player'],
+                  ['snap_counts', '305,000+', '2013-2025', 'Weekly off/def/ST snap percentages'],
+                  ['draft', '16,800+', '1970-2025', 'Every draft pick with college and career link'],
+                  ['combine_seasons', '8,600+', '2000-2025', '40-yard dash, vertical, bench, shuttle'],
+                  ['adv_receiving', '4,300+', '2016-2025', 'ADOT, YAC, separation, drop rate (NGS + PFR)'],
+                  ['ngs_passing', '400+', '2016-2025', 'Time to throw, CPOE, aggressiveness'],
+                  ['ngs_rushing', '500+', '2016-2025', 'Efficiency, RYOE, time to LOS, 8-box %'],
+                ].map(([name, rows, cov, desc]) => (
+                  <tr key={name} className="hover:bg-slate-800/30">
+                    <td className="px-5 py-2.5 text-amber-400/90 font-mono font-semibold">{name}</td>
+                    <td className="px-5 py-2.5 text-right text-white font-semibold">{rows}</td>
+                    <td className="px-5 py-2.5 text-slate-500">{cov}</td>
+                    <td className="px-5 py-2.5 text-slate-400">{desc}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 space-y-3">
+            <p className="text-white font-bold text-sm">Career Views — Why Not Store Rates?</p>
+            <p className="text-slate-400 text-xs leading-relaxed">
+              The six <code className="text-amber-400/80">*_career</code> views aggregate season tables into lifetime totals, but deliberately
+              <strong className="text-white"> exclude rate columns</strong> (completion %, yards per attempt, FG%, etc.). Averaging a rate across
+              seasons of different lengths produces misleading numbers — a QB with 95% completion rate in a 2-game season shouldn't skew his career average.
+              Instead, rates are recomputed at query time from summed counting stats: <code className="text-amber-400/80">100.0 * SUM(cmp) / NULLIF(SUM(att), 0)</code>.
+            </p>
+          </div>
+        </section>
+
+        {/* FDV */}
+        <section className="space-y-6">
+          <div>
+            <p className="text-amber-500 text-xs font-bold uppercase tracking-widest mb-1">Proprietary Metric</p>
+            <h2 className="text-2xl font-black text-white">FDV — Fourth & Data Value</h2>
+            <p className="text-slate-400 text-sm mt-2">
+              A position-aware career quality metric designed to replace PFR's Approximate Value. Built entirely from this platform's own
+              statistical data with transparent, auditable formulas.
+            </p>
+          </div>
+          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-8 space-y-6">
+            {/* FDV Pipeline */}
+            <div className="space-y-3">
+              <p className="text-white font-bold text-sm">How FDV is computed (5 layers):</p>
+              <div className="space-y-2">
+                {[
+                  { step: '1', title: 'Position-specific raw score', desc: '11 tailored formulas (QB, RB, WR, TE, EDGE, DT, LB, CB, S, K, P) — each weights the stats that matter most at that position.' },
+                  { step: '2', title: 'Era normalization', desc: 'Z-scored against same-position peers in the same season year. A great 1978 season counts the same as a great 2023 season.' },
+                  { step: '3', title: 'Season FDV calculation', desc: 'Formula: max(0, 6 + 3z) × (games / full_season), capped at 18 per season. Games-ratio adjustment prevents part-season inflation.' },
+                  { step: '4', title: 'Career aggregation with longevity decay', desc: 'Top 10 seasons at full value, seasons 11-13 at 50%, seasons 14+ at 30%. Prevents longevity alone from inflating scores.' },
+                  { step: '5', title: 'Cross-position normalization + draft multiplier', desc: 'Career FDV is z-scored within position group, then scaled by a draft-derived positional value multiplier (0.70 for P to 1.20 for EDGE).' },
+                ].map(s => (
+                  <div key={s.step} className="flex gap-3">
+                    <span className="shrink-0 w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 text-xs font-bold flex items-center justify-center mt-0.5">{s.step}</span>
+                    <div>
+                      <p className="text-white text-sm font-semibold">{s.title}</p>
+                      <p className="text-slate-500 text-xs leading-relaxed">{s.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* FDV Scale */}
+            <div>
+              <p className="text-white font-bold text-sm mb-3">Scale reference:</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {[
+                  { range: '< 30', label: 'Depth / minimal impact', color: '#475569' },
+                  { range: '30-50', label: 'Backup / role player', color: '#64748b' },
+                  { range: '50-70', label: 'Solid multi-year starter', color: '#3b82f6' },
+                  { range: '70-90', label: 'Pro Bowl-level career', color: '#f59e0b' },
+                  { range: '90-130', label: 'Star / borderline HOF', color: '#f97316' },
+                  { range: '130+', label: 'Hall of Fame level', color: '#a78bfa' },
+                ].map(s => (
+                  <div key={s.range} className="flex items-center gap-2 rounded-lg bg-slate-800/60 px-3 py-2">
+                    <span className="text-xs font-mono font-bold w-12 shrink-0" style={{ color: s.color }}>{s.range}</span>
+                    <span className="text-xs text-slate-400">{s.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-slate-800/60 rounded-xl p-4">
+              <p className="text-white font-bold text-sm mb-2">Why build a new metric?</p>
+              <p className="text-slate-400 text-xs leading-relaxed">
+                PFR's Career Approximate Value (AV) uses an undisclosed formula that can't be independently reproduced or
+                commercially distributed. FDV provides full transparency — every coefficient, threshold, and normalization
+                step is documented and auditable. It also improves on AV by using position-specific formulas rather than
+                a one-size-fits-all approach, and by incorporating era adjustment so historical players are compared fairly.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* AI Features */}
+        <section className="space-y-6">
+          <div>
+            <p className="text-amber-500 text-xs font-bold uppercase tracking-widest mb-1">AI Integration</p>
+            <h2 className="text-2xl font-black text-white">Claude-Powered Features</h2>
+            <p className="text-slate-400 text-sm mt-2">
+              Five AI-powered features, all using Claude Sonnet 4.6 via the Anthropic API with structured safety layers.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {[
+              {
+                title: 'Smart Search',
+                desc: 'Natural language (English or Hebrew) translated to SQL via Claude. A regex safety layer rejects writes, DDL, and multi-statement queries before they reach the database. Returns results + AI-generated insight + auto-chart.',
+                detail: 'Full schema provided to Claude as system prompt. Row limit 200. All queries logged with tokens, latency, and user feedback.',
+              },
+              {
+                title: 'Player Similarity',
+                desc: 'Cosine similarity on per-game career stat vectors, grouped by position (QB, RB, WR, TE, DEF). Uses sklearn StandardScaler for normalization.',
+                detail: 'AI generates one-sentence explanations for each similar player, covering shared strengths and key differences.',
+              },
+              {
+                title: 'Career Insights',
+                desc: 'Claude writes a 3-5 sentence analytical paragraph about any player\'s career. Covers trajectory, peak seasons, and historical context.',
+                detail: 'Results cached 24 hours in-memory. User 👍/👎 feedback stored in ai_query_log for quality tracking.',
+              },
+              {
+                title: 'Comparison Narrative',
+                desc: 'When comparing 2-4 players, Claude writes a 4-6 sentence analysis highlighting who leads in each metric, stylistic differences, and an overall verdict.',
+                detail: 'Works across all 6 stat categories and in both career and single-season modes.',
+              },
+            ].map(f => (
+              <div key={f.title} className="bg-slate-900/60 border border-slate-800 rounded-xl p-5 space-y-2">
+                <p className="text-white font-bold text-sm">{f.title}</p>
+                <p className="text-slate-400 text-xs leading-relaxed">{f.desc}</p>
+                <p className="text-slate-600 text-xs leading-relaxed">{f.detail}</p>
+              </div>
+            ))}
+          </div>
+          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 space-y-3">
+            <p className="text-white font-bold text-sm">AI Safety Architecture</p>
+            <div className="flex flex-wrap gap-2 items-center justify-center">
+              {['User question', 'Claude generates SQL', 'Regex safety filter', 'Execute read-only', 'Claude analyzes results', 'Return insight + chart'].map((s, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <span className="text-xs bg-slate-800 border border-slate-700 text-slate-300 px-3 py-1.5 rounded-lg">{s}</span>
+                  {i < 5 && <span className="text-amber-500 font-bold">&rarr;</span>}
+                </div>
+              ))}
+            </div>
+            <p className="text-slate-500 text-xs text-center">
+              The safety filter rejects INSERT, UPDATE, DELETE, DROP, ALTER, TRUNCATE, and multi-statement queries. Only single SELECT/WITH statements pass through.
+            </p>
+          </div>
+        </section>
+
+        {/* Key Decisions */}
+        <section className="space-y-6">
+          <div>
+            <p className="text-amber-500 text-xs font-bold uppercase tracking-widest mb-1">Engineering Decisions</p>
+            <h2 className="text-2xl font-black text-white">Why We Built It This Way</h2>
+          </div>
+          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-8 space-y-5">
+            <Decision
+              title="Full rebuild over patching"
+              why="Legacy data had 4 distinct corruption patterns from a Power BI export pipeline — date-encoded integers, mangled QB records, broken hyphenated surnames, and UTF-8 mojibake. Surgical fixes would have been fragile. Instead, we rebuilt from raw CSV exports, writing a dedicated corruption_fixes.py module that recovers each pattern deterministically."
+            />
+            <Decision
+              title="nflverse over web scraping"
+              why="Originally the platform scraped Pro Football Reference via Selenium. We migrated to nflverse (open-source NFL data ecosystem) for reliability — no Cloudflare challenges, no HTML structure changes, and the data is already cleaned. All formulas (passer rating, ANY/A, success rate) are re-derived from raw counts and verified against published values."
+            />
+            <Decision
+              title="Play-by-play derived stats over pre-computed aggregates"
+              why="nflverse's pre-computed wide table had known inaccuracies — games played was off by 38-78% depending on category, and defensive TD counts were provably wrong (Taron Johnson 2024: 2 real TDs, wide table reported 1). We derive games, touchdowns, fumbles, first downs, longest plays, 4QC, and GWD directly from play-by-play, which reproduces PFR's own figures at 99%+ accuracy."
+            />
+            <Decision
+              title="Position-specific FDV over universal scoring"
+              why="A single formula can't capture what makes a great kicker vs. a great edge rusher. FDV uses 11 tailored formulas, each weighting the stats that differentiate elite from average at that position. Era z-scoring ensures a dominant 1978 season scores the same as a dominant 2023 season."
+            />
+            <Decision
+              title="Career views exclude rate columns"
+              why="Averaging rates across seasons of different lengths is statistically misleading. A 95% completion rate in a 2-game season shouldn't weight equally with 65% over 16 games. Career views only store counting stats (SUM) and longest plays (MAX). Rates are recomputed at query time from the summed counts."
+            />
+            <Decision
+              title="Three-stage draft linking"
+              why="Draft picks don't ship with player IDs. We link them in three stages: (1) combine cross-reference for 81% of picks with zero ambiguity, (2) string matching on name + position + school for 16%, and (3) manual review for the remaining 3% of ambiguous cases."
+            />
+            <Decision
+              title="Single Docker container deployment"
+              why="The React SPA is built at Docker build time and served as static files from the FastAPI process. No nginx, no separate static host — one container, one port. Simplifies deployment and keeps the free-tier footprint minimal."
+            />
+          </div>
+        </section>
+
+        {/* Data Recovery */}
+        <section className="space-y-6">
+          <div>
+            <p className="text-amber-500 text-xs font-bold uppercase tracking-widest mb-1">Data Engineering</p>
+            <h2 className="text-2xl font-black text-white">Data Recovery & Quality</h2>
+          </div>
+          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-8">
+            <p className="text-slate-400 text-sm leading-relaxed mb-4">
+              The original dataset was exported through Power BI, which introduced 4 distinct corruption patterns.
+              Each was identified, diagnosed, and reversed programmatically:
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {[
+                { pattern: 'Date-encoded integers', desc: 'Small integers (1-31) silently converted to Excel date serial numbers. Reversed by detecting the date-range pattern and inverting the encoding.', example: '15 → 42385 → 15' },
+                { pattern: 'QB Win-Loss records', desc: 'Records like "12-5" parsed as dates or fractions. Recovered by pattern-matching the corrupted format back to W-L-T notation.', example: '"12-5" → 0.416... → "12-5"' },
+                { pattern: 'Hyphenated surnames', desc: 'Names like "Smith-Schuster" had hyphens stripped or split across columns. Fixed by cross-referencing with the stable player ID column.', example: 'SmithSchuster → Smith-Schuster' },
+                { pattern: 'UTF-8 mojibake', desc: 'Non-ASCII characters (accents, special chars) garbled by encoding mismatch. Detected and corrected per-character.', example: 'GarcÃ­a → García' },
+              ].map(p => (
+                <div key={p.pattern} className="bg-slate-800/60 rounded-xl p-4 space-y-2">
+                  <p className="text-white font-semibold text-sm">{p.pattern}</p>
+                  <p className="text-slate-500 text-xs leading-relaxed">{p.desc}</p>
+                  <p className="text-amber-400/70 text-xs font-mono">{p.example}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* PBP Derivation */}
+        <section className="space-y-6">
+          <div>
+            <p className="text-amber-500 text-xs font-bold uppercase tracking-widest mb-1">Play-by-Play Engineering</p>
+            <h2 className="text-2xl font-black text-white">What We Derive from Raw Plays</h2>
+          </div>
+          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-8">
+            <p className="text-slate-400 text-sm leading-relaxed mb-4">
+              Rather than trusting pre-aggregated stats (which have known inaccuracies), we derive 15+ fields directly from
+              nflverse play-by-play data — every snap of every game. This gives us provably higher accuracy.
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {[
+                { field: 'Games played (g)', method: 'Distinct game_id per player per category-specific role' },
+                { field: 'QB record (qbrec)', method: 'Wins/losses from load_schedules() starting QB data' },
+                { field: '4th-quarter comebacks', method: 'Games trailing in Q4/OT where team won, credited to QB with most Q4 pass attempts' },
+                { field: 'Game-winning drives', method: 'Last go-ahead scoring play in Q4/OT, credited to the drive\'s QB' },
+                { field: 'Success rates', method: 'PFR methodology: 1st down ≥40%, 2nd ≥60%, 3rd/4th = first down or TD' },
+                { field: 'Longest plays', method: 'MAX(passing_yards), MAX(rushing_yards), MAX(receiving_yards) from PBP' },
+                { field: 'INT return TDs', method: 'Per-play interception attribution (more accurate than wide-table aggregate)' },
+                { field: 'Fumble recovery TDs', method: 'fumble_recovery_1/2 player attribution from PBP' },
+                { field: 'First downs', method: 'first_down_pass/rush flags per play, attributed to passer/rusher/receiver' },
+              ].map(f => (
+                <div key={f.field} className="bg-slate-800/60 rounded-lg p-3">
+                  <p className="text-white text-xs font-semibold">{f.field}</p>
+                  <p className="text-slate-500 text-[10px] leading-relaxed mt-1">{f.method}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Tech Stack Summary */}
+        <section className="space-y-6">
+          <div>
+            <p className="text-amber-500 text-xs font-bold uppercase tracking-widest mb-1">Stack</p>
+            <h2 className="text-2xl font-black text-white">Full Technology Stack</h2>
+          </div>
+          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-8">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              {[
+                { cat: 'Frontend', items: ['React 19', 'Vite 8', 'Tailwind CSS 4', 'Recharts 3.8', 'React Router 7'] },
+                { cat: 'Backend', items: ['Python / FastAPI', 'SQLAlchemy 2', 'Pydantic 2', 'Uvicorn', 'JWT (python-jose)'] },
+                { cat: 'AI / ML', items: ['Claude Sonnet 4.6', 'Anthropic SDK', 'scikit-learn', 'Cosine similarity', 'NL-to-SQL'] },
+                { cat: 'Data / Infra', items: ['PostgreSQL 17', 'Neon (serverless)', 'nflreadpy / Polars', 'Docker', 'Railway'] },
+              ].map(g => (
+                <div key={g.cat}>
+                  <p className="text-amber-400 text-xs font-bold uppercase tracking-wider mb-2">{g.cat}</p>
+                  <ul className="space-y-1.5">
+                    {g.items.map(i => (
+                      <li key={i} className="text-slate-300 text-xs">{i}</li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Footer CTA */}
+        <footer className="text-center space-y-4 pb-12">
+          <a href={PLATFORM_URL} target="_blank" rel="noopener noreferrer"
+            className="inline-block px-8 py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-sm transition-colors">
+            Explore the Live Platform
+          </a>
+          <p className="text-slate-600 text-xs">
+            Built by Yotam &middot; Data Analyst &middot; 2025-2026
+          </p>
+        </footer>
+      </div>
+    </div>
+  )
+}

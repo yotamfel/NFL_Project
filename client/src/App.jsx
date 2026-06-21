@@ -23,6 +23,7 @@ import Privacy from './pages/Privacy'
 import FdvPage from './pages/FdvPage'
 import SourcesPage from './pages/SourcesPage'
 import ContentHistory from './pages/ContentHistory'
+import Portfolio from './pages/Portfolio'
 import Onboarding from './components/Onboarding'
 import Footer from './components/Footer'
 
@@ -48,10 +49,11 @@ function AppInner() {
     return user ? <Navigate to="/" replace /> : <Auth />
   }
 
-  if (['/about', '/privacy', '/methodology'].includes(location.pathname)) {
+  if (['/about', '/privacy', '/methodology', '/portfolio'].includes(location.pathname)) {
     if (location.pathname === '/about')       return <About />
     if (location.pathname === '/privacy')     return <Privacy />
     if (location.pathname === '/methodology') return <FdvPage />
+    if (location.pathname === '/portfolio')   return <Portfolio />
   }
 
   if (!user) {

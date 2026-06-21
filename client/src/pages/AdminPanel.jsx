@@ -22,6 +22,10 @@ export default function AdminPanel() {
           <h1 className="text-2xl font-bold text-white">Admin Panel</h1>
           <p className="text-slate-400 text-sm mt-0.5">Platform management</p>
         </div>
+        <a href="/portfolio" target="_blank" rel="noopener noreferrer"
+          className="text-xs px-3 py-1.5 rounded-lg border border-amber-500/30 text-amber-400 hover:bg-amber-500/10 transition-colors">
+          Portfolio Page
+        </a>
       </div>
 
       {/* Tabs */}
