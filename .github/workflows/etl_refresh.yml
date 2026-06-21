@@ -65,7 +65,7 @@ jobs:
       # ── Weekly game-level stats ──────────────────────────────────────────
       - name: Load weekly stats
         working-directory: etl
-        run: python -c "import sys; sys.path.insert(0,'.'); from load_weekly_stats import load_weekly_stats; load_weekly_stats()"
+        run: python load_weekly_stats.py
 
       # ── Rebuild career aggregation views ─────────────────────────────────
       - name: Rebuild career views

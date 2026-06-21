@@ -386,10 +386,25 @@ def main():
     eng2 = get_engine()
     with eng2.begin() as conn:
         conn.execute(text('ALTER TABLE players ADD COLUMN IF NOT EXISTS fdv NUMERIC(6,1)'))
+        conn.execute(text(
+            'CREATE TEMP TABLE _fdv_tmp (player_id TEXT PRIMARY KEY, fdv NUMERIC(6,1))'
+        ))
+        from io import StringIO
+        import csv as _csv
+        buf = StringIO()
+        w = _csv.writer(buf)
         for _, r in result.iterrows():
-            conn.execute(text('UPDATE players SET fdv=:f WHERE player_id=:p'),
-                         {'f': float(r['fdv']), 'p': r['player_id']})
-    print('Done.')
+            w.writerow([r['player_id'], round(float(r['fdv']), 1)])
+        buf.seek(0)
+        raw = conn.connection.cursor()
+        raw.copy_expert('COPY _fdv_tmp FROM STDIN WITH CSV', buf)
+        conn.execute(text(
+            'UPDATE players p SET fdv = t.fdv FROM _fdv_tmp t WHERE p.player_id = t.player_id'
+        ))
+        conn.execute(text(
+            'UPDATE players SET fdv = NULL WHERE player_id NOT IN (SELECT player_id FROM _fdv_tmp)'
+        ))
+    print(f'Done. {len(result):,} players updated.')
 
 
 if __name__ == '__main__':

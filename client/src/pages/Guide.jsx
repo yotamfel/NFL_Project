@@ -245,7 +245,7 @@ const CONTENT = {
         subsections: [
           {
             title: 'What are anomaly alerts?',
-            body: 'The "Statistical Anomalies" section on the homepage surfaces players who are having statistically unusual seasons. The ETL runs every Wednesday during the regular season and pulls cumulative season-to-date stats from PFR — the anomaly engine re-runs immediately after, so alerts always reflect the most recently played week. Outside the season (March–August) they show the previous full season.',
+            body: 'The "Statistical Anomalies" section on the homepage surfaces players who are having statistically unusual seasons. The ETL runs every Wednesday during the regular season and pulls cumulative season-to-date stats from nflverse — the anomaly engine re-runs immediately after, so alerts always reflect the most recently played week. Outside the season (March–August) they show the previous full season.',
           },
           {
             title: 'Alert types',
@@ -701,7 +701,7 @@ const CONTENT = {
         subsections: [
           {
             title: 'מה זה Anomaly Alerts?',
-            body: 'החלק "Statistical Anomalies" בדף הבית מציג שחקנים עם עונות סטטיסטיות חריגות. ה-ETL רץ כל רביעי במהלך עונת הסדרה ומושך נתוני עונה-מצטברים מ-PFR. מיד לאחר מכן מחשב מחדש את כל החריגות — כך שהן תמיד משקפות את הנתונים המצטברים עד השבוע האחרון ששוחק. מחוץ לעונה (מרץ–אוגוסט) מוצגת העונה הקודמת בשלמותה.',
+            body: 'החלק "Statistical Anomalies" בדף הבית מציג שחקנים עם עונות סטטיסטיות חריגות. ה-ETL רץ כל רביעי במהלך עונת הסדרה ומושך נתוני עונה-מצטברים מ-nflverse. מיד לאחר מכן מחשב מחדש את כל החריגות — כך שהן תמיד משקפות את הנתונים המצטברים עד השבוע האחרון ששוחק. מחוץ לעונה (מרץ–אוגוסט) מוצגת העונה הקודמת בשלמותה.',
           },
           {
             title: 'סוגי התראות',
