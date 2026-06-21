@@ -77,7 +77,7 @@ export default function Portfolio() {
           <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-8">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {/* Frontend */}
-              <div className="rounded-xl bg-blue-950/40 border border-blue-800/40 p-5 space-y-3">
+              <div className="rounded-xl border p-5 space-y-3" style={{ background: 'rgba(23,37,84,0.4)', borderColor: 'rgba(30,64,175,0.4)' }}>
                 <p className="text-blue-400 text-xs font-bold uppercase tracking-wider">Frontend</p>
                 <p className="text-white font-bold">React 19 + Vite 8</p>
                 <ul className="text-xs text-slate-400 space-y-1.5">
@@ -89,7 +89,7 @@ export default function Portfolio() {
                 </ul>
               </div>
               {/* Backend */}
-              <div className="rounded-xl bg-green-950/40 border border-green-800/40 p-5 space-y-3">
+              <div className="rounded-xl border p-5 space-y-3" style={{ background: 'rgba(5,46,22,0.4)', borderColor: 'rgba(22,101,52,0.4)' }}>
                 <p className="text-green-400 text-xs font-bold uppercase tracking-wider">Backend</p>
                 <p className="text-white font-bold">FastAPI + Python</p>
                 <ul className="text-xs text-slate-400 space-y-1.5">
@@ -101,7 +101,7 @@ export default function Portfolio() {
                 </ul>
               </div>
               {/* Data */}
-              <div className="rounded-xl bg-violet-950/40 border border-violet-800/40 p-5 space-y-3">
+              <div className="rounded-xl border p-5 space-y-3" style={{ background: 'rgba(46,16,101,0.4)', borderColor: 'rgba(91,33,182,0.4)' }}>
                 <p className="text-violet-400 text-xs font-bold uppercase tracking-wider">Data Layer</p>
                 <p className="text-white font-bold">PostgreSQL 17 (Neon)</p>
                 <ul className="text-xs text-slate-400 space-y-1.5">
@@ -131,7 +131,7 @@ export default function Portfolio() {
           </div>
           <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-8 space-y-3">
             {/* Pipeline flow */}
-            <div className="rounded-xl bg-amber-950/30 border border-amber-700/30 px-4 py-3 text-center">
+            <div className="rounded-xl border px-4 py-3 text-center" style={{ background: 'rgba(69,26,3,0.3)', borderColor: 'rgba(180,83,9,0.3)' }}>
               <p className="text-amber-400 font-bold text-sm">nflverse Data Sources</p>
               <p className="text-slate-500 text-xs mt-0.5">load_player_stats() &middot; load_pbp() &middot; load_schedules() &middot; load_rosters()</p>
             </div>
@@ -162,7 +162,7 @@ export default function Portfolio() {
               ))}
             </div>
             <Arrow />
-            <div className="rounded-xl bg-green-950/30 border border-green-700/30 px-4 py-3 text-center">
+            <div className="rounded-xl border px-4 py-3 text-center" style={{ background: 'rgba(5,46,22,0.3)', borderColor: 'rgba(21,128,61,0.3)' }}>
               <p className="text-green-400 font-bold text-sm">PostgreSQL (Neon Cloud)</p>
               <p className="text-slate-500 text-xs mt-0.5">14 tables &middot; 6 career views &middot; 440K+ rows &middot; Ready for API</p>
             </div>
