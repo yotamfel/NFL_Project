@@ -176,6 +176,7 @@ export const api = {
   scoutQuery: (question) => post('/scout', { question }),
   generateContent: (platform, data, context) => post('/content/generate', { platform, data, context }),
   getContentHistory: () => get('/content/history'),
+  patchContent: (id, body) => patch(`/content/${id}`, body),
   deleteContent: (id) => del(`/content/${id}`),
   assignToProjects: (savedItemId, projectIds) => post('/projects/assign', { saved_item_id: savedItemId, project_ids: projectIds }),
 

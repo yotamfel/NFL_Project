@@ -186,8 +186,17 @@ def _run_migrations():
                 platform         TEXT NOT NULL,
                 content_text     TEXT NOT NULL,
                 source_context   TEXT,
-                created_at       TIMESTAMPTZ DEFAULT now()
+                source_data      TEXT,
+                regenerate_count INT DEFAULT 0,
+                created_at       TIMESTAMPTZ DEFAULT now(),
+                updated_at       TIMESTAMPTZ DEFAULT now()
             )
+        """))
+        conn.execute(text("""
+            ALTER TABLE generated_content
+                ADD COLUMN IF NOT EXISTS source_data TEXT,
+                ADD COLUMN IF NOT EXISTS regenerate_count INT DEFAULT 0,
+                ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT now()
         """))
 
 

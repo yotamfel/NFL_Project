@@ -22,7 +22,7 @@ import About from './pages/About'
 import Privacy from './pages/Privacy'
 import FdvPage from './pages/FdvPage'
 import SourcesPage from './pages/SourcesPage'
-// Scout merged into NaturalSearch (Smart Search)
+import ContentHistory from './pages/ContentHistory'
 import Onboarding from './components/Onboarding'
 import Footer from './components/Footer'
 
@@ -81,7 +81,7 @@ function AppInner() {
             <Route path="/about"           element={<About />} />
             <Route path="/privacy"         element={<Privacy />} />
             <Route path="/methodology"     element={<FdvPage />} />
-            {/* Scout merged into Smart Search */}
+            {user?.is_admin && <Route path="/content-history" element={<ContentHistory />} />}
             <Route path="/sources"          element={<SourcesPage />} />
           </Routes>
         </main>

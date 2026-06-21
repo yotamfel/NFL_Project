@@ -83,13 +83,15 @@ def generate_content(body: ContentBody, user: dict = Depends(require_admin)):
 
     uid = int(user["sub"])
     content_str = content if isinstance(content, str) else json.dumps(content)
+    data_str = json.dumps(body.data, default=str)[:10000]
     with engine.begin() as conn:
         row = conn.execute(text("""
-            INSERT INTO generated_content (user_id, platform, content_text, source_context)
-            VALUES (:uid, :platform, :content, :context)
+            INSERT INTO generated_content (user_id, platform, content_text, source_context, source_data)
+            VALUES (:uid, :platform, :content, :context, :data)
             RETURNING id, created_at
         """), {"uid": uid, "platform": body.platform,
-               "content": content_str, "context": body.context[:500]}).fetchone()
+               "content": content_str, "context": body.context[:500],
+               "data": data_str}).fetchone()
 
     return {"id": row.id, "platform": body.platform, "content": content,
             "created_at": str(row.created_at)}
@@ -107,6 +109,68 @@ def content_history(user: dict = Depends(require_admin)):
             LIMIT 100
         """), {"uid": uid}).fetchall()
     return [dict(r._mapping) for r in rows]
+
+
+class PatchContentBody(BaseModel):
+    content_text: str | None = None
+    regenerate: bool = False
+
+
+@router.patch("/{content_id}")
+def patch_content(content_id: int, body: PatchContentBody, user: dict = Depends(require_admin)):
+    uid = int(user["sub"])
+    with engine.begin() as conn:
+        row = conn.execute(text(
+            "SELECT id, platform, source_context, source_data, regenerate_count FROM generated_content WHERE id = :id AND user_id = :uid"
+        ), {"id": content_id, "uid": uid}).fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Content not found")
+
+        if body.regenerate:
+            if row.regenerate_count >= 3:
+                raise HTTPException(status_code=422, detail="Regeneration limit reached (max 3)")
+            if not ANTHROPIC_API_KEY:
+                raise HTTPException(status_code=503, detail="AI features not configured")
+            if not row.source_data:
+                raise HTTPException(status_code=422, detail="No source data stored for regeneration")
+
+            prompt = PROMPTS[row.platform].format(
+                data=row.source_data[:6000],
+                context=(row.source_context or "")[:500],
+            )
+            client = Anthropic(api_key=ANTHROPIC_API_KEY)
+            resp = client.messages.create(
+                model=MODEL, max_tokens=1000,
+                messages=[{"role": "user", "content": prompt}],
+                timeout=20,
+            )
+            raw = "".join(b.text for b in resp.content if b.type == "text").strip()
+            if row.platform == "twitter":
+                new_content = raw[:280]
+            else:
+                try:
+                    new_content = json.dumps(json.loads(raw))
+                except json.JSONDecodeError:
+                    new_content = raw
+
+            updated = conn.execute(text("""
+                UPDATE generated_content
+                SET content_text = :content, regenerate_count = regenerate_count + 1, updated_at = now()
+                WHERE id = :id AND user_id = :uid
+                RETURNING id, platform, content_text, source_context, regenerate_count, created_at, updated_at
+            """), {"content": new_content, "id": content_id, "uid": uid}).fetchone()
+            return dict(updated._mapping)
+
+        if body.content_text is not None:
+            updated = conn.execute(text("""
+                UPDATE generated_content
+                SET content_text = :content, updated_at = now()
+                WHERE id = :id AND user_id = :uid
+                RETURNING id, platform, content_text, source_context, regenerate_count, created_at, updated_at
+            """), {"content": body.content_text, "id": content_id, "uid": uid}).fetchone()
+            return dict(updated._mapping)
+
+    return {"ok": True}
 
 
 @router.delete("/{content_id}", status_code=204)
