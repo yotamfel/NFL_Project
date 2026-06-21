@@ -214,7 +214,7 @@ const CONTENT = {
         subsections: [
           {
             title: 'How it works',
-            body: 'Type any question in natural English. The AI (Claude) translates your question into a SQL query, runs it against the database, and analyzes the results. You get three things: an AI-written insight summarizing what the data shows, an auto-generated chart when the data fits (bar, line, or scatter), and the full results table.',
+            body: 'Type any question in natural English. The AI (Claude) translates your question into a SQL query and runs it against the database. You get the generated SQL (expandable) and a full results table with CSV export.',
           },
           {
             title: 'Example questions',
@@ -670,7 +670,7 @@ const CONTENT = {
         subsections: [
           {
             title: 'איך זה עובד',
-            body: 'הקלד שאלה חופשית באנגלית. ה-AI (Claude) מתרגם את השאלה ל-SQL, מריץ אותה מול בסיס הנתונים, ומנתח את התוצאות. מתקבלים שלושה דברים: תובנת AI שמסכמת את מה שהנתונים מראים, גרף אוטומטי כשהנתונים מתאימים (עמודות, קו, או פיזור), וטבלת תוצאות מלאה.',
+            body: 'הקלד שאלה חופשית באנגלית. ה-AI (Claude) מתרגם את השאלה ל-SQL ומריץ אותה מול בסיס הנתונים. מתקבלים ה-SQL שנוצר (ניתן להרחבה) וטבלת תוצאות מלאה עם אפשרות ייצוא CSV.',
           },
           {
             title: 'דוגמאות לשאלות',

@@ -409,8 +409,8 @@ export default function Portfolio() {
               <p className="text-slate-400 text-xs leading-relaxed mt-2">
                 <span className="text-white font-medium">The solution:</span> Users type questions in plain English (or Hebrew). Claude receives
                 the full database schema as a system prompt — every table, column, coverage window, and data quirk — and generates a single
-                read-only SQL query. The query runs, and a second AI pass analyzes the results: generating a 2-4 sentence insight summary
-                and an auto-fitted chart (bar, line, or scatter) when the data shape fits.
+                read-only SQL query. The basic tier returns the SQL and a results table. The Pro tier (in development) adds a second AI pass
+                that analyzes the results: generating a 2-4 sentence insight summary and an auto-fitted chart (bar, line, or scatter).
               </p>
               <p className="text-slate-400 text-xs leading-relaxed mt-2">
                 <span className="text-white font-medium">Why this approach:</span> Rather than building a rigid form-based query builder
@@ -420,7 +420,7 @@ export default function Portfolio() {
               </p>
             </div>
             <div className="bg-slate-800/60 rounded-xl p-4 space-y-2">
-              <p className="text-slate-300 text-xs font-semibold">Two-step flow:</p>
+              <p className="text-slate-300 text-xs font-semibold">Two-tier architecture:</p>
               <div className="flex flex-wrap gap-2 items-center justify-center">
                 {['User question', 'Claude generates SQL', 'Regex safety filter', 'Execute read-only', 'Claude analyzes results', 'Return insight + chart'].map((s, i) => (
                   <div key={i} className="flex items-center gap-2">
