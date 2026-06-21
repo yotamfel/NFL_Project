@@ -62,10 +62,20 @@ jobs:
         working-directory: etl
         run: python run_ngs_stats.py
 
+      # ── Weekly game-level stats ──────────────────────────────────────────
+      - name: Load weekly stats
+        working-directory: etl
+        run: python -c "import sys; sys.path.insert(0,'.'); from load_weekly_stats import load_weekly_stats; load_weekly_stats()"
+
       # ── Rebuild career aggregation views ─────────────────────────────────
       - name: Rebuild career views
         working-directory: etl
         run: python build_career_views.py
+
+      # ── Rebuild FDV scores ───────────────────────────────────────────────
+      - name: Rebuild FDV
+        working-directory: etl
+        run: python build_fdv_v3.py --write
 
       # ── Anomaly detection (runs last, needs updated career views) ────────
       - name: Detect season anomalies

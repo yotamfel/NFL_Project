@@ -76,8 +76,8 @@ function AppInner() {
             <Route path="/saved"           element={<Saved />} />
             <Route path="/trends"          element={<LeagueTrends />} />
             <Route path="/guide"           element={<Guide />} />
-            <Route path="/admin/ai"        element={<AdminAi />} />
-            <Route path="/admin"           element={<AdminPanel />} />
+            {user?.is_admin && <Route path="/admin/ai" element={<AdminAi />} />}
+            {user?.is_admin && <Route path="/admin"   element={<AdminPanel />} />}
             <Route path="/anomalies"       element={<Anomalies />} />
             <Route path="/feedback"        element={<Feedback />} />
             <Route path="/about"           element={<About />} />
