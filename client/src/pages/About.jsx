@@ -67,7 +67,7 @@ export default function About() {
           ))}
         </div>
         <p className="text-slate-500 text-xs pt-2 border-t border-slate-700/40">
-          These features are in development and will be available soon.
+          These features are in development and will be available soon. The core platform will always be free — down the road, some advanced tools may be offered as optional Pro features for power users.
         </p>
       </div>
 
