@@ -179,10 +179,19 @@ Return ONLY a valid JSON array of strings (one paragraph per player, same order)
         cleaned = cleaned.rsplit("```", 1)[0]
     cleaned = cleaned.strip()
 
+    def _normalize(text):
+        return (text
+            .replace("—", "-").replace("–", "-")
+            .replace("‘", "'").replace("’", "'")
+            .replace("“", '"').replace("”", '"')
+            .replace("…", "...")
+            .replace("é", "e").replace("è", "e")
+            .replace("à", "a").replace("ñ", "n"))
+
     try:
         explanations = json.loads(cleaned)
         if isinstance(explanations, list) and len(explanations) >= len(similar):
-            return explanations[:len(similar)]
+            return [_normalize(e) if isinstance(e, str) else e for e in explanations[:len(similar)]]
     except (json.JSONDecodeError, TypeError):
         pass
 
