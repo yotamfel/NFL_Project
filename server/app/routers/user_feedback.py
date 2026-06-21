@@ -253,13 +253,20 @@ def admin_stats(admin: dict = Depends(_require_admin)):
 @router.get("/admin/feature-usage")
 def admin_feature_usage(admin: dict = Depends(_require_admin)):
     with engine.connect() as conn:
-        page_views_all = conn.execute(text("""
+        page_views_raw = conn.execute(text("""
             SELECT page, COUNT(*) as total,
                    COUNT(*) FILTER (WHERE created_at > now() - INTERVAL '7 days') as views_7d,
                    COUNT(*) FILTER (WHERE created_at > now() - INTERVAL '30 days') as views_30d
             FROM page_views
-            GROUP BY page ORDER BY total DESC
+            GROUP BY page
         """)).fetchall()
+        pv_map = {r.page: dict(r._mapping) for r in page_views_raw}
+        all_pages = ['players', 'profile', 'comparison', 'draft', 'search', 'trends', 'anomalies', 'saved', 'guide']
+        page_views_all = [
+            pv_map.get(p, {"page": p, "total": 0, "views_7d": 0, "views_30d": 0})
+            for p in all_pages
+        ]
+        page_views_all.sort(key=lambda x: x["total"], reverse=True)
         page_views_daily = conn.execute(text("""
             SELECT DATE(created_at) as day, COUNT(*) as views
             FROM page_views
@@ -294,7 +301,7 @@ def admin_feature_usage(admin: dict = Depends(_require_admin)):
             GROUP BY category ORDER BY count DESC
         """)).fetchall()
     return {
-        "page_views":     [dict(r._mapping) for r in page_views_all],
+        "page_views":     page_views_all,
         "daily_views":    [dict(r._mapping) for r in page_views_daily],
         "ai_features_7d": [dict(r._mapping) for r in features_7d],
         "ai_features_30d":[dict(r._mapping) for r in features_30d],
