@@ -1095,21 +1095,32 @@ def weekly_trend(
             return {"error": "Position not supported"}
 
         rows = c.execute(text(f"""
-            SELECT week,
+            SELECT week, posteam, defteam,
                    COUNT(*) as plays,
                    ROUND(AVG(epa)::numeric, 3) as epa_per_play,
                    ROUND(SUM(epa)::numeric, 1) as total_epa,
                    ROUND(AVG(CASE WHEN success = 1 THEN 100.0 ELSE 0.0 END)::numeric, 1) as success_rate,
-                   ROUND(AVG(yards_gained)::numeric, 1) as avg_yards
+                   ROUND(AVG(yards_gained)::numeric, 1) as avg_yards,
+                   MAX(posteam_score_post) as team_score,
+                   MAX(defteam_score_post) as opp_score
             FROM pbp
             WHERE {id_col} = :pid AND season = :season AND epa IS NOT NULL
                   AND {base} AND season_type = 'REG'
-            GROUP BY week ORDER BY week
+            GROUP BY week, posteam, defteam ORDER BY week
         """), {"pid": gsis, "season": yr}).fetchall()
+
+        data = []
+        for r in rows:
+            d = dict(r._mapping)
+            ts, os_ = d.pop("team_score", None), d.pop("opp_score", None)
+            d["result"] = "W" if ts and os_ and ts > os_ else "L" if ts and os_ and ts < os_ else "T" if ts is not None else None
+            d["score"] = f"{int(ts)}-{int(os_)}" if ts is not None and os_ is not None else None
+            d["opponent"] = d.pop("defteam", None)
+            data.append(d)
 
     return {
         "player": player.player_name,
         "player_id": player_id,
         "season": yr,
-        "data": [dict(r._mapping) for r in rows],
+        "data": data,
     }

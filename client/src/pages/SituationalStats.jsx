@@ -1528,6 +1528,7 @@ function WeeklyTrendSection({ players, season }) {
   const [data, setData] = useState({})
   const [loading, setLoading] = useState(false)
   const [hoverBar, setHoverBar] = useState(null)
+  const [drillWeek, setDrillWeek] = useState(null)
 
   useEffect(() => {
     if (players.length === 0) { setData({}); return }
@@ -1593,46 +1594,73 @@ function WeeklyTrendSection({ players, season }) {
       </div>
 
       {/* Legend */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 flex-wrap">
         {players.map((p, i) => (
           <span key={p.player_id} className="flex items-center gap-1.5 text-xs">
             <span className="w-3 h-3 rounded-full" style={{ background: colors[i] }} />
             <span className="text-white font-medium">{p.player_name}</span>
           </span>
         ))}
-        <span className="text-[10px] text-slate-600 ml-auto">Bars up = positive EPA, bars down = negative. Hover for details.</span>
+        <span className="flex items-center gap-1 text-[10px] text-slate-600">
+          <span className="w-6 border-t-2 border-dashed" style={{ borderColor: '#f59e0b', opacity: 0.5 }} /> 3-week rolling avg
+        </span>
+        <span className="text-[10px] text-slate-600 ml-auto">Click a bar to see plays. <span className="text-emerald-500">W</span> = win, <span className="text-red-400">L</span> = loss.</span>
       </div>
 
       {/* Chart */}
       <div className="overflow-x-auto">
-        <div className="flex items-end gap-1 min-w-[600px]" style={{ height: barH + 40 }}>
-          {allWeeks.map(week => (
-            <div key={week} className="flex-1 flex flex-col items-center">
-              <div className="relative w-full flex justify-center gap-0.5" style={{ height: barH }}>
-                {players.map((p, pi) => {
-                  const wd = (data[p.player_id]?.data || []).find(w => w.week === week)
-                  if (!wd) return <div key={pi} className="w-4" />
-                  const epa = wd.epa_per_play || 0
-                  const h = Math.max(Math.abs(epa) / maxAbsEpa * (barH / 2), 2)
-                  const isPos = epa >= 0
-                  return (
-                    <div key={pi} className="relative w-4 cursor-pointer" style={{ height: barH }}
-                      onMouseEnter={e => showBar(e, pi, wd, week)} onMouseLeave={() => setHoverBar(null)}>
-                      <div className={`absolute ${isPos ? 'bottom-1/2' : 'top-1/2'} left-0 right-0 rounded-sm transition-all hover:opacity-100`}
-                        style={{ height: h, background: colors[pi], opacity: 0.8 }} />
-                      {/* avg line marker */}
-                      {(() => {
-                        const avgH = (barH / 2) * (avgs[pi] / maxAbsEpa)
-                        return <div className="absolute left-0 right-0 border-t border-dashed" style={{ bottom: `${50 + (avgH / barH * 100)}%`, borderColor: colors[pi], opacity: 0.3 }} />
-                      })()}
-                    </div>
-                  )
-                })}
+        <div className="relative min-w-[600px]" style={{ height: barH + 55 }}>
+          <div className="flex items-end gap-1 absolute inset-0" style={{ height: barH }}>
+            {allWeeks.map((week, wi) => (
+              <div key={week} className="flex-1 flex flex-col items-center">
+                <div className="relative w-full flex justify-center gap-0.5" style={{ height: barH }}>
+                  {players.map((p, pi) => {
+                    const wd = (data[p.player_id]?.data || []).find(w => w.week === week)
+                    if (!wd) return <div key={pi} className="w-4" />
+                    const epa = wd.epa_per_play || 0
+                    const h = Math.max(Math.abs(epa) / maxAbsEpa * (barH / 2), 2)
+                    const isPos = epa >= 0
+                    return (
+                      <div key={pi} className="relative w-4 cursor-pointer" style={{ height: barH }}
+                        onMouseEnter={e => showBar(e, pi, wd, week)} onMouseLeave={() => setHoverBar(null)}
+                        onClick={() => setDrillWeek(drillWeek?.week === week && drillWeek?.pi === pi ? null : { week, pi })}>
+                        <div className={`absolute ${isPos ? 'bottom-1/2' : 'top-1/2'} left-0 right-0 rounded-sm transition-all`}
+                          style={{ height: h, background: colors[pi], opacity: drillWeek?.week === week ? 1 : 0.8 }} />
+                      </div>
+                    )
+                  })}
+                </div>
+                {/* Win/loss + week label */}
+                <div className="h-px w-full bg-slate-700" />
+                <div className="flex gap-0.5 mt-0.5">
+                  {players.map((p, pi) => {
+                    const wd = (data[p.player_id]?.data || []).find(w => w.week === week)
+                    if (!wd?.result) return <span key={pi} className="text-[7px] w-3 text-center text-slate-800">-</span>
+                    return <span key={pi} className={`text-[7px] w-3 text-center font-bold ${wd.result === 'W' ? 'text-emerald-500' : 'text-red-400'}`}>{wd.result}</span>
+                  })}
+                </div>
+                <span className="text-[9px] text-slate-600">{week}</span>
               </div>
-              <div className="h-px w-full bg-slate-700 mt-0" />
-              <span className="text-xs text-slate-600 mt-1">W{week}</span>
-            </div>
-          ))}
+            ))}
+          </div>
+          {/* Rolling average SVG overlay */}
+          <svg className="absolute inset-0 pointer-events-none" width="100%" height={barH} style={{ overflow: 'visible' }}>
+            {players.map((p, pi) => {
+              const weeks = (data[p.player_id]?.data || []).sort((a, b) => a.week - b.week)
+              if (weeks.length < 3) return null
+              const rollingPts = []
+              for (let j = 1; j < weeks.length - 1; j++) {
+                const avg3 = (weeks[j-1].epa_per_play + weeks[j].epa_per_play + weeks[j+1].epa_per_play) / 3
+                const wi = allWeeks.indexOf(weeks[j].week)
+                if (wi < 0) continue
+                const x = ((wi + 0.5) / allWeeks.length) * 100
+                const y = barH / 2 - (avg3 / maxAbsEpa) * (barH / 2)
+                rollingPts.push(`${x}%,${y}`)
+              }
+              if (rollingPts.length < 2) return null
+              return <polyline key={pi} points={rollingPts.join(' ')} fill="none" stroke={colors[pi]} strokeWidth={2} strokeDasharray="4,3" opacity={0.6} />
+            })}
+          </svg>
         </div>
       </div>
 
@@ -1643,9 +1671,24 @@ function WeeklyTrendSection({ players, season }) {
           <p className="font-bold" style={{ color: colors[hoverBar.pi] }}>Week {hoverBar.week} - {players[hoverBar.pi]?.player_name}</p>
           <p className="text-slate-300">
             EPA/play: <span className={hoverBar.wd.epa_per_play >= 0 ? 'text-emerald-400' : 'text-red-400'}>{hoverBar.wd.epa_per_play}</span>
-            {' '}| Total: {hoverBar.wd.total_epa} | Success: {hoverBar.wd.success_rate}% | {hoverBar.wd.plays} plays | {hoverBar.wd.avg_yards} yds
+            {' '}| Total: {hoverBar.wd.total_epa} | Success: {hoverBar.wd.success_rate}%
+            {' '}| {hoverBar.wd.plays} plays | {hoverBar.wd.avg_yards} yds
           </p>
+          {hoverBar.wd.opponent && <p className="text-slate-500">vs {hoverBar.wd.opponent} {hoverBar.wd.score && `(${hoverBar.wd.score})`} {hoverBar.wd.result && <span className={hoverBar.wd.result === 'W' ? 'text-emerald-400' : 'text-red-400'}>{hoverBar.wd.result}</span>}</p>}
         </div>
+      )}
+
+      {/* Drill into week plays */}
+      {drillWeek && (
+        <PlayLogPanel
+          body={{
+            season,
+            filters: [],
+            season_type: 'REG',
+            player_id: players[drillWeek.pi]?.player_id,
+            drill: { field: 'week', value: drillWeek.week },
+          }}
+          onClose={() => setDrillWeek(null)} />
       )}
 
       {/* Weekly table */}
@@ -1660,6 +1703,8 @@ function WeeklyTrendSection({ players, season }) {
                 <thead>
                   <tr className="text-slate-600 border-b border-slate-800">
                     <th className="text-left py-1 px-1">Week</th>
+                    <th className="text-left py-1 px-1">Opp</th>
+                    <th className="text-center py-1 px-1">W/L</th>
                     <th className="text-right py-1 px-1">EPA/play<Tip stat="epa_per_play" /></th>
                     <th className="text-right py-1 px-1">Total EPA<Tip stat="total_epa" /></th>
                     <th className="text-right py-1 px-1">Success%<Tip stat="success_rate" /></th>
@@ -1669,8 +1714,14 @@ function WeeklyTrendSection({ players, season }) {
                 </thead>
                 <tbody>
                   {weeks.map(w => (
-                    <tr key={w.week} className="border-b border-slate-800/30">
-                      <td className="py-1 px-1 text-slate-400">Week {w.week}</td>
+                    <tr key={w.week} className="border-b border-slate-800/30 hover:bg-slate-800/20 cursor-pointer"
+                      onClick={() => setDrillWeek({ week: w.week, pi })}>
+                      <td className="py-1 px-1 text-slate-400">W{w.week}</td>
+                      <td className="py-1 px-1 text-slate-400">{w.opponent || '-'}</td>
+                      <td className="py-1 px-1 text-center">
+                        {w.result && <span className={`font-bold ${w.result === 'W' ? 'text-emerald-400' : 'text-red-400'}`}>{w.result}</span>}
+                        {w.score && <span className="text-slate-600 ml-0.5 text-[9px]">{w.score}</span>}
+                      </td>
                       <td className="py-1 px-1 text-right"><EpaColorCell val={w.epa_per_play} /></td>
                       <td className="py-1 px-1 text-right"><EpaColorCell val={w.total_epa} /></td>
                       <td className="py-1 px-1 text-right text-slate-300">{w.success_rate}%</td>
