@@ -1,0 +1,530 @@
+"""Situational Stats - EPA, splits, play-action, formations, heatmaps."""
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy import text
+from typing import Optional
+
+from app.auth import require_admin
+from app.db import engine
+
+router = APIRouter(prefix="/situational", tags=["situational"])
+
+# Position -> min plays for meaningful sample
+MIN_PLAYS = {"QB": 200, "RB": 80, "WR": 50, "TE": 30, "DEFAULT": 50}
+
+
+def _min_plays(pos: str) -> int:
+    return MIN_PLAYS.get(pos, MIN_PLAYS["DEFAULT"])
+
+
+def _latest_season():
+    with engine.connect() as c:
+        return c.execute(text("SELECT MAX(season) FROM pbp")).scalar() or 2025
+
+
+# ── EPA Rankings ──────────────────────────────────────────────────────────────
+
+@router.get("/epa-rankings")
+def epa_rankings(
+    position: str = Query("QB"),
+    season: Optional[int] = None,
+    season_type: str = Query("REG"),
+    min_plays: Optional[int] = None,
+    user: dict = Depends(require_admin),
+):
+    yr = season or _latest_season()
+    mp = min_plays or _min_plays(position)
+
+    pos_map = {
+        "QB": ("passer_player_id", "passer_player_name", "pass_attempt = 1"),
+        "RB": ("rusher_player_id", "rusher_player_name", "rush_attempt = 1"),
+        "WR": ("receiver_player_id", "receiver_player_name", "pass_attempt = 1 AND receiver_player_id IS NOT NULL"),
+        "TE": ("receiver_player_id", "receiver_player_name", "pass_attempt = 1 AND receiver_player_id IS NOT NULL"),
+    }
+    if position not in pos_map:
+        return []
+
+    id_col, name_col, where = pos_map[position]
+    st_filter = "" if season_type == "ALL" else f"AND season_type = '{season_type}'"
+
+    sql = text(f"""
+        WITH player_epa AS (
+            SELECT {id_col} as player_id, {name_col} as player_name, posteam as team,
+                   COUNT(*) as plays,
+                   ROUND(AVG(epa)::numeric, 3) as epa_per_play,
+                   ROUND(SUM(epa)::numeric, 1) as total_epa,
+                   ROUND(AVG(wpa)::numeric, 4) as wpa_per_play,
+                   ROUND(SUM(wpa)::numeric, 3) as total_wpa,
+                   ROUND(AVG(CASE WHEN success = 1 THEN 1.0 ELSE 0.0 END)::numeric * 100, 1) as success_rate
+            FROM pbp
+            WHERE season = :season AND {where} AND {id_col} IS NOT NULL
+                  AND epa IS NOT NULL {st_filter}
+            GROUP BY {id_col}, {name_col}, posteam
+            HAVING COUNT(*) >= :min_plays
+        )
+        SELECT pe.*,
+               p.fdv, p.pos,
+               d.round as draft_round, d.draft_year
+        FROM player_epa pe
+        LEFT JOIN players p ON p.player_id = pe.player_id
+        LEFT JOIN draft d ON d.player_id = pe.player_id
+        ORDER BY epa_per_play DESC
+        LIMIT 50
+    """)
+
+    with engine.connect() as c:
+        rows = c.execute(sql, {"season": yr, "min_plays": mp}).fetchall()
+    return {"season": yr, "position": position, "data": [dict(r._mapping) for r in rows]}
+
+
+# ── Clutch Rankings (WPA in high-leverage) ────────────────────────────────────
+
+@router.get("/clutch-rankings")
+def clutch_rankings(
+    position: str = Query("QB"),
+    season: Optional[int] = None,
+    user: dict = Depends(require_admin),
+):
+    yr = season or _latest_season()
+    pos_map = {
+        "QB": ("passer_player_id", "passer_player_name", "pass_attempt = 1"),
+        "RB": ("rusher_player_id", "rusher_player_name", "rush_attempt = 1"),
+        "WR": ("receiver_player_id", "receiver_player_name", "pass_attempt = 1 AND receiver_player_id IS NOT NULL"),
+    }
+    if position not in pos_map:
+        return []
+
+    id_col, name_col, where = pos_map[position]
+
+    sql = text(f"""
+        SELECT {id_col} as player_id, {name_col} as player_name, posteam as team,
+               COUNT(*) as clutch_plays,
+               ROUND(SUM(wpa)::numeric, 3) as clutch_wpa,
+               ROUND(AVG(wpa)::numeric, 4) as clutch_wpa_per_play,
+               ROUND(AVG(epa)::numeric, 3) as clutch_epa_per_play
+        FROM pbp
+        WHERE season = :season AND {where} AND {id_col} IS NOT NULL
+              AND wpa IS NOT NULL AND season_type = 'REG'
+              AND game_seconds_remaining <= 300
+              AND ABS(score_differential) <= 8
+        GROUP BY {id_col}, {name_col}, posteam
+        HAVING COUNT(*) >= 20
+        ORDER BY clutch_wpa DESC
+        LIMIT 30
+    """)
+
+    with engine.connect() as c:
+        rows = c.execute(sql, {"season": yr}).fetchall()
+    return {"season": yr, "position": position, "data": [dict(r._mapping) for r in rows]}
+
+
+# ── Situational Splits ────────────────────────────────────────────────────────
+
+@router.get("/splits/{player_id}")
+def situational_splits(
+    player_id: str,
+    season: Optional[int] = None,
+    user: dict = Depends(require_admin),
+):
+    yr = season or _latest_season()
+
+    with engine.connect() as c:
+        player = c.execute(text(
+            "SELECT player_name, pos FROM players WHERE player_id = :pid"
+        ), {"pid": player_id}).fetchone()
+        if not player:
+            return {"error": "Player not found"}
+
+        pos = player.pos or ""
+        is_qb = pos in ("QB",)
+        is_rb = pos in ("RB", "FB", "HB")
+        is_wr_te = pos in ("WR", "TE", "FL", "SE")
+
+        if is_qb:
+            id_col = "passer_player_id"
+            base_filter = "pass_attempt = 1"
+        elif is_rb:
+            id_col = "rusher_player_id"
+            base_filter = "rush_attempt = 1"
+        elif is_wr_te:
+            id_col = "receiver_player_id"
+            base_filter = "pass_attempt = 1 AND receiver_player_id IS NOT NULL"
+        else:
+            return {"player": player.player_name, "pos": pos, "splits": {}, "note": "Position not supported for splits"}
+
+        def _split(label, extra_where="", source="pbp"):
+            full_where = f"{base_filter} AND {id_col} = :pid AND season = :season AND epa IS NOT NULL"
+            if extra_where:
+                full_where += f" AND {extra_where}"
+
+            row = c.execute(text(f"""
+                SELECT COUNT(*) as plays,
+                       ROUND(AVG(epa)::numeric, 3) as epa_per_play,
+                       ROUND(SUM(epa)::numeric, 1) as total_epa,
+                       ROUND(AVG(wpa)::numeric, 4) as wpa_per_play,
+                       ROUND(AVG(CASE WHEN success = 1 THEN 1.0 ELSE 0.0 END)::numeric * 100, 1) as success_rate,
+                       ROUND(AVG(yards_gained)::numeric, 1) as avg_yards
+                FROM pbp
+                WHERE {full_where}
+            """), {"pid": player_id, "season": yr}).fetchone()
+
+            d = dict(row._mapping) if row else {}
+            d["label"] = label
+            d["source"] = source
+            return d
+
+        splits = {}
+        splits["overall"] = _split("Overall")
+        splits["red_zone"] = _split("Red Zone", "yardline_100 <= 20")
+        splits["third_down"] = _split("3rd Down", "down = 3")
+
+        # Clutch
+        splits["clutch"] = _split("Clutch (last 5 min, close game)",
+            "game_seconds_remaining <= 300 AND ABS(score_differential) <= 8")
+
+        # Quarter splits
+        for q in [1, 2, 3, 4]:
+            splits[f"q{q}"] = _split(f"Quarter {q}", f"qtr = {q}")
+
+        # Home / Away
+        splits["home"] = _split("Home", f"posteam = home_team")
+        splits["away"] = _split("Away", f"posteam = away_team")
+
+        # Divisional
+        splits["divisional"] = _split("vs Division", "div_game = 1")
+
+        # Weather
+        splits["cold"] = _split("Cold (<40F)", "temp < 40 AND temp IS NOT NULL")
+        splits["dome"] = _split("Dome", "roof = 'dome' OR roof = 'closed'")
+        splits["outdoor"] = _split("Outdoor", "roof = 'outdoors' OR roof = 'open'")
+
+        # Position-specific
+        if is_qb:
+            splits["deep"] = _split("Deep passes (20+ air yards)", "air_yards >= 20")
+            splits["short"] = _split("Short passes (<10 air yards)", "air_yards < 10")
+            splits["no_huddle"] = _split("No-Huddle", "no_huddle = 1")
+            splits["shotgun"] = _split("Shotgun", "shotgun = 1")
+            splits["under_center"] = _split("Under Center", "shotgun = 0")
+
+        elif is_rb:
+            splits["short_yardage"] = _split("Short Yardage (<=2 to go)", "ydstogo <= 2")
+            splits["goal_line"] = _split("Goal Line (<=5 yards)", "yardline_100 <= 5")
+            splits["run_left"] = _split("Run Left", "run_location = 'left'")
+            splits["run_middle"] = _split("Run Middle", "run_location = 'middle'")
+            splits["run_right"] = _split("Run Right", "run_location = 'right'")
+
+        elif is_wr_te:
+            splits["deep_targets"] = _split("Deep Targets (20+ air yards)", "air_yards >= 20")
+            splits["short_targets"] = _split("Short Targets (<10 air yards)", "air_yards < 10")
+            splits["left"] = _split("Targets Left", "pass_location = 'left'")
+            splits["middle"] = _split("Targets Middle", "pass_location = 'middle'")
+            splits["right"] = _split("Targets Right", "pass_location = 'right'")
+
+        # Enrichments from existing DB
+        enrichment = {}
+        fdv_row = c.execute(text("SELECT fdv FROM players WHERE player_id = :pid"), {"pid": player_id}).fetchone()
+        if fdv_row and fdv_row.fdv:
+            enrichment["fdv"] = float(fdv_row.fdv)
+
+        inj_row = c.execute(text("""
+            SELECT COUNT(*) FILTER (WHERE report_status = 'Out') as games_out
+            FROM injuries WHERE player_id = :pid AND season = :season
+        """), {"pid": player_id, "season": yr}).fetchone()
+        if inj_row:
+            enrichment["games_missed"] = inj_row.games_out
+
+        snap_row = c.execute(text("""
+            SELECT ROUND(AVG(offense_pct)::numeric * 100, 1) as avg_snap_pct
+            FROM snap_counts WHERE player_id = :pid AND season = :season AND game_type = 'REG'
+        """), {"pid": player_id, "season": yr}).fetchone()
+        if snap_row and snap_row.avg_snap_pct:
+            enrichment["avg_snap_pct"] = float(snap_row.avg_snap_pct)
+
+        draft_row = c.execute(text(
+            "SELECT round, pick, draft_year FROM draft WHERE player_id = :pid"
+        ), {"pid": player_id}).fetchone()
+        if draft_row:
+            enrichment["draft"] = {"round": draft_row.round, "pick": draft_row.pick, "year": draft_row.draft_year}
+
+    return {
+        "player": player.player_name,
+        "player_id": player_id,
+        "pos": pos,
+        "season": yr,
+        "splits": splits,
+        "enrichment": enrichment,
+    }
+
+
+# ── Play-Action Analysis (FTN, 2022+) ────────────────────────────────────────
+
+@router.get("/play-action/{player_id}")
+def play_action_analysis(
+    player_id: str,
+    season: Optional[int] = None,
+    user: dict = Depends(require_admin),
+):
+    yr = season or _latest_season()
+    if yr < 2022:
+        return {"error": "Play-action data available from 2022 only"}
+
+    sql = text("""
+        WITH pa AS (
+            SELECT
+                f.is_play_action,
+                p.epa, p.complete_pass, p.passing_yards, p.air_yards,
+                p.yards_after_catch, p.success
+            FROM pbp p
+            JOIN ftn_charting f ON f.nflverse_game_id = p.game_id
+                AND f.nflverse_play_id = p.play_id
+            WHERE p.passer_player_id = :pid AND p.season = :season
+                  AND p.pass_attempt = 1 AND p.sack = 0
+                  AND p.epa IS NOT NULL AND f.is_play_action IS NOT NULL
+        )
+        SELECT
+            is_play_action,
+            COUNT(*) as plays,
+            ROUND(AVG(epa)::numeric, 3) as epa_per_play,
+            ROUND(AVG(CASE WHEN complete_pass = 1 THEN 100.0 ELSE 0.0 END)::numeric, 1) as comp_pct,
+            ROUND(AVG(passing_yards)::numeric, 1) as avg_yards,
+            ROUND(AVG(air_yards)::numeric, 1) as avg_air_yards,
+            ROUND(AVG(yards_after_catch)::numeric, 1) as avg_yac,
+            ROUND(AVG(CASE WHEN success = 1 THEN 100.0 ELSE 0.0 END)::numeric, 1) as success_rate
+        FROM pa
+        GROUP BY is_play_action
+    """)
+
+    with engine.connect() as c:
+        player = c.execute(text("SELECT player_name FROM players WHERE player_id = :pid"), {"pid": player_id}).fetchone()
+        rows = c.execute(sql, {"pid": player_id, "season": yr}).fetchall()
+
+    data = {}
+    for r in rows:
+        key = "with_play_action" if r.is_play_action else "without_play_action"
+        data[key] = dict(r._mapping)
+
+    return {
+        "player": player.player_name if player else player_id,
+        "player_id": player_id,
+        "season": yr,
+        "coverage": "2022-2025 (FTN Charting)",
+        "data": data,
+    }
+
+
+# ── Formation Analysis ────────────────────────────────────────────────────────
+
+@router.get("/formation/{team}")
+def formation_analysis(
+    team: str,
+    season: Optional[int] = None,
+    user: dict = Depends(require_admin),
+):
+    yr = season or _latest_season()
+
+    sql = text("""
+        SELECT
+            pt.offense_personnel as personnel,
+            COUNT(*) as plays,
+            ROUND(100.0 * COUNT(*) / SUM(COUNT(*)) OVER(), 1) as usage_pct,
+            ROUND(AVG(p.epa)::numeric, 3) as epa_per_play,
+            ROUND(AVG(CASE WHEN p.success = 1 THEN 100.0 ELSE 0.0 END)::numeric, 1) as success_rate,
+            ROUND(AVG(p.yards_gained)::numeric, 1) as avg_yards
+        FROM participation pt
+        JOIN pbp p ON p.game_id = pt.nflverse_game_id AND p.play_id = pt.play_id
+        WHERE p.posteam = :team AND p.season = :season
+              AND p.epa IS NOT NULL AND pt.offense_personnel IS NOT NULL
+              AND p.play_type IN ('pass', 'run')
+        GROUP BY pt.offense_personnel
+        HAVING COUNT(*) >= 10
+        ORDER BY plays DESC
+        LIMIT 20
+    """)
+
+    with engine.connect() as c:
+        rows = c.execute(sql, {"team": team.upper(), "season": yr}).fetchall()
+
+    return {
+        "team": team.upper(),
+        "season": yr,
+        "coverage": "2016-2025 (Participation)",
+        "data": [dict(r._mapping) for r in rows],
+    }
+
+
+# ── Run Direction Heatmap ─────────────────────────────────────────────────────
+
+@router.get("/run-heatmap/{player_id}")
+def run_heatmap(
+    player_id: str,
+    season: Optional[int] = None,
+    user: dict = Depends(require_admin),
+):
+    yr = season or _latest_season()
+
+    sql = text("""
+        SELECT
+            run_location, run_gap,
+            COUNT(*) as plays,
+            ROUND(AVG(epa)::numeric, 3) as epa_per_play,
+            ROUND(AVG(rushing_yards)::numeric, 1) as avg_yards,
+            ROUND(AVG(CASE WHEN success = 1 THEN 100.0 ELSE 0.0 END)::numeric, 1) as success_rate
+        FROM pbp
+        WHERE rusher_player_id = :pid AND season = :season
+              AND rush_attempt = 1 AND epa IS NOT NULL
+              AND run_location IS NOT NULL
+        GROUP BY run_location, run_gap
+        ORDER BY run_location, run_gap
+    """)
+
+    with engine.connect() as c:
+        player = c.execute(text("SELECT player_name FROM players WHERE player_id = :pid"), {"pid": player_id}).fetchone()
+        rows = c.execute(sql, {"pid": player_id, "season": yr}).fetchall()
+
+    return {
+        "player": player.player_name if player else player_id,
+        "player_id": player_id,
+        "season": yr,
+        "data": [dict(r._mapping) for r in rows],
+    }
+
+
+# ── Pass Location Heatmap ─────────────────────────────────────────────────────
+
+@router.get("/pass-heatmap/{player_id}")
+def pass_heatmap(
+    player_id: str,
+    season: Optional[int] = None,
+    role: str = Query("passer"),
+    user: dict = Depends(require_admin),
+):
+    yr = season or _latest_season()
+    id_col = "passer_player_id" if role == "passer" else "receiver_player_id"
+
+    sql = text(f"""
+        SELECT
+            pass_location, pass_length,
+            COUNT(*) as plays,
+            ROUND(AVG(epa)::numeric, 3) as epa_per_play,
+            ROUND(AVG(CASE WHEN complete_pass = 1 THEN 100.0 ELSE 0.0 END)::numeric, 1) as comp_pct,
+            ROUND(AVG(passing_yards)::numeric, 1) as avg_yards,
+            ROUND(AVG(air_yards)::numeric, 1) as avg_air_yards
+        FROM pbp
+        WHERE {id_col} = :pid AND season = :season
+              AND pass_attempt = 1 AND sack = 0 AND epa IS NOT NULL
+              AND pass_location IS NOT NULL
+        GROUP BY pass_location, pass_length
+        ORDER BY pass_location, pass_length
+    """)
+
+    with engine.connect() as c:
+        player = c.execute(text("SELECT player_name FROM players WHERE player_id = :pid"), {"pid": player_id}).fetchone()
+        rows = c.execute(sql, {"pid": player_id, "season": yr}).fetchall()
+
+    return {
+        "player": player.player_name if player else player_id,
+        "player_id": player_id,
+        "season": yr,
+        "role": role,
+        "data": [dict(r._mapping) for r in rows],
+    }
+
+
+# ── QB Under Pressure (Participation, 2016+) ─────────────────────────────────
+
+@router.get("/pressure/{player_id}")
+def pressure_analysis(
+    player_id: str,
+    season: Optional[int] = None,
+    user: dict = Depends(require_admin),
+):
+    yr = season or _latest_season()
+    if yr < 2016:
+        return {"error": "Pressure data available from 2016 only"}
+
+    sql = text("""
+        SELECT
+            pt.was_pressure,
+            COUNT(*) as plays,
+            ROUND(AVG(p.epa)::numeric, 3) as epa_per_play,
+            ROUND(AVG(CASE WHEN p.complete_pass = 1 THEN 100.0 ELSE 0.0 END)::numeric, 1) as comp_pct,
+            ROUND(AVG(CASE WHEN p.sack = 1 THEN 100.0 ELSE 0.0 END)::numeric, 1) as sack_rate,
+            ROUND(AVG(p.passing_yards)::numeric, 1) as avg_yards,
+            ROUND(AVG(CASE WHEN p.interception = 1 THEN 100.0 ELSE 0.0 END)::numeric, 1) as int_rate
+        FROM pbp p
+        JOIN participation pt ON pt.nflverse_game_id = p.game_id AND pt.play_id = p.play_id
+        WHERE p.passer_player_id = :pid AND p.season = :season
+              AND p.pass_attempt = 1 AND p.epa IS NOT NULL
+              AND pt.was_pressure IS NOT NULL
+        GROUP BY pt.was_pressure
+    """)
+
+    with engine.connect() as c:
+        player = c.execute(text("SELECT player_name FROM players WHERE player_id = :pid"), {"pid": player_id}).fetchone()
+        rows = c.execute(sql, {"pid": player_id, "season": yr}).fetchall()
+
+    data = {}
+    for r in rows:
+        key = "under_pressure" if r.was_pressure else "clean_pocket"
+        data[key] = dict(r._mapping)
+
+    return {
+        "player": player.player_name if player else player_id,
+        "player_id": player_id,
+        "season": yr,
+        "coverage": "2016-2025 (Participation)",
+        "data": data,
+    }
+
+
+# ── QB Decision Making (FTN, 2022+) ──────────────────────────────────────────
+
+@router.get("/decisions/{player_id}")
+def qb_decisions(
+    player_id: str,
+    season: Optional[int] = None,
+    user: dict = Depends(require_admin),
+):
+    yr = season or _latest_season()
+    if yr < 2022:
+        return {"error": "Decision data available from 2022 only"}
+
+    sql = text("""
+        SELECT
+            COUNT(*) as total_passes,
+            ROUND(AVG(CASE WHEN f.is_throw_away THEN 100.0 ELSE 0.0 END)::numeric, 1) as throwaway_pct,
+            ROUND(AVG(CASE WHEN f.is_interception_worthy THEN 100.0 ELSE 0.0 END)::numeric, 1) as int_worthy_pct,
+            ROUND(AVG(CASE WHEN f.is_catchable_ball THEN 100.0 ELSE 0.0 END)::numeric, 1) as catchable_pct,
+            ROUND(AVG(CASE WHEN f.is_drop THEN 100.0 ELSE 0.0 END)::numeric, 1) as drop_pct,
+            ROUND(AVG(CASE WHEN f.is_contested_ball THEN 100.0 ELSE 0.0 END)::numeric, 1) as contested_pct,
+            ROUND(AVG(CASE WHEN f.is_qb_out_of_pocket THEN 100.0 ELSE 0.0 END)::numeric, 1) as out_of_pocket_pct,
+            ROUND(AVG(CASE WHEN f.is_qb_fault_sack THEN 100.0 ELSE 0.0 END)::numeric, 1) as qb_fault_sack_pct,
+            ROUND(AVG(p.epa)::numeric, 3) as epa_per_play
+        FROM pbp p
+        JOIN ftn_charting f ON f.nflverse_game_id = p.game_id AND f.nflverse_play_id = p.play_id
+        WHERE p.passer_player_id = :pid AND p.season = :season
+              AND p.pass_attempt = 1 AND p.epa IS NOT NULL
+    """)
+
+    # Also get read_thrown distribution
+    read_sql = text("""
+        SELECT f.read_thrown, COUNT(*) as count
+        FROM pbp p
+        JOIN ftn_charting f ON f.nflverse_game_id = p.game_id AND f.nflverse_play_id = p.play_id
+        WHERE p.passer_player_id = :pid AND p.season = :season
+              AND p.pass_attempt = 1 AND f.read_thrown IS NOT NULL
+        GROUP BY f.read_thrown ORDER BY count DESC
+    """)
+
+    with engine.connect() as c:
+        player = c.execute(text("SELECT player_name FROM players WHERE player_id = :pid"), {"pid": player_id}).fetchone()
+        row = c.execute(sql, {"pid": player_id, "season": yr}).fetchone()
+        reads = c.execute(read_sql, {"pid": player_id, "season": yr}).fetchall()
+
+    return {
+        "player": player.player_name if player else player_id,
+        "player_id": player_id,
+        "season": yr,
+        "coverage": "2022-2025 (FTN Charting)",
+        "decisions": dict(row._mapping) if row else {},
+        "read_distribution": [dict(r._mapping) for r in reads],
+    }

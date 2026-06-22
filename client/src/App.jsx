@@ -23,6 +23,7 @@ import Privacy from './pages/Privacy'
 import FdvPage from './pages/FdvPage'
 import SourcesPage from './pages/SourcesPage'
 import ContentHistory from './pages/ContentHistory'
+import SituationalStats from './pages/SituationalStats'
 import Portfolio from './pages/Portfolio'
 import Onboarding from './components/Onboarding'
 import Footer from './components/Footer'
@@ -84,6 +85,7 @@ function AppInner() {
             <Route path="/privacy"         element={<Privacy />} />
             <Route path="/methodology"     element={<FdvPage />} />
             {user?.is_admin && <Route path="/content-history" element={<ContentHistory />} />}
+            {user?.is_admin && <Route path="/situational" element={<SituationalStats />} />}
             <Route path="/sources"          element={<SourcesPage />} />
           </Routes>
         </main>

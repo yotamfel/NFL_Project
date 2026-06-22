@@ -182,6 +182,29 @@ export const api = {
   deleteContent: (id) => del(`/content/${id}`),
   assignToProjects: (savedItemId, projectIds) => post('/projects/assign', { saved_item_id: savedItemId, project_ids: projectIds }),
 
+  // Situational Stats
+  getEpaRankings: (params = {}) => {
+    const p = new URLSearchParams()
+    if (params.position) p.set('position', params.position)
+    if (params.season) p.set('season', params.season)
+    if (params.season_type) p.set('season_type', params.season_type)
+    if (params.min_plays) p.set('min_plays', params.min_plays)
+    return get(`/situational/epa-rankings?${p}`)
+  },
+  getClutchRankings: (params = {}) => {
+    const p = new URLSearchParams()
+    if (params.position) p.set('position', params.position)
+    if (params.season) p.set('season', params.season)
+    return get(`/situational/clutch-rankings?${p}`)
+  },
+  getSituationalSplits: (playerId, season) => get(`/situational/splits/${playerId}${season ? `?season=${season}` : ''}`),
+  getPlayAction: (playerId, season) => get(`/situational/play-action/${playerId}${season ? `?season=${season}` : ''}`),
+  getFormation: (team, season) => get(`/situational/formation/${team}${season ? `?season=${season}` : ''}`),
+  getRunHeatmap: (playerId, season) => get(`/situational/run-heatmap/${playerId}${season ? `?season=${season}` : ''}`),
+  getPassHeatmap: (playerId, season, role) => get(`/situational/pass-heatmap/${playerId}?${new URLSearchParams({ ...(season && { season }), ...(role && { role }) })}`),
+  getPressureAnalysis: (playerId, season) => get(`/situational/pressure/${playerId}${season ? `?season=${season}` : ''}`),
+  getQbDecisions: (playerId, season) => get(`/situational/decisions/${playerId}${season ? `?season=${season}` : ''}`),
+
   topPlayersByFdv: ({ pos, limit = 50 } = {}) => {
     const p = new URLSearchParams({ limit })
     if (pos) p.set('pos', pos)

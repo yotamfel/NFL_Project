@@ -13,6 +13,7 @@ const LINKS = [
   { to: '/saved',      label: 'Saved' },
   { to: '/guide',      label: 'Guide' },
   { to: '/feedback',   label: 'Feedback' },
+  { to: '/situational', label: 'Situational', adminOnly: true },
   { to: '/content-history', label: 'Content', adminOnly: true },
   { to: '/admin',      label: 'Admin', adminOnly: true },
 ]
