@@ -38,6 +38,11 @@ const STAT_TIPS = {
   pass_location: 'Where the pass was targeted - left, middle, or right of the field.',
   pass_length: 'Short (under 15 air yards) or deep (15+ air yards) pass.',
   read_thrown: 'Which read the QB threw to - 1st, 2nd, 3rd, or checkdown read.',
+  epa_dist: 'EPA distribution - each bar is an EPA bucket. Green = positive, red = negative. Tall bars = many plays at that EPA. Shows if performance is consistent or driven by outlier plays.',
+  play_down: 'Current down (1st, 2nd, 3rd, or 4th).',
+  play_dist: 'Yards to go for a first down.',
+  play_ydln: 'Yards from the end zone (1 = goal line, 99 = own 1-yard line).',
+  play_players: 'For passes: QB -> Receiver. For runs: ball carrier.',
 }
 
 let _setColTip = null
@@ -768,9 +773,9 @@ function PlayLogPanel({ body, onClose }) {
     URL.revokeObjectURL(url)
   }
 
-  const SortTh = ({ label, col }) => (
+  const SortTh = ({ label, col, tip }) => (
     <th className="py-1 px-1.5 text-right cursor-pointer hover:text-slate-300 select-none" onClick={() => toggleSort(col)}>
-      {label}{sortCol === col ? (sortDir === 'desc' ? ' ↓' : ' ↑') : ''}
+      {label}{sortCol === col ? (sortDir === 'desc' ? ' ↓' : ' ↑') : ''}{tip && <Tip stat={tip} />}
     </th>
   )
 
@@ -791,20 +796,24 @@ function PlayLogPanel({ body, onClose }) {
                 <tr className="text-slate-600 border-b border-slate-800">
                   <th className="py-1 px-1.5 text-left">Wk</th>
                   <th className="py-1 px-1.5 text-left">Q</th>
-                  <th className="py-1 px-1.5 text-left">Down</th>
-                  <th className="py-1 px-1.5 text-right">Dist</th>
-                  <th className="py-1 px-1.5 text-right">YdLn</th>
+                  <th className="py-1 px-1.5 text-left">Down<Tip stat="play_down" /></th>
+                  <th className="py-1 px-1.5 text-right">Dist<Tip stat="play_dist" /></th>
+                  <th className="py-1 px-1.5 text-right">YdLn<Tip stat="play_ydln" /></th>
                   <th className="py-1 px-1.5 text-left">Type</th>
-                  <SortTh label="Yards" col="yards_gained" />
-                  <SortTh label="EPA" col="epa" />
-                  <SortTh label="WPA" col="wpa" />
-                  <th className="py-1 px-1.5 text-left">Player</th>
+                  <SortTh label="Yards" col="yards_gained" tip="avg_yards" />
+                  <SortTh label="EPA" col="epa" tip="epa_per_play" />
+                  <SortTh label="WPA" col="wpa" tip="wpa_per_play" />
+                  <th className="py-1 px-1.5 text-left">Player(s)<Tip stat="play_players" /></th>
                   <th className="py-1 px-1.5 text-left">Teams</th>
                   <th className="py-1 px-1.5 text-center">Result</th>
                 </tr>
               </thead>
               <tbody>
-                {plays.map((p, i) => (
+                {plays.map((p, i) => {
+                  const playerStr = p.pass_attempt
+                    ? `${p.passer_player_name || '?'}${p.receiver_player_name ? ` -> ${p.receiver_player_name}` : ''}`
+                    : p.rusher_player_name || '-'
+                  return (
                   <tr key={i} className="border-b border-slate-800/30 hover:bg-slate-800/30">
                     <td className="py-1 px-1.5 text-slate-400">{p.week}</td>
                     <td className="py-1 px-1.5 text-slate-500">Q{p.qtr}</td>
@@ -815,13 +824,14 @@ function PlayLogPanel({ body, onClose }) {
                     <td className="py-1 px-1.5 text-right text-white font-medium">{p.yards_gained}</td>
                     <td className="py-1 px-1.5 text-right"><EpaColorCell val={p.epa != null ? Math.round(p.epa * 1000) / 1000 : null} /></td>
                     <td className="py-1 px-1.5 text-right"><EpaColorCell val={p.wpa != null ? Math.round(p.wpa * 10000) / 10000 : null} /></td>
-                    <td className="py-1 px-1.5 text-slate-300 truncate max-w-[100px]">{p.passer_player_name || p.rusher_player_name || '-'}</td>
+                    <td className="py-1 px-1.5 text-slate-300 truncate max-w-[140px]">{playerStr}</td>
                     <td className="py-1 px-1.5 text-slate-500">{p.posteam} v {p.defteam}</td>
                     <td className="py-1 px-1.5 text-center">
                       {p.touchdown ? <span className="text-emerald-400">TD</span> : p.interception ? <span className="text-red-400">INT</span> : p.sack ? <span className="text-red-400">Sack</span> : p.complete_pass ? <span className="text-slate-400">Cmp</span> : p.success ? <span className="text-emerald-500/60">+</span> : ''}
                     </td>
                   </tr>
-                ))}
+                  )
+                })}
               </tbody>
             </table>
           </div>
@@ -854,20 +864,27 @@ function ComparePanel({ rows, onClose }) {
         <p className="text-xs text-white font-semibold">Comparing: <span className="text-amber-400">{a._label}</span> vs <span className="text-blue-400">{b._label}</span></p>
         <button onClick={onClose} className="text-xs text-slate-500 hover:text-slate-300">Close</button>
       </div>
-      <div className="space-y-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {metrics.map(m => {
           const va = a[m.key] ?? 0, vb = b[m.key] ?? 0
-          const max = Math.max(Math.abs(va), Math.abs(vb), 0.01)
-          const pctA = Math.abs(va) / max * 100, pctB = Math.abs(vb) / max * 100
+          const winner = Math.abs(va) > Math.abs(vb) ? 'a' : Math.abs(vb) > Math.abs(va) ? 'b' : null
           return (
-            <div key={m.key}>
-              <div className="flex justify-between text-xs mb-0.5">
-                <span className="text-slate-500">{m.label}</span>
-                <span className="text-slate-400"><span className="text-amber-400">{va}</span> vs <span className="text-blue-400">{vb}</span></span>
-              </div>
-              <div className="flex gap-1 h-2">
-                <div className="flex-1 bg-slate-800 rounded-full overflow-hidden flex justify-end"><div className="bg-amber-500/60 rounded-full" style={{ width: `${pctA}%` }} /></div>
-                <div className="flex-1 bg-slate-800 rounded-full overflow-hidden"><div className="bg-blue-500/60 rounded-full" style={{ width: `${pctB}%` }} /></div>
+            <div key={m.key} className="bg-slate-800/60 rounded-lg p-3">
+              <p className="text-xs text-slate-500 mb-2">{m.label}<Tip stat={m.key} /></p>
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-center flex-1">
+                  <p className={`text-lg font-bold ${winner === 'a' ? 'text-amber-400' : 'text-amber-400/50'}`}>{va}</p>
+                  <div className="h-1.5 bg-slate-900 rounded-full mt-1 overflow-hidden">
+                    <div className="h-full bg-amber-500 rounded-full" style={{ width: `${Math.max(Math.abs(va) / Math.max(Math.abs(va), Math.abs(vb), 0.01) * 100, 4)}%` }} />
+                  </div>
+                </div>
+                <span className="text-slate-600 text-xs">vs</span>
+                <div className="text-center flex-1">
+                  <p className={`text-lg font-bold ${winner === 'b' ? 'text-blue-400' : 'text-blue-400/50'}`}>{vb}</p>
+                  <div className="h-1.5 bg-slate-900 rounded-full mt-1 overflow-hidden">
+                    <div className="h-full bg-blue-500 rounded-full" style={{ width: `${Math.max(Math.abs(vb) / Math.max(Math.abs(va), Math.abs(vb), 0.01) * 100, 4)}%` }} />
+                  </div>
+                </div>
               </div>
             </div>
           )
@@ -1071,7 +1088,7 @@ function ExplorerSection({ seasons }) {
               <tr className="text-slate-500 text-xs border-b border-slate-800">
                 <th className="w-6 py-2"></th>
                 <SortHeader label={GROUP_OPTIONS.find(g => g.id === activeGroupBy)?.label || activeGroupBy} field={activeGroupBy} sort={sort} setSort={setSort} align="left" />
-                <th className="py-2 px-1 text-right text-[10px]">Dist</th>
+                <th className="py-2 px-1 text-right text-[10px]">EPA Dist<Tip stat="epa_dist" /></th>
                 <SortHeader label="EPA/play" field="epa_per_play" sort={sort} setSort={setSort} tip="epa_per_play" />
                 <SortHeader label="Total EPA" field="total_epa" sort={sort} setSort={setSort} tip="total_epa" />
                 <SortHeader label="Success%" field="success_rate" sort={sort} setSort={setSort} tip="success_rate" />
