@@ -723,7 +723,7 @@ const GROUP_OPTIONS = [
   { id: 'pass_depth', label: 'Pass Depth' },
 ]
 
-function EpaSplitBar({ buckets }) {
+function EpaSplitBar({ buckets, onClick }) {
   if (!buckets?.length) return null
   let pos = 0, neg = 0
   buckets.forEach(b => { if (b.epa >= 0) pos += b.count; else neg += b.count })
@@ -731,12 +731,56 @@ function EpaSplitBar({ buckets }) {
   if (!total) return null
   const pct = Math.round(pos / total * 100)
   return (
-    <div className="inline-flex items-center gap-1.5 align-middle">
-      <div className="w-14 h-2 rounded-full overflow-hidden flex bg-slate-800">
+    <div className="inline-flex items-center gap-1.5 align-middle cursor-pointer group" onClick={onClick}>
+      <div className="w-14 h-2 rounded-full overflow-hidden flex bg-slate-800 group-hover:h-3 transition-all">
         <div className="bg-emerald-500 h-full" style={{ width: `${pct}%` }} />
         <div className="bg-red-500 h-full flex-1" />
       </div>
       <span className={`text-[10px] font-medium ${pct >= 50 ? 'text-emerald-400' : 'text-red-400'}`}>{pct}%</span>
+    </div>
+  )
+}
+
+function EpaDistDetail({ buckets, label, onClose }) {
+  if (!buckets?.length) return null
+  const sorted = [...buckets].sort((a, b) => a.epa - b.epa)
+  const maxCount = Math.max(...sorted.map(b => b.count))
+  let pos = 0, neg = 0, totalEpa = 0
+  sorted.forEach(b => {
+    if (b.epa >= 0) pos += b.count; else neg += b.count
+    totalEpa += b.epa * b.count
+  })
+  const total = pos + neg
+  const barH = 100
+
+  return (
+    <div className="bg-slate-900/90 border border-slate-700 rounded-xl p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-white font-semibold">EPA Distribution - {label}</p>
+        <button onClick={onClose} className="text-xs text-slate-500 hover:text-slate-300">Close</button>
+      </div>
+      <div className="flex gap-4 text-xs">
+        <span className="text-emerald-400">{pos} positive plays ({Math.round(pos / total * 100)}%)</span>
+        <span className="text-red-400">{neg} negative plays ({Math.round(neg / total * 100)}%)</span>
+        <span className="text-slate-400">{total} total</span>
+      </div>
+      <div className="flex items-end gap-0.5" style={{ height: barH + 30 }}>
+        {sorted.map((b, i) => {
+          const h = Math.max((b.count / maxCount) * barH, 3)
+          return (
+            <div key={i} className="flex-1 flex flex-col items-center group/bar">
+              <div className="relative w-full flex justify-center" style={{ height: barH }}>
+                <div className={`w-full rounded-t-sm ${b.epa >= 0 ? 'bg-emerald-500' : 'bg-red-500'} absolute bottom-0`}
+                  style={{ height: h }} />
+                <div className="absolute -top-5 left-1/2 -translate-x-1/2 opacity-0 group-hover/bar:opacity-100 bg-slate-950 border border-slate-700 rounded px-1.5 py-0.5 text-[9px] text-white whitespace-nowrap z-10 pointer-events-none">
+                  EPA {b.epa}: {b.count} plays
+                </div>
+              </div>
+              <span className="text-[8px] text-slate-600 mt-1">{b.epa}</span>
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
@@ -916,6 +960,7 @@ function ExplorerSection({ seasons }) {
   const [loading, setLoading] = useState(false)
   const [sort, setSort] = useState({ field: 'epa_per_play', dir: 'desc' })
   const [expandedRow, setExpandedRow] = useState(null)
+  const [expandedDist, setExpandedDist] = useState(null)
   const [compareRows, setCompareRows] = useState([])
   const [drillStack, setDrillStack] = useState([])
 
@@ -1121,7 +1166,7 @@ function ExplorerSection({ seasons }) {
                       <td className="py-2 pr-2 text-white font-medium cursor-pointer hover:text-amber-400" onClick={() => drillDown(activeGroupBy, gKey)}>
                         {gKey} <span className="text-slate-600 text-[10px] ml-0.5">drill</span>
                       </td>
-                      <td className="py-2 px-1 text-right"><EpaSplitBar buckets={data?.histograms?.[String(gKey)]} /></td>
+                      <td className="py-2 px-1 text-right"><EpaSplitBar buckets={data?.histograms?.[String(gKey)]} onClick={() => setExpandedDist(expandedDist === gKey ? null : gKey)} /></td>
                       <td className="py-2 px-2 text-right"><EpaColorCell val={r.epa_per_play} /><EpaBar val={r.epa_per_play} max={maxEpa} /></td>
                       <td className="py-2 px-2 text-right"><EpaColorCell val={r.total_epa} /></td>
                       <td className="py-2 px-2 text-right text-slate-300">{r.success_rate}%</td>
@@ -1136,6 +1181,11 @@ function ExplorerSection({ seasons }) {
                         </button>
                       </td>
                     </tr>
+                    {expandedDist === gKey && data?.histograms?.[String(gKey)] && (
+                      <tr><td colSpan={11} className="p-2">
+                        <EpaDistDetail buckets={data.histograms[String(gKey)]} label={gKey} onClose={() => setExpandedDist(null)} />
+                      </td></tr>
+                    )}
                     {isExpanded && (
                       <tr><td colSpan={11} className="p-0">
                         <PlayLogPanel
