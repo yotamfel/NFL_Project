@@ -124,6 +124,64 @@ function EpaRankingsSection({ season }) {
   )
 }
 
+function ClutchRankingsSection({ season }) {
+  const [pos, setPos] = useState('QB')
+  const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    setLoading(true)
+    api.getClutchRankings({ position: pos, season }).then(setData).catch(() => setData(null)).finally(() => setLoading(false))
+  }, [pos, season])
+
+  return (
+    <div className="space-y-4">
+      <p className="text-slate-400 text-xs">Last 5 minutes, score within 8 points</p>
+      <div className="flex gap-2">
+        {['QB', 'RB', 'WR'].map(p => (
+          <button key={p} onClick={() => setPos(p)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${pos === p ? 'bg-red-500/20 text-red-400 border border-red-500/40' : 'bg-slate-800 text-slate-400 border border-slate-700'}`}>
+            {p}
+          </button>
+        ))}
+      </div>
+      {loading && <Loading text="Loading clutch rankings..." />}
+      {data?.data && (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-slate-500 text-xs border-b border-slate-800">
+                <th className="text-left py-2 pr-2">#</th>
+                <th className="text-left py-2 pr-2">Player</th>
+                <th className="text-left py-2 pr-2">Team</th>
+                <th className="text-right py-2 px-2">Clutch WPA</th>
+                <th className="text-right py-2 px-2">WPA/play</th>
+                <th className="text-right py-2 px-2">EPA/play</th>
+                <th className="text-right py-2 px-2">Plays</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.data.map((r, i) => (
+                <tr key={r.player_id} className="border-b border-slate-800/40 hover:bg-slate-800/30">
+                  <td className="py-2 pr-2 text-slate-600 text-xs">{i + 1}</td>
+                  <td className="py-2 pr-2">
+                    <a href={`/player/${r.player_id}`} className="text-white hover:text-amber-400 transition-colors font-medium">{r.player_name}</a>
+                  </td>
+                  <td className="py-2 pr-2 text-slate-400">{r.team}</td>
+                  <td className="py-2 px-2 text-right"><EpaColorCell val={r.clutch_wpa} /></td>
+                  <td className="py-2 px-2 text-right"><EpaColorCell val={r.clutch_wpa_per_play} /></td>
+                  <td className="py-2 px-2 text-right"><EpaColorCell val={r.clutch_epa_per_play} /></td>
+                  <td className="py-2 px-2 text-right text-slate-500">{r.clutch_plays}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function SplitsSection({ players, season }) {
   const [data, setData] = useState({})
   const [loading, setLoading] = useState(false)
@@ -295,7 +353,7 @@ export default function SituationalStats() {
         {/* Content */}
         <div className="bg-slate-800/50 border border-slate-700/60 rounded-2xl p-5">
           {section === 'epa' && <EpaRankingsSection season={season} />}
-          {section === 'clutch' && <EpaRankingsSection season={season} />}
+          {section === 'clutch' && <ClutchRankingsSection season={season} />}
           {section === 'splits' && <SplitsSection players={players} season={season} />}
           {section === 'playaction' && (
             <SimpleSection title="Play-Action" fetchFn={api.getPlayAction} players={players} season={season}

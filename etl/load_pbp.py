@@ -268,5 +268,9 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         years = [int(y) for y in sys.argv[1:]]
     else:
-        years = list(range(1999, 2026))
+        # Default: current + previous season (same as supplement_seasons)
+        from datetime import datetime
+        now = datetime.utcnow()
+        cur = now.year if now.month >= 9 else now.year - 1
+        years = sorted({cur - 1, cur})
     load_pbp_seasons(years)

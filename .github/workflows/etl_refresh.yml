@@ -77,6 +77,11 @@ jobs:
         working-directory: etl
         run: python build_fdv_v3.py --write
 
+      # ── Play-by-play data (current + previous season) ───────────────────
+      - name: Load PBP + FTN + Participation
+        working-directory: etl
+        run: python load_pbp.py
+
       # ── Anomaly detection (runs last, needs updated career views) ────────
       - name: Detect season anomalies
         working-directory: etl
