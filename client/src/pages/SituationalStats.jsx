@@ -921,7 +921,7 @@ export default function SituationalStats() {
           {section === 'splits' && <SplitsSection players={players} ctxParams={ctxParams} />}
           {section === 'trend' && <WeeklyTrendSection players={players} season={selectedSeasons[0]} ctxParams={ctxParams} />}
           {section === 'playaction' && (<>
-            <p className="text-slate-400 text-xs mb-2">Play-action is when the QB fakes a handoff before passing. It freezes linebackers and safeties, often creating more open receivers downfield. Compare EPA with and without play-action to see how much the fake helps.</p>
+            <p className="text-slate-600 text-[10px]">Play-action: QB fakes a handoff before passing, freezing defenders to create open receivers.</p>
             <SimpleSection title="Play-Action" fetchFn={api.getPlayAction} players={players} season={selectedSeasons[0]} ctxParams={ctxParams}
               renderData={(d, p) => {
                 const pa = d?.data?.with_play_action, noPa = d?.data?.without_play_action
