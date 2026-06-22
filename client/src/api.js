@@ -222,16 +222,50 @@ export const api = {
     if (params.location) p.set('location', params.location)
     return get(`/situational/splits/${playerId}?${p}`)
   },
-  getPlayAction: (playerId, season) => get(`/situational/play-action/${playerId}${season ? `?season=${season}` : ''}`),
+  getPlayAction: (playerId, season, ctx) => {
+    const p = new URLSearchParams()
+    if (season) p.set('season', season)
+    if (ctx?.season_type) p.set('season_type', ctx.season_type)
+    if (ctx?.opponent) p.set('opponent', ctx.opponent)
+    if (ctx?.week_from) p.set('week_from', ctx.week_from)
+    if (ctx?.week_to) p.set('week_to', ctx.week_to)
+    if (ctx?.location) p.set('location', ctx.location)
+    return get(`/situational/play-action/${playerId}?${p}`)
+  },
   getFormation: (team, season) => get(`/situational/formation/${team}${season ? `?season=${season}` : ''}`),
-  getRunHeatmap: (playerId, season) => get(`/situational/run-heatmap/${playerId}${season ? `?season=${season}` : ''}`),
-  getPassHeatmap: (playerId, season, role) => get(`/situational/pass-heatmap/${playerId}?${new URLSearchParams({ ...(season && { season }), ...(role && { role }) })}`),
-  getPressureAnalysis: (playerId, season) => get(`/situational/pressure/${playerId}${season ? `?season=${season}` : ''}`),
-  getQbDecisions: (playerId, season) => get(`/situational/decisions/${playerId}${season ? `?season=${season}` : ''}`),
+  getRunHeatmap: (playerId, season, ctx) => {
+    const p = new URLSearchParams(); if (season) p.set('season', season)
+    if (ctx?.season_type) p.set('season_type', ctx.season_type); if (ctx?.opponent) p.set('opponent', ctx.opponent)
+    if (ctx?.week_from) p.set('week_from', ctx.week_from); if (ctx?.week_to) p.set('week_to', ctx.week_to); if (ctx?.location) p.set('location', ctx.location)
+    return get(`/situational/run-heatmap/${playerId}?${p}`)
+  },
+  getPassHeatmap: (playerId, season, ctx) => {
+    const p = new URLSearchParams(); if (season) p.set('season', season); if (ctx?.role) p.set('role', ctx.role)
+    if (ctx?.season_type) p.set('season_type', ctx.season_type); if (ctx?.opponent) p.set('opponent', ctx.opponent)
+    if (ctx?.week_from) p.set('week_from', ctx.week_from); if (ctx?.week_to) p.set('week_to', ctx.week_to); if (ctx?.location) p.set('location', ctx.location)
+    return get(`/situational/pass-heatmap/${playerId}?${p}`)
+  },
+  getPressureAnalysis: (playerId, season, ctx) => {
+    const p = new URLSearchParams(); if (season) p.set('season', season)
+    if (ctx?.season_type) p.set('season_type', ctx.season_type); if (ctx?.opponent) p.set('opponent', ctx.opponent)
+    if (ctx?.week_from) p.set('week_from', ctx.week_from); if (ctx?.week_to) p.set('week_to', ctx.week_to); if (ctx?.location) p.set('location', ctx.location)
+    return get(`/situational/pressure/${playerId}?${p}`)
+  },
+  getQbDecisions: (playerId, season, ctx) => {
+    const p = new URLSearchParams(); if (season) p.set('season', season)
+    if (ctx?.season_type) p.set('season_type', ctx.season_type); if (ctx?.opponent) p.set('opponent', ctx.opponent)
+    if (ctx?.week_from) p.set('week_from', ctx.week_from); if (ctx?.week_to) p.set('week_to', ctx.week_to); if (ctx?.location) p.set('location', ctx.location)
+    return get(`/situational/decisions/${playerId}?${p}`)
+  },
   getExplorerFilters: () => get('/situational/explorer-filters'),
   postExplorer: (body) => post('/situational/explorer', body),
   postExplorerPlays: (body) => post('/situational/explorer-plays', body),
-  getWeeklyTrend: (playerId, season) => get(`/situational/weekly-trend/${playerId}${season ? `?season=${season}` : ''}`),
+  getWeeklyTrend: (playerId, season, ctx) => {
+    const p = new URLSearchParams(); if (season) p.set('season', season)
+    if (ctx?.season_type) p.set('season_type', ctx.season_type); if (ctx?.opponent) p.set('opponent', ctx.opponent)
+    if (ctx?.week_from) p.set('week_from', ctx.week_from); if (ctx?.week_to) p.set('week_to', ctx.week_to); if (ctx?.location) p.set('location', ctx.location)
+    return get(`/situational/weekly-trend/${playerId}?${p}`)
+  },
 
   topPlayersByFdv: ({ pos, limit = 50 } = {}) => {
     const p = new URLSearchParams({ limit })

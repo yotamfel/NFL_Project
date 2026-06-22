@@ -30,6 +30,28 @@ def _get_gsis_id(conn, player_id: str) -> Optional[str]:
     return row.gsis_id if row and row.gsis_id else None
 
 
+def _ctx_filters(season_type="REG", opponent=None, week_from=None, week_to=None, location=None):
+    """Build common context filter SQL fragments."""
+    parts = []
+    if season_type and season_type != "ALL":
+        parts.append(f"season_type = '{season_type}'")
+    if opponent:
+        opp_list = [t.strip().upper() for t in opponent.split(",")]
+        if len(opp_list) == 1:
+            parts.append(f"defteam = '{opp_list[0]}'")
+        else:
+            parts.append(f"defteam IN ({','.join(repr(t) for t in opp_list)})")
+    if week_from:
+        parts.append(f"week >= {int(week_from)}")
+    if week_to:
+        parts.append(f"week <= {int(week_to)}")
+    if location == "home":
+        parts.append("posteam = home_team")
+    elif location == "away":
+        parts.append("posteam = away_team")
+    return (" AND " + " AND ".join(parts)) if parts else ""
+
+
 @router.get("/available-seasons")
 def available_seasons(user: dict = Depends(require_admin)):
     with engine.connect() as c:
@@ -462,9 +484,14 @@ def situational_splits(
 def play_action_analysis(
     player_id: str,
     season: Optional[int] = None,
+    season_type: str = Query("REG"),
+    opponent: Optional[str] = None,
+    week_from: Optional[int] = None, week_to: Optional[int] = None,
+    location: Optional[str] = None,
     user: dict = Depends(require_admin),
 ):
     yr = season or _latest_season()
+    ctx_sql = _ctx_filters(season_type, opponent, week_from, week_to, location)
     ftn_years = _ftn_seasons()
 
     with engine.connect() as c:
@@ -496,7 +523,7 @@ def play_action_analysis(
                     AND f.nflverse_play_id = p.play_id
                 WHERE p.passer_player_id = :pid AND p.season = :season
                       AND p.pass_attempt = 1 AND p.sack = 0
-                      AND p.epa IS NOT NULL AND f.is_play_action IS NOT NULL
+                      AND p.epa IS NOT NULL AND f.is_play_action IS NOT NULL{ctx_sql}
             )
             SELECT
                 is_play_action,
@@ -580,9 +607,12 @@ def formation_analysis(
 def run_heatmap(
     player_id: str,
     season: Optional[int] = None,
+    season_type: str = Query("REG"), opponent: Optional[str] = None,
+    week_from: Optional[int] = None, week_to: Optional[int] = None, location: Optional[str] = None,
     user: dict = Depends(require_admin),
 ):
     yr = season or _latest_season()
+    ctx_sql = _ctx_filters(season_type, opponent, week_from, week_to, location)
 
     with engine.connect() as c:
         player = c.execute(text("SELECT player_name, gsis_id FROM players WHERE player_id = :pid"), {"pid": player_id}).fetchone()
@@ -590,7 +620,7 @@ def run_heatmap(
         if not gsis:
             return {"player": player.player_name if player else player_id, "player_id": player_id, "season": yr, "data": [], "error": "No PBP ID mapping"}
 
-        rows = c.execute(text("""
+        rows = c.execute(text(f"""
             SELECT
                 run_location, run_gap,
                 COUNT(*) as plays,
@@ -600,7 +630,7 @@ def run_heatmap(
             FROM pbp
             WHERE rusher_player_id = :pid AND season = :season
                   AND rush_attempt = 1 AND epa IS NOT NULL
-                  AND run_location IS NOT NULL
+                  AND run_location IS NOT NULL{ctx_sql}
             GROUP BY run_location, run_gap
             ORDER BY run_location, run_gap
         """), {"pid": gsis, "season": yr}).fetchall()
@@ -620,9 +650,12 @@ def pass_heatmap(
     player_id: str,
     season: Optional[int] = None,
     role: str = Query("passer"),
+    season_type: str = Query("REG"), opponent: Optional[str] = None,
+    week_from: Optional[int] = None, week_to: Optional[int] = None, location: Optional[str] = None,
     user: dict = Depends(require_admin),
 ):
     yr = season or _latest_season()
+    ctx_sql = _ctx_filters(season_type, opponent, week_from, week_to, location)
     id_col = "passer_player_id" if role == "passer" else "receiver_player_id"
 
     with engine.connect() as c:
@@ -642,7 +675,7 @@ def pass_heatmap(
             FROM pbp
             WHERE {id_col} = :pid AND season = :season
                   AND pass_attempt = 1 AND sack = 0 AND epa IS NOT NULL
-                  AND pass_location IS NOT NULL
+                  AND pass_location IS NOT NULL{ctx_sql}
             GROUP BY pass_location, pass_length
             ORDER BY pass_location, pass_length
         """), {"pid": gsis, "season": yr}).fetchall()
@@ -662,9 +695,12 @@ def pass_heatmap(
 def pressure_analysis(
     player_id: str,
     season: Optional[int] = None,
+    season_type: str = Query("REG"), opponent: Optional[str] = None,
+    week_from: Optional[int] = None, week_to: Optional[int] = None, location: Optional[str] = None,
     user: dict = Depends(require_admin),
 ):
     yr = season or _latest_season()
+    ctx_sql = _ctx_filters(season_type, opponent, week_from, week_to, location)
     part_years = _participation_seasons()
 
     with engine.connect() as c:
@@ -698,7 +734,7 @@ def pressure_analysis(
             JOIN participation pt ON pt.nflverse_game_id = p.game_id AND pt.play_id = p.play_id
             WHERE p.passer_player_id = :pid AND p.season = :season
                   AND p.pass_attempt = 1 AND p.epa IS NOT NULL
-                  AND pt.was_pressure IS NOT NULL
+                  AND pt.was_pressure IS NOT NULL{ctx_sql}
             GROUP BY pt.was_pressure
         """), {"pid": gsis, "season": yr}).fetchall()
 
@@ -722,9 +758,12 @@ def pressure_analysis(
 def qb_decisions(
     player_id: str,
     season: Optional[int] = None,
+    season_type: str = Query("REG"), opponent: Optional[str] = None,
+    week_from: Optional[int] = None, week_to: Optional[int] = None, location: Optional[str] = None,
     user: dict = Depends(require_admin),
 ):
     yr = season or _latest_season()
+    ctx_sql = _ctx_filters(season_type, opponent, week_from, week_to, location)
     ftn_years = _ftn_seasons()
 
     with engine.connect() as c:
@@ -760,15 +799,15 @@ def qb_decisions(
             FROM pbp p
             JOIN ftn_charting f ON f.nflverse_game_id = p.game_id AND f.nflverse_play_id = p.play_id
             WHERE p.passer_player_id = :pid AND p.season = :season
-                  AND p.pass_attempt = 1 AND p.epa IS NOT NULL
+                  AND p.pass_attempt = 1 AND p.epa IS NOT NULL{ctx_sql}
         """), {"pid": gsis, "season": yr}).fetchone()
 
-        reads = c.execute(text("""
+        reads = c.execute(text(f"""
             SELECT f.read_thrown, COUNT(*) as count
             FROM pbp p
             JOIN ftn_charting f ON f.nflverse_game_id = p.game_id AND f.nflverse_play_id = p.play_id
             WHERE p.passer_player_id = :pid AND p.season = :season
-                  AND p.pass_attempt = 1 AND f.read_thrown IS NOT NULL
+                  AND p.pass_attempt = 1 AND f.read_thrown IS NOT NULL{ctx_sql}
             GROUP BY f.read_thrown ORDER BY count DESC
         """), {"pid": gsis, "season": yr}).fetchall()
 
@@ -1074,9 +1113,12 @@ def explorer_plays(
 def weekly_trend(
     player_id: str,
     season: Optional[int] = None,
+    season_type: str = Query("REG"), opponent: Optional[str] = None,
+    week_from: Optional[int] = None, week_to: Optional[int] = None, location: Optional[str] = None,
     user: dict = Depends(require_admin),
 ):
     yr = season or _latest_season()
+    ctx_sql = _ctx_filters(season_type, opponent, week_from, week_to, location)
     with engine.connect() as c:
         player = c.execute(text("SELECT player_name, pos, gsis_id FROM players WHERE player_id = :pid"), {"pid": player_id}).fetchone()
         if not player or not player.gsis_id:
@@ -1105,7 +1147,7 @@ def weekly_trend(
                    MAX(defteam_score_post) as opp_score
             FROM pbp
             WHERE {id_col} = :pid AND season = :season AND epa IS NOT NULL
-                  AND {base} AND season_type = 'REG'
+                  AND {base}{ctx_sql}
             GROUP BY week, posteam, defteam ORDER BY week
         """), {"pid": gsis, "season": yr}).fetchall()
 

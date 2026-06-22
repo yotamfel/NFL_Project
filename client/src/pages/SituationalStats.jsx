@@ -582,19 +582,20 @@ function SplitsSection({ players, season, ctxParams = {} }) {
   )
 }
 
-function SimpleSection({ title, fetchFn, players, season, renderData }) {
+function SimpleSection({ title, fetchFn, players, season, renderData, ctxParams }) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const ctxKey = ctxParams ? JSON.stringify(ctxParams) : season
 
   useEffect(() => {
     if (players.length === 0) { setData(null); setError(null); return }
     setLoading(true); setError(null)
-    Promise.all(players.map(p => fetchFn(p.player_id, season)))
+    Promise.all(players.map(p => fetchFn(p.player_id, season, ctxParams)))
       .then(results => setData(results))
       .catch(e => { setData(null); setError(e.message || 'Failed to load data') })
       .finally(() => setLoading(false))
-  }, [players.map(p => p.player_id).join(','), season])
+  }, [players.map(p => p.player_id).join(','), ctxKey])
 
   if (players.length === 0) return <p className="text-slate-500 text-sm">Search for a player above</p>
   if (loading) return <Loading text={`Loading ${title}...`} />
@@ -649,6 +650,7 @@ export default function SituationalStats() {
   const [ctxWeekFrom, setCtxWeekFrom] = useState('')
   const [ctxWeekTo, setCtxWeekTo] = useState('')
   const [ctxLocation, setCtxLocation] = useState('')
+  const [ctxApplied, setCtxApplied] = useState(0)
   // Player finder filters
   const [finderPos, setFinderPos] = useState('')
   const [finderTeam, setFinderTeam] = useState([])
@@ -662,7 +664,10 @@ export default function SituationalStats() {
     week_from: ctxWeekFrom || undefined,
     week_to: ctxWeekTo || undefined,
     location: ctxLocation || undefined,
+    _v: ctxApplied,
   }
+  const hasCtxFilters = ctxSeasonType !== 'REG' || ctxOpponent.length > 0 || ctxLocation || ctxWeekFrom || ctxWeekTo
+  const applyFilters = () => setCtxApplied(v => v + 1)
 
   const addPlayer = (p) => {
     if (players.length < 2 && !players.find(x => x.player_id === p.player_id)) {
@@ -784,6 +789,15 @@ export default function SituationalStats() {
               <span className="text-slate-600 text-[10px]">-</span>
               <input type="number" min={1} max={18} value={ctxWeekTo} onChange={e => setCtxWeekTo(e.target.value)}
                 placeholder="18" className="w-10 bg-slate-800 border border-slate-700 text-slate-300 rounded px-1.5 py-0.5 text-[10px]" />
+              <span className="text-slate-700">|</span>
+              <button onClick={applyFilters}
+                className={`px-3 py-1 rounded-lg text-[10px] font-medium transition-colors ${hasCtxFilters ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40 hover:bg-amber-500/30' : 'bg-slate-800 text-slate-500 border border-slate-700'}`}>
+                Apply Filters
+              </button>
+              {hasCtxFilters && (
+                <button onClick={() => { setCtxSeasonType('REG'); setCtxOpponent([]); setCtxLocation(''); setCtxWeekFrom(''); setCtxWeekTo(''); setCtxApplied(v => v + 1) }}
+                  className="text-[10px] text-red-400 hover:text-red-300">Reset</button>
+              )}
             </div>
           </div>
         )}
@@ -794,9 +808,9 @@ export default function SituationalStats() {
           {section === 'clutch' && <ClutchRankingsSection seasons={selectedSeasons} />}
           {section === 'explorer' && <ExplorerSection seasons={selectedSeasons} />}
           {section === 'splits' && <SplitsSection players={players} ctxParams={ctxParams} />}
-          {section === 'trend' && <WeeklyTrendSection players={players} season={selectedSeasons[0]} />}
+          {section === 'trend' && <WeeklyTrendSection players={players} season={selectedSeasons[0]} ctxParams={ctxParams} />}
           {section === 'playaction' && (
-            <SimpleSection title="Play-Action" fetchFn={api.getPlayAction} players={players} season={selectedSeasons[0]}
+            <SimpleSection title="Play-Action" fetchFn={api.getPlayAction} players={players} season={selectedSeasons[0]} ctxParams={ctxParams}
               renderData={(d, p) => (
                 <div key={p.player_id} className="space-y-2">
                   <p className="text-white font-semibold">{d.player}</p>
@@ -820,7 +834,7 @@ export default function SituationalStats() {
             />
           )}
           {section === 'pressure' && (
-            <SimpleSection title="Pressure" fetchFn={api.getPressureAnalysis} players={players} season={selectedSeasons[0]}
+            <SimpleSection title="Pressure" fetchFn={api.getPressureAnalysis} players={players} season={selectedSeasons[0]} ctxParams={ctxParams}
               renderData={(d, p) => (
                 <div key={p.player_id} className="space-y-2">
                   <p className="text-white font-semibold">{d.player}</p>
@@ -846,7 +860,7 @@ export default function SituationalStats() {
             />
           )}
           {section === 'decisions' && (
-            <SimpleSection title="Decisions" fetchFn={api.getQbDecisions} players={players} season={selectedSeasons[0]}
+            <SimpleSection title="Decisions" fetchFn={api.getQbDecisions} players={players} season={selectedSeasons[0]} ctxParams={ctxParams}
               renderData={(d, p) => (
                 <div key={p.player_id} className="space-y-3">
                   <p className="text-white font-semibold">{d.player}</p>
@@ -889,7 +903,7 @@ export default function SituationalStats() {
             />
           )}
           {section === 'runheatmap' && (
-            <SimpleSection title="Run Heatmap" fetchFn={api.getRunHeatmap} players={players} season={selectedSeasons[0]}
+            <SimpleSection title="Run Heatmap" fetchFn={api.getRunHeatmap} players={players} season={selectedSeasons[0]} ctxParams={ctxParams}
               renderData={(d, p) => (
                 <div key={p.player_id} className="space-y-3">
                   <p className="text-white font-semibold">{d.player}</p>
@@ -920,7 +934,7 @@ export default function SituationalStats() {
             />
           )}
           {section === 'passheatmap' && (
-            <SimpleSection title="Pass Heatmap" fetchFn={(pid, s) => api.getPassHeatmap(pid, s)} players={players} season={selectedSeasons[0]}
+            <SimpleSection title="Pass Heatmap" fetchFn={(pid, s, ctx) => api.getPassHeatmap(pid, s, ctx)} players={players} season={selectedSeasons[0]} ctxParams={ctxParams}
               renderData={(d, p) => (
                 <div key={p.player_id} className="space-y-3">
                   <p className="text-white font-semibold">{d.player}</p>
@@ -1524,16 +1538,17 @@ function ExplorerSection({ seasons }) {
 
 // ── Weekly Trend ─────────────────────────────────────────────────────────────
 
-function WeeklyTrendSection({ players, season }) {
+function WeeklyTrendSection({ players, season, ctxParams }) {
   const [data, setData] = useState({})
   const [loading, setLoading] = useState(false)
   const [hoverBar, setHoverBar] = useState(null)
   const [drillWeek, setDrillWeek] = useState(null)
+  const ctxKey = ctxParams ? JSON.stringify(ctxParams) : season
 
   useEffect(() => {
     if (players.length === 0) { setData({}); return }
     setLoading(true)
-    Promise.all(players.map(p => api.getWeeklyTrend(p.player_id, season)))
+    Promise.all(players.map(p => api.getWeeklyTrend(p.player_id, season, ctxParams)))
       .then(results => {
         const d = {}
         results.forEach((r, i) => { d[players[i].player_id] = r })
@@ -1541,7 +1556,7 @@ function WeeklyTrendSection({ players, season }) {
       })
       .catch(() => {})
       .finally(() => setLoading(false))
-  }, [players.map(p => p.player_id).join(','), season])
+  }, [players.map(p => p.player_id).join(','), ctxKey])
 
   if (players.length === 0) return <p className="text-slate-500 text-sm">Search for a player above to see their weekly EPA trend</p>
   if (loading) return <Loading text="Loading weekly trend..." />
