@@ -920,7 +920,8 @@ export default function SituationalStats() {
           {section === 'matchup' && <MatchupSection players={players} season={selectedSeasons[0]} />}
           {section === 'splits' && <SplitsSection players={players} ctxParams={ctxParams} />}
           {section === 'trend' && <WeeklyTrendSection players={players} season={selectedSeasons[0]} ctxParams={ctxParams} />}
-          {section === 'playaction' && (
+          {section === 'playaction' && (<>
+            <p className="text-slate-400 text-xs mb-2">Play-action is when the QB fakes a handoff before passing. It freezes linebackers and safeties, often creating more open receivers downfield. Compare EPA with and without play-action to see how much the fake helps.</p>
             <SimpleSection title="Play-Action" fetchFn={api.getPlayAction} players={players} season={selectedSeasons[0]} ctxParams={ctxParams}
               renderData={(d, p) => {
                 const pa = d?.data?.with_play_action, noPa = d?.data?.without_play_action
@@ -1032,7 +1033,7 @@ export default function SituationalStats() {
                 )
               }}
             />
-          )}
+          </>)}
           {section === 'pressure' && (
             <SimpleSection title="Pressure" fetchFn={api.getPressureAnalysis} players={players} season={selectedSeasons[0]} ctxParams={ctxParams}
               renderData={(d, p) => (
@@ -2031,14 +2032,18 @@ function DashboardSection({ season }) {
         {/* Team EPA */}
         <div className="bg-slate-900/40 border border-slate-700/30 rounded-xl p-4 space-y-1">
           <p className="text-xs font-bold text-blue-400">Team EPA Rankings</p>
-          <div className="max-h-48 overflow-y-auto space-y-0.5">
+          <div className="flex justify-between text-[9px] text-slate-600 px-0.5 mb-1 sticky top-0">
+            <span>Team</span>
+            <span className="flex gap-2"><span>Pass</span><span>Rush</span><span>Total</span></span>
+          </div>
+          <div className="max-h-52 overflow-y-auto space-y-0.5">
             {(data.team_epa || []).map((r, i) => (
               <div key={r.team} className="flex justify-between text-[10px] items-center">
                 <span className="text-slate-300">{i + 1}. {r.team}</span>
                 <span className="flex gap-2">
-                  <span className="text-slate-500">Pass <EpaColorCell val={r.pass_epa} /></span>
-                  <span className="text-slate-500">Rush <EpaColorCell val={r.rush_epa} /></span>
-                  <span className="font-bold"><EpaColorCell val={r.epa} /></span>
+                  <span className="w-12 text-right"><EpaColorCell val={r.pass_epa} /></span>
+                  <span className="w-12 text-right"><EpaColorCell val={r.rush_epa} /></span>
+                  <span className="w-12 text-right font-bold"><EpaColorCell val={r.epa} /></span>
                 </span>
               </div>
             ))}
