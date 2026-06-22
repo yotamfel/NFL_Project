@@ -27,9 +27,10 @@ class AdminFeedbackPatch(BaseModel):
 
 class TrackBody(BaseModel):
     page: str
+    is_guest: bool = False
 
 
-VALID_PAGES = {"players", "profile", "comparison", "draft", "search", "trends", "anomalies", "saved", "guide"}
+VALID_PAGES = {"players", "profile", "comparison", "draft", "search", "trends", "anomalies", "saved", "guide", "situational"}
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -129,8 +130,18 @@ def track_page(body: TrackBody, current_user: dict = Depends(get_current_user)):
         return
     with engine.begin() as conn:
         conn.execute(text(
-            "INSERT INTO page_views (user_id, page) VALUES (:uid, :page)"
+            "INSERT INTO page_views (user_id, page, is_guest) VALUES (:uid, :page, FALSE)"
         ), {"uid": int(current_user["sub"]), "page": body.page})
+
+
+@router.post("/track/guest", status_code=204)
+def track_guest_page(body: TrackBody):
+    if body.page not in VALID_PAGES:
+        return
+    with engine.begin() as conn:
+        conn.execute(text(
+            "INSERT INTO page_views (user_id, page, is_guest) VALUES (NULL, :page, TRUE)"
+        ), {"page": body.page})
 
 
 # ── Admin endpoints ────────────────────────────────────────────────────────────
@@ -301,6 +312,11 @@ def admin_feature_usage(admin: dict = Depends(_require_admin)):
         thumbs_up = conn.execute(text("SELECT COUNT(*) FROM ai_query_log WHERE thumbs = 1")).scalar() or 0
         thumbs_down = conn.execute(text("SELECT COUNT(*) FROM ai_query_log WHERE thumbs = -1")).scalar() or 0
         total_page_views = conn.execute(text("SELECT COUNT(*) FROM page_views")).scalar() or 0
+        guest_views = conn.execute(text("SELECT COUNT(*) FROM page_views WHERE is_guest = TRUE")).scalar() or 0
+        guest_sessions = conn.execute(text("""
+            SELECT COUNT(DISTINCT DATE_TRUNC('hour', created_at))
+            FROM page_views WHERE is_guest = TRUE
+        """)).scalar() or 0
         feedback_raw = conn.execute(text("""
             SELECT category, COUNT(*) as count,
                    COUNT(*) FILTER (WHERE resolved = FALSE) as open
@@ -322,6 +338,8 @@ def admin_feature_usage(admin: dict = Depends(_require_admin)):
         "feedback_by_category": feedback_by_cat,
         "totals": {
             "total_page_views": total_page_views,
+            "guest_page_views": guest_views,
+            "guest_sessions": guest_sessions,
             "total_ai_calls": total_ai,
             "thumbs_up": thumbs_up,
             "thumbs_down": thumbs_down,

@@ -438,10 +438,15 @@ function UsageTab() {
   return (
     <div className="space-y-6">
       {/* Top-level totals */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
         <div className="rounded-xl p-5 border bg-amber-500/10 border-amber-500/30">
           <p className="text-xs font-medium mb-1 text-amber-400">Page Views</p>
           <p className="text-3xl font-bold text-amber-300">{(totals.total_page_views ?? 0).toLocaleString()}</p>
+        </div>
+        <div className="rounded-xl p-5 border bg-slate-700/30 border-slate-600/40">
+          <p className="text-xs font-medium mb-1 text-slate-400">Guest Views</p>
+          <p className="text-3xl font-bold text-slate-300">{(totals.guest_page_views ?? 0).toLocaleString()}</p>
+          <p className="text-[10px] text-slate-600 mt-0.5">{totals.guest_sessions ?? 0} sessions</p>
         </div>
         <div className="rounded-xl p-5 border bg-violet-500/10 border-violet-500/30">
           <p className="text-xs font-medium mb-1 text-violet-400">AI Calls</p>

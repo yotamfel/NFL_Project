@@ -208,12 +208,14 @@ def _run_migrations():
                 id         BIGSERIAL PRIMARY KEY,
                 user_id    BIGINT REFERENCES users(id) ON DELETE CASCADE,
                 page       TEXT NOT NULL,
+                is_guest   BOOLEAN DEFAULT FALSE,
                 created_at TIMESTAMPTZ DEFAULT now()
             )
         """))
         conn.execute(text("""
             CREATE INDEX IF NOT EXISTS idx_page_views_page_date ON page_views (page, created_at DESC)
         """))
+        conn.execute(text("ALTER TABLE page_views ADD COLUMN IF NOT EXISTS is_guest BOOLEAN DEFAULT FALSE"))
 
 
 _run_migrations()
