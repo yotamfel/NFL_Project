@@ -638,8 +638,19 @@ export default function SituationalStats() {
   const [selectedSeasons, setSelectedSeasons] = useState(initSeasons)
   const [players, setPlayers] = useState([])
   const [availableYears, setAvailableYears] = useState(FALLBACK_YEARS)
-  const multiSeasonSections = ['epa', 'clutch', 'explorer', 'splits', 'trend', 'playaction', 'pressure', 'decisions', 'runheatmap', 'passheatmap', 'formation']
   const [urlInited, setUrlInited] = useState(false)
+  const [ctxOpponent, setCtxOpponent] = useState(initOpp)
+  const [ctxSeasonType, setCtxSeasonType] = useState(initST)
+  const [ctxWeekFrom, setCtxWeekFrom] = useState(initWF)
+  const [ctxWeekTo, setCtxWeekTo] = useState(initWT)
+  const [ctxLocation, setCtxLocation] = useState(initLoc)
+  const [ctxApplied, setCtxApplied] = useState(0)
+  const [finderPos, setFinderPos] = useState('')
+  const [finderTeam, setFinderTeam] = useState([])
+  const [finderResults, setFinderResults] = useState([])
+  const [finderLoading, setFinderLoading] = useState(false)
+
+  const multiSeasonSections = ['epa', 'clutch', 'explorer', 'splits', 'trend', 'playaction', 'pressure', 'decisions', 'runheatmap', 'passheatmap', 'formation']
 
   useEffect(() => {
     api.getSituationalSeasons().then(years => {
@@ -648,7 +659,6 @@ export default function SituationalStats() {
         if (!initSeasons.length) { setSelectedSeasons([years[0]]) }
         setSeason(years[0])
       }
-      // Restore players from URL
       const pids = searchParams.get('p')?.split(',').filter(Boolean) || []
       if (pids.length) {
         Promise.all(pids.map(pid => api.getPlayer(pid).catch(() => null)))
@@ -658,7 +668,7 @@ export default function SituationalStats() {
     }).catch(() => { setUrlInited(true) })
   }, [])
 
-  // Sync state to URL
+  const urlSyncKey = `${section}|${selectedSeasons}|${players.map(p => p.player_id)}|${ctxSeasonType}|${ctxOpponent}|${ctxLocation}|${ctxWeekFrom}|${ctxWeekTo}`
   useEffect(() => {
     if (!urlInited) return
     const p = new URLSearchParams()
@@ -671,21 +681,7 @@ export default function SituationalStats() {
     if (ctxWeekFrom) p.set('wf', ctxWeekFrom)
     if (ctxWeekTo) p.set('wt', ctxWeekTo)
     setSearchParams(p, { replace: true })
-  }, [section, selectedSeasons.join(','), players.map(p => p.player_id).join(','), ctxSeasonType, ctxOpponent.join(','), ctxLocation, ctxWeekFrom, ctxWeekTo, urlInited])
-
-  // Context filters for player-based sections
-  const [ctxOpponent, setCtxOpponent] = useState(initOpp)
-  const [ctxSeasonType, setCtxSeasonType] = useState(initST)
-  const [ctxWeekFrom, setCtxWeekFrom] = useState(initWF)
-  const [ctxWeekTo, setCtxWeekTo] = useState(initWT)
-  const [ctxLocation, setCtxLocation] = useState(initLoc)
-  const [ctxApplied, setCtxApplied] = useState(0)
-
-  // Player finder filters
-  const [finderPos, setFinderPos] = useState('')
-  const [finderTeam, setFinderTeam] = useState([])
-  const [finderResults, setFinderResults] = useState([])
-  const [finderLoading, setFinderLoading] = useState(false)
+  }, [urlSyncKey, urlInited])
 
   const finderKey = `${finderPos}|${finderTeam.join(',')}|${selectedSeasons.join(',')}`
   useEffect(() => {
