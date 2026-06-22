@@ -6,7 +6,7 @@ import { Loading, ErrorMsg } from '../components/Status'
 import SocialPostGenerator from '../components/SocialPostGenerator'
 import ProjectPicker from '../components/ProjectPicker'
 
-const YEARS = Array.from({ length: 27 }, (_, i) => 2025 - i)
+const FALLBACK_YEARS = [2025, 2024, 2023, 2022]
 const POSITIONS = ['QB', 'RB', 'WR', 'TE']
 
 const SECTIONS = [
@@ -290,8 +290,15 @@ export default function SituationalStats() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const [section, setSection] = useState('epa')
-  const [season, setSeason] = useState(2024)
+  const [season, setSeason] = useState(2025)
   const [players, setPlayers] = useState([])
+  const [availableYears, setAvailableYears] = useState(FALLBACK_YEARS)
+
+  useEffect(() => {
+    api.getSituationalSeasons().then(years => {
+      if (years?.length) { setAvailableYears(years); setSeason(years[0]) }
+    }).catch(() => {})
+  }, [])
 
   useEffect(() => {
     if (user && !user.is_admin) navigate('/', { replace: true })
@@ -331,7 +338,7 @@ export default function SituationalStats() {
         <div className="flex items-center gap-3 flex-wrap">
           <select value={season} onChange={e => setSeason(Number(e.target.value))}
             className="bg-slate-800 border border-slate-700 text-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none">
-            {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+            {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
           </select>
 
           {needsPlayer && (

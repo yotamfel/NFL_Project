@@ -183,6 +183,7 @@ export const api = {
   assignToProjects: (savedItemId, projectIds) => post('/projects/assign', { saved_item_id: savedItemId, project_ids: projectIds }),
 
   // Situational Stats
+  getSituationalSeasons: () => get('/situational/available-seasons'),
   getEpaRankings: (params = {}) => {
     const p = new URLSearchParams()
     if (params.position) p.set('position', params.position)

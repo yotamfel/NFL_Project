@@ -21,6 +21,13 @@ def _latest_season():
         return c.execute(text("SELECT MAX(season) FROM pbp")).scalar() or 2025
 
 
+@router.get("/available-seasons")
+def available_seasons(user: dict = Depends(require_admin)):
+    with engine.connect() as c:
+        rows = c.execute(text("SELECT DISTINCT season FROM pbp ORDER BY season DESC")).fetchall()
+    return [r[0] for r in rows]
+
+
 # ── EPA Rankings ──────────────────────────────────────────────────────────────
 
 @router.get("/epa-rankings")
