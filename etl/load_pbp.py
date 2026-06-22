@@ -273,4 +273,6 @@ if __name__ == "__main__":
         now = datetime.utcnow()
         cur = now.year if now.month >= 9 else now.year - 1
         years = sorted({cur - 1, cur})
+    # PBP covers 2020-2025 max (DB size constraint: ~45MB/year, 512MB limit)
+    years = [y for y in years if y >= 2020]
     load_pbp_seasons(years)
