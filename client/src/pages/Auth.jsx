@@ -117,15 +117,16 @@ export default function Auth() {
             </button>
           </form>
 
-          <div className="mt-4 pt-4 border-t border-slate-800">
+          <div className="mt-4 pt-4 border-t border-slate-800 space-y-2">
             {guestExpired ? (
               <p className="text-center text-slate-600 text-xs">Guest session already used. Sign up to continue.</p>
-            ) : (
+            ) : (<>
               <button onClick={() => { if (loginAsGuest()) navigate('/', { replace: true }) }}
                 className="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 py-2.5 rounded-lg text-sm transition-colors">
                 Try as guest <span className="text-slate-500">(10 min)</span>
               </button>
-            )}
+              <p className="text-center text-slate-600 text-[10px]">Guest mode: no AI search, no saves/exports, no feedback</p>
+            </>)}
           </div>
         </div>
       </div>
