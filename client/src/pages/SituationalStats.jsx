@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Fragment } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../api'
 import { useAuth } from '../context/AuthContext'
@@ -741,15 +741,16 @@ function PlayLogPanel({ body, onClose }) {
   const [total, setTotal] = useState(0)
   const [offset, setOffset] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [sortCol, setSortCol] = useState('epa')
   const [sortDir, setSortDir] = useState('desc')
   const limit = 50
 
   const load = (off = 0, col = sortCol, dir = sortDir) => {
-    setLoading(true)
+    setLoading(true); setError(null)
     api.postExplorerPlays({ ...body, offset: off, limit, sort: col, sort_dir: dir })
       .then(d => { setPlays(d.plays); setTotal(d.total); setOffset(off) })
-      .catch(() => {})
+      .catch(e => setError(e.message || 'Failed to load plays'))
       .finally(() => setLoading(false))
   }
 
@@ -788,6 +789,7 @@ function PlayLogPanel({ body, onClose }) {
           <button onClick={onClose} className="text-xs text-slate-500 hover:text-slate-300">Close</button>
         </div>
       </div>
+      {error && <p className="text-red-400 text-xs">{error}</p>}
       {loading ? <Loading text="Loading plays..." /> : (
         <>
           <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
@@ -1105,8 +1107,8 @@ function ExplorerSection({ seasons }) {
                 const isCompared = compareRows.some(c => c._label === gKey)
                 const isExpanded = expandedRow === gKey
                 return (
-                  <>
-                    <tr key={gKey} className={`border-b border-slate-800/40 hover:bg-slate-800/30 ${isCompared ? 'bg-amber-500/5' : ''}`}>
+                  <Fragment key={gKey}>
+                    <tr className={`border-b border-slate-800/40 hover:bg-slate-800/30 ${isCompared ? 'bg-amber-500/5' : ''}`}>
                       <td className="py-2 pl-1">
                         <input type="checkbox" checked={isCompared} onChange={() => toggleCompare(r, gKey)}
                           className="w-3 h-3 accent-amber-500 cursor-pointer" />
@@ -1130,13 +1132,13 @@ function ExplorerSection({ seasons }) {
                       </td>
                     </tr>
                     {isExpanded && (
-                      <tr key={`${gKey}-log`}><td colSpan={11} className="p-0">
+                      <tr><td colSpan={11} className="p-0">
                         <PlayLogPanel
                           body={{ ...buildBody(), drill: { field: activeGroupBy, value: gKey } }}
                           onClose={() => setExpandedRow(null)} />
                       </td></tr>
                     )}
-                  </>
+                  </Fragment>
                 )
               })}
             </tbody>

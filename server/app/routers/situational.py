@@ -730,17 +730,36 @@ def _build_explorer_where(body: dict):
 
     if drill:
         drill_map = {
-            "team": "posteam = :drill_val",
-            "down": "down = :drill_val_i",
-            "quarter": "qtr = :drill_val_i",
-            "play_type": "play_type = :drill_val",
-            "week": "week = :drill_val_i",
+            "team": ("posteam = :drill_val", "str"),
+            "down": ("down = :drill_val_i", "int"),
+            "quarter": ("qtr = :drill_val_i", "int"),
+            "play_type": ("play_type = :drill_val", "str"),
+            "week": ("week = :drill_val_i", "int"),
+            "field_zone": (
+                "CASE WHEN yardline_100 <= 10 THEN 'Goal line (1-10)' "
+                "WHEN yardline_100 <= 20 THEN 'Red zone (11-20)' "
+                "WHEN yardline_100 <= 40 THEN 'Mid-field (21-40)' "
+                "WHEN yardline_100 <= 60 THEN 'Own territory (41-60)' "
+                "ELSE 'Deep own (61+)' END = :drill_val", "str"),
+            "score_diff": (
+                "CASE WHEN score_differential > 14 THEN 'Up big (14+)' "
+                "WHEN score_differential > 0 THEN 'Leading (1-14)' "
+                "WHEN score_differential = 0 THEN 'Tied' "
+                "WHEN score_differential > -14 THEN 'Trailing (1-14)' "
+                "ELSE 'Down big (14+)' END = :drill_val", "str"),
+            "pass_depth": (
+                "CASE WHEN air_yards IS NULL THEN 'Run' "
+                "WHEN air_yards < 0 THEN 'Behind LOS' "
+                "WHEN air_yards < 10 THEN 'Short (0-9)' "
+                "WHEN air_yards < 20 THEN 'Medium (10-19)' "
+                "ELSE 'Deep (20+)' END = :drill_val", "str"),
         }
         drill_field = drill.get("field")
         drill_value = drill.get("value")
         if drill_field in drill_map and drill_value is not None:
-            where_parts.append(drill_map[drill_field])
-            if "_i" in drill_map[drill_field]:
+            sql_expr, val_type = drill_map[drill_field]
+            where_parts.append(sql_expr)
+            if val_type == "int":
                 params["drill_val_i"] = int(drill_value)
             else:
                 params["drill_val"] = str(drill_value)
