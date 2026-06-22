@@ -671,17 +671,19 @@ export default function SituationalStats() {
   }
   const removePlayer = (id) => setPlayers(prev => prev.filter(p => p.player_id !== id))
 
-  const browseByFilters = () => {
-    if (!finderPos && !finderTeam.length) return
-    setFinderLoading(true)
+  const finderKey = `${finderPos}|${finderTeam.join(',')}|${selectedSeasons.join(',')}`
+  useEffect(() => {
+    if (!finderPos && !finderTeam.length) { setFinderResults([]); return }
+    setFinderLoading(true); setFinderResults([])
+    const key = finderKey
     api.browseSituationalPlayers({
       pos: finderPos || undefined,
       team: finderTeam.length ? finderTeam.join(',') : undefined,
       seasons: selectedSeasons,
-    }).then(setFinderResults).catch(() => setFinderResults([])).finally(() => setFinderLoading(false))
-  }
-
-  useEffect(() => { if (finderPos || finderTeam.length) browseByFilters() }, [finderPos, finderTeam.join(','), selectedSeasons.join(',')])
+    }).then(r => { if (finderKey === key) setFinderResults(r) })
+      .catch(() => { if (finderKey === key) setFinderResults([]) })
+      .finally(() => { if (finderKey === key) setFinderLoading(false) })
+  }, [finderKey])
 
   const needsPlayer = !['epa', 'clutch', 'formation', 'explorer'].includes(section)
 
