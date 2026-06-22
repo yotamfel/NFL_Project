@@ -717,6 +717,42 @@ export default function SituationalStats() {
 
   if (!user?.is_admin) return null
 
+  // Saved reports
+  const [savedReports, setSavedReports] = useState([])
+  const [showSaved, setShowSaved] = useState(false)
+
+  useEffect(() => {
+    api.getSaved().then(items => setSavedReports(items.filter(i => i.type === 'situational_report'))).catch(() => {})
+  }, [])
+
+  const saveCurrentState = () => {
+    const state = { section, seasons: selectedSeasons, players: players.map(p => ({ player_id: p.player_id, player_name: p.player_name, pos: p.pos })), ctxSeasonType, ctxOpponent, ctxLocation, ctxWeekFrom, ctxWeekTo }
+    const label = `${SECTIONS.find(s => s.id === section)?.label || section}${players.length ? ` - ${players.map(p => p.player_name).join(' vs ')}` : ''}`
+    const name = prompt('Report name:', label)
+    if (!name) return
+    api.createSaved({ type: 'situational_report', label: name, data: state })
+      .then(() => api.getSaved().then(items => setSavedReports(items.filter(i => i.type === 'situational_report'))))
+      .catch(() => {})
+  }
+
+  const loadReport = (report) => {
+    const s = report.data
+    if (s.section) setSection(s.section)
+    if (s.seasons?.length) setSelectedSeasons(s.seasons)
+    if (s.players?.length) setPlayers(s.players)
+    if (s.ctxSeasonType) setCtxSeasonType(s.ctxSeasonType)
+    if (s.ctxOpponent) setCtxOpponent(s.ctxOpponent)
+    if (s.ctxLocation) setCtxLocation(s.ctxLocation)
+    if (s.ctxWeekFrom) setCtxWeekFrom(s.ctxWeekFrom)
+    if (s.ctxWeekTo) setCtxWeekTo(s.ctxWeekTo)
+    setShowSaved(false)
+    setCtxApplied(v => v + 1)
+  }
+
+  const deleteReport = (id) => {
+    api.deleteSaved(id).then(() => setSavedReports(prev => prev.filter(r => r.id !== id))).catch(() => {})
+  }
+
   const ctxParams = {
     seasons: selectedSeasons,
     opponent: ctxOpponent.length ? ctxOpponent.join(',') : undefined,
@@ -751,6 +787,32 @@ export default function SituationalStats() {
             <span>{s.icon}</span> {s.label}
           </button>
         ))}
+        <div className="border-t border-slate-800 pt-2 mt-2 space-y-1">
+          <button onClick={saveCurrentState}
+            className="w-full text-left px-3 py-2 rounded-lg text-xs font-medium text-slate-500 hover:text-amber-400 hover:bg-slate-800 transition-colors flex items-center gap-2">
+            <span>💾</span> Save Report
+          </button>
+          <div className="relative">
+            <button onClick={() => setShowSaved(!showSaved)}
+              className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors flex items-center gap-2 ${showSaved ? 'bg-slate-800 text-white' : 'text-slate-500 hover:text-white hover:bg-slate-800'}`}>
+              <span>📂</span> Saved ({savedReports.length})
+            </button>
+            {showSaved && savedReports.length > 0 && (
+              <div className="absolute left-full top-0 ml-2 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl z-30 p-2 w-64 max-h-80 overflow-y-auto">
+                {savedReports.map(r => (
+                  <div key={r.id} className="flex items-center gap-1 group">
+                    <button onClick={() => loadReport(r)}
+                      className="flex-1 text-left px-2 py-1.5 rounded text-xs text-slate-300 hover:bg-slate-800 hover:text-amber-400 transition-colors truncate">
+                      {r.label}
+                    </button>
+                    <button onClick={() => deleteReport(r.id)}
+                      className="text-slate-700 hover:text-red-400 text-xs px-1 opacity-0 group-hover:opacity-100">x</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Main content */}
