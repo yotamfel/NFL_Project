@@ -249,6 +249,12 @@ def load_pbp_seasons(years):
             try:
                 raw = nfl.load_participation(yr)
                 df = raw.to_pandas()
+                # Fix object-typed boolean columns (was_pressure etc.)
+                for col in df.columns:
+                    if df[col].dtype == object:
+                        sample = df[col].dropna().head(5).tolist()
+                        if any(isinstance(v, bool) for v in sample):
+                            df[col] = df[col].map({True: 1, False: 0, None: None})
                 eng = get_engine()
                 with eng.begin() as conn:
                     try:
