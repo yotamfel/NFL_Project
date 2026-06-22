@@ -28,6 +28,26 @@ def available_seasons(user: dict = Depends(require_admin)):
     return [r[0] for r in rows]
 
 
+def _ftn_seasons():
+    try:
+        with engine.connect() as c:
+            rows = c.execute(text("SELECT DISTINCT season FROM ftn_charting ORDER BY season DESC")).fetchall()
+        return [r[0] for r in rows]
+    except Exception:
+        return []
+
+
+def _participation_seasons():
+    try:
+        with engine.connect() as c:
+            rows = c.execute(text(
+                "SELECT DISTINCT LEFT(nflverse_game_id, 4)::int as season FROM participation ORDER BY season DESC"
+            )).fetchall()
+        return [r[0] for r in rows]
+    except Exception:
+        return []
+
+
 # ── EPA Rankings ──────────────────────────────────────────────────────────────
 
 @router.get("/epa-rankings")
@@ -271,38 +291,47 @@ def play_action_analysis(
     user: dict = Depends(require_admin),
 ):
     yr = season or _latest_season()
-    if yr < 2022:
-        return {"error": "Play-action data available from 2022 only"}
-
-    sql = text("""
-        WITH pa AS (
-            SELECT
-                f.is_play_action,
-                p.epa, p.complete_pass, p.passing_yards, p.air_yards,
-                p.yards_after_catch, p.success
-            FROM pbp p
-            JOIN ftn_charting f ON f.nflverse_game_id = p.game_id
-                AND f.nflverse_play_id = p.play_id
-            WHERE p.passer_player_id = :pid AND p.season = :season
-                  AND p.pass_attempt = 1 AND p.sack = 0
-                  AND p.epa IS NOT NULL AND f.is_play_action IS NOT NULL
-        )
-        SELECT
-            is_play_action,
-            COUNT(*) as plays,
-            ROUND(AVG(epa)::numeric, 3) as epa_per_play,
-            ROUND(AVG(CASE WHEN complete_pass = 1 THEN 100.0 ELSE 0.0 END)::numeric, 1) as comp_pct,
-            ROUND(AVG(passing_yards)::numeric, 1) as avg_yards,
-            ROUND(AVG(air_yards)::numeric, 1) as avg_air_yards,
-            ROUND(AVG(yards_after_catch)::numeric, 1) as avg_yac,
-            ROUND(AVG(CASE WHEN success = 1 THEN 100.0 ELSE 0.0 END)::numeric, 1) as success_rate
-        FROM pa
-        GROUP BY is_play_action
-    """)
+    ftn_years = _ftn_seasons()
 
     with engine.connect() as c:
         player = c.execute(text("SELECT player_name FROM players WHERE player_id = :pid"), {"pid": player_id}).fetchone()
-        rows = c.execute(sql, {"pid": player_id, "season": yr}).fetchall()
+
+        if yr not in ftn_years:
+            return {
+                "player": player.player_name if player else player_id,
+                "player_id": player_id,
+                "season": yr,
+                "coverage": f"FTN Charting data available for: {', '.join(str(y) for y in ftn_years) if ftn_years else 'none loaded'}",
+                "data": {},
+                "no_data": True,
+                "available_seasons": ftn_years,
+            }
+
+        rows = c.execute(text("""
+            WITH pa AS (
+                SELECT
+                    f.is_play_action,
+                    p.epa, p.complete_pass, p.passing_yards, p.air_yards,
+                    p.yards_after_catch, p.success
+                FROM pbp p
+                JOIN ftn_charting f ON f.nflverse_game_id = p.game_id
+                    AND f.nflverse_play_id = p.play_id
+                WHERE p.passer_player_id = :pid AND p.season = :season
+                      AND p.pass_attempt = 1 AND p.sack = 0
+                      AND p.epa IS NOT NULL AND f.is_play_action IS NOT NULL
+            )
+            SELECT
+                is_play_action,
+                COUNT(*) as plays,
+                ROUND(AVG(epa)::numeric, 3) as epa_per_play,
+                ROUND(AVG(CASE WHEN complete_pass = 1 THEN 100.0 ELSE 0.0 END)::numeric, 1) as comp_pct,
+                ROUND(AVG(passing_yards)::numeric, 1) as avg_yards,
+                ROUND(AVG(air_yards)::numeric, 1) as avg_air_yards,
+                ROUND(AVG(yards_after_catch)::numeric, 1) as avg_yac,
+                ROUND(AVG(CASE WHEN success = 1 THEN 100.0 ELSE 0.0 END)::numeric, 1) as success_rate
+            FROM pa
+            GROUP BY is_play_action
+        """), {"pid": player_id, "season": yr}).fetchall()
 
     data = {}
     for r in rows:
@@ -313,7 +342,7 @@ def play_action_analysis(
         "player": player.player_name if player else player_id,
         "player_id": player_id,
         "season": yr,
-        "coverage": "2022-2025 (FTN Charting)",
+        "coverage": f"FTN Charting: {', '.join(str(y) for y in ftn_years)}",
         "data": data,
     }
 
@@ -327,33 +356,42 @@ def formation_analysis(
     user: dict = Depends(require_admin),
 ):
     yr = season or _latest_season()
+    part_years = _participation_seasons()
 
-    sql = text("""
-        SELECT
-            pt.offense_personnel as personnel,
-            COUNT(*) as plays,
-            ROUND(100.0 * COUNT(*) / SUM(COUNT(*)) OVER(), 1) as usage_pct,
-            ROUND(AVG(p.epa)::numeric, 3) as epa_per_play,
-            ROUND(AVG(CASE WHEN p.success = 1 THEN 100.0 ELSE 0.0 END)::numeric, 1) as success_rate,
-            ROUND(AVG(p.yards_gained)::numeric, 1) as avg_yards
-        FROM participation pt
-        JOIN pbp p ON p.game_id = pt.nflverse_game_id AND p.play_id = pt.play_id
-        WHERE p.posteam = :team AND p.season = :season
-              AND p.epa IS NOT NULL AND pt.offense_personnel IS NOT NULL
-              AND p.play_type IN ('pass', 'run')
-        GROUP BY pt.offense_personnel
-        HAVING COUNT(*) >= 10
-        ORDER BY plays DESC
-        LIMIT 20
-    """)
+    if yr not in part_years:
+        return {
+            "team": team.upper(),
+            "season": yr,
+            "coverage": f"Participation data available for: {', '.join(str(y) for y in part_years) if part_years else 'none loaded'}",
+            "data": [],
+            "no_data": True,
+            "available_seasons": part_years,
+        }
 
     with engine.connect() as c:
-        rows = c.execute(sql, {"team": team.upper(), "season": yr}).fetchall()
+        rows = c.execute(text("""
+            SELECT
+                pt.offense_personnel as personnel,
+                COUNT(*) as plays,
+                ROUND(100.0 * COUNT(*) / SUM(COUNT(*)) OVER(), 1) as usage_pct,
+                ROUND(AVG(p.epa)::numeric, 3) as epa_per_play,
+                ROUND(AVG(CASE WHEN p.success = 1 THEN 100.0 ELSE 0.0 END)::numeric, 1) as success_rate,
+                ROUND(AVG(p.yards_gained)::numeric, 1) as avg_yards
+            FROM participation pt
+            JOIN pbp p ON p.game_id = pt.nflverse_game_id AND p.play_id = pt.play_id
+            WHERE p.posteam = :team AND p.season = :season
+                  AND p.epa IS NOT NULL AND pt.offense_personnel IS NOT NULL
+                  AND p.play_type IN ('pass', 'run')
+            GROUP BY pt.offense_personnel
+            HAVING COUNT(*) >= 10
+            ORDER BY plays DESC
+            LIMIT 20
+        """), {"team": team.upper(), "season": yr}).fetchall()
 
     return {
         "team": team.upper(),
         "season": yr,
-        "coverage": "2016-2025 (Participation)",
+        "coverage": f"Participation data: {', '.join(str(y) for y in part_years)}",
         "data": [dict(r._mapping) for r in rows],
     }
 
@@ -445,29 +483,38 @@ def pressure_analysis(
     user: dict = Depends(require_admin),
 ):
     yr = season or _latest_season()
-    if yr < 2016:
-        return {"error": "Pressure data available from 2016 only"}
-
-    sql = text("""
-        SELECT
-            pt.was_pressure,
-            COUNT(*) as plays,
-            ROUND(AVG(p.epa)::numeric, 3) as epa_per_play,
-            ROUND(AVG(CASE WHEN p.complete_pass = 1 THEN 100.0 ELSE 0.0 END)::numeric, 1) as comp_pct,
-            ROUND(AVG(CASE WHEN p.sack = 1 THEN 100.0 ELSE 0.0 END)::numeric, 1) as sack_rate,
-            ROUND(AVG(p.passing_yards)::numeric, 1) as avg_yards,
-            ROUND(AVG(CASE WHEN p.interception = 1 THEN 100.0 ELSE 0.0 END)::numeric, 1) as int_rate
-        FROM pbp p
-        JOIN participation pt ON pt.nflverse_game_id = p.game_id AND pt.play_id = p.play_id
-        WHERE p.passer_player_id = :pid AND p.season = :season
-              AND p.pass_attempt = 1 AND p.epa IS NOT NULL
-              AND pt.was_pressure IS NOT NULL
-        GROUP BY pt.was_pressure
-    """)
+    part_years = _participation_seasons()
 
     with engine.connect() as c:
         player = c.execute(text("SELECT player_name FROM players WHERE player_id = :pid"), {"pid": player_id}).fetchone()
-        rows = c.execute(sql, {"pid": player_id, "season": yr}).fetchall()
+
+        if yr not in part_years:
+            return {
+                "player": player.player_name if player else player_id,
+                "player_id": player_id,
+                "season": yr,
+                "coverage": f"Participation data available for: {', '.join(str(y) for y in part_years) if part_years else 'none loaded'}",
+                "data": {},
+                "no_data": True,
+                "available_seasons": part_years,
+            }
+
+        rows = c.execute(text("""
+            SELECT
+                pt.was_pressure,
+                COUNT(*) as plays,
+                ROUND(AVG(p.epa)::numeric, 3) as epa_per_play,
+                ROUND(AVG(CASE WHEN p.complete_pass = 1 THEN 100.0 ELSE 0.0 END)::numeric, 1) as comp_pct,
+                ROUND(AVG(CASE WHEN p.sack = 1 THEN 100.0 ELSE 0.0 END)::numeric, 1) as sack_rate,
+                ROUND(AVG(p.passing_yards)::numeric, 1) as avg_yards,
+                ROUND(AVG(CASE WHEN p.interception = 1 THEN 100.0 ELSE 0.0 END)::numeric, 1) as int_rate
+            FROM pbp p
+            JOIN participation pt ON pt.nflverse_game_id = p.game_id AND pt.play_id = p.play_id
+            WHERE p.passer_player_id = :pid AND p.season = :season
+                  AND p.pass_attempt = 1 AND p.epa IS NOT NULL
+                  AND pt.was_pressure IS NOT NULL
+            GROUP BY pt.was_pressure
+        """), {"pid": player_id, "season": yr}).fetchall()
 
     data = {}
     for r in rows:
@@ -478,7 +525,7 @@ def pressure_analysis(
         "player": player.player_name if player else player_id,
         "player_id": player_id,
         "season": yr,
-        "coverage": "2016-2025 (Participation)",
+        "coverage": f"Participation data: {', '.join(str(y) for y in part_years)}",
         "data": data,
     }
 
@@ -492,8 +539,21 @@ def qb_decisions(
     user: dict = Depends(require_admin),
 ):
     yr = season or _latest_season()
-    if yr < 2022:
-        return {"error": "Decision data available from 2022 only"}
+    ftn_years = _ftn_seasons()
+
+    if yr not in ftn_years:
+        with engine.connect() as c:
+            player = c.execute(text("SELECT player_name FROM players WHERE player_id = :pid"), {"pid": player_id}).fetchone()
+        return {
+            "player": player.player_name if player else player_id,
+            "player_id": player_id,
+            "season": yr,
+            "coverage": f"FTN Charting data available for: {', '.join(str(y) for y in ftn_years) if ftn_years else 'none loaded'}",
+            "decisions": {},
+            "read_distribution": [],
+            "no_data": True,
+            "available_seasons": ftn_years,
+        }
 
     sql = text("""
         SELECT
