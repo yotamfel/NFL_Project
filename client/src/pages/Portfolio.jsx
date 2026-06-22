@@ -38,7 +38,7 @@ export default function Portfolio() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    document.title = 'Fourth & Data — Portfolio'
+    document.title = 'Fourth & Data - Portfolio'
     return () => { document.title = 'Fourth & Data' }
   }, [])
 
@@ -51,7 +51,7 @@ export default function Portfolio() {
           <p className="text-amber-500 text-xs font-bold uppercase tracking-[0.25em]">Technical Portfolio</p>
           <h1 className="text-5xl font-black text-white tracking-tight leading-tight">Fourth & Data</h1>
           <p className="text-slate-400 text-lg max-w-2xl mx-auto leading-relaxed">
-            A full-stack NFL analytics platform built from scratch — from data recovery and pipeline design
+            A full-stack NFL analytics platform built from scratch - from data recovery and pipeline design
             to statistical modeling, AI-powered analysis, and a proprietary career value metric serving 19,000+ players across 56 seasons.
           </p>
           <div className="flex justify-center gap-4 pt-2">
@@ -122,7 +122,7 @@ export default function Portfolio() {
               </div>
             </div>
             <p className="text-xs text-slate-600 text-center mt-4">
-              Single Docker container on Railway — FastAPI serves the React SPA from the same process.
+              Single Docker container on Railway - FastAPI serves the React SPA from the same process.
             </p>
           </div>
         </section>
@@ -133,7 +133,7 @@ export default function Portfolio() {
             <p className="text-amber-500 text-xs font-bold uppercase tracking-widest mb-1">ETL Pipeline</p>
             <h2 className="text-2xl font-black text-white">Data Flow</h2>
             <p className="text-slate-400 text-sm mt-2">
-              All data originates from nflverse — an open-source NFL data ecosystem. The pipeline transforms raw play-by-play
+              All data originates from nflverse - an open-source NFL data ecosystem. The pipeline transforms raw play-by-play
               and seasonal statistics into clean, analysis-ready tables through a multi-stage process.
             </p>
           </div>
@@ -181,12 +181,12 @@ export default function Portfolio() {
             <p className="text-white font-bold text-sm">Behind the scenes: what the pipeline actually does</p>
             <div className="space-y-3">
               <Decision
-                title="supplement_seasons.py — the core transform (1,000+ lines)"
-                why="This single script is the backbone of the entire data layer. It pulls raw per-player season stats from nflverse's wide table, but the wide table is incomplete — it's missing games played, longest plays, QB records, success rates, and several touchdown/fumble counts. So the script also loads the full play-by-play (~50K plays per season), and derives 15+ fields by aggregating individual plays. Each derived field was verified against published reference values to 99%+ accuracy. The script handles a circular dependency: new players must exist in the players table before their season rows can be inserted (foreign key), but the players table is built from season data. It breaks the cycle by seeding new players before writing seasons."
+                title="supplement_seasons.py - the core transform (1,000+ lines)"
+                why="This single script is the backbone of the entire data layer. It pulls raw per-player season stats from nflverse's wide table, but the wide table is incomplete - it's missing games played, longest plays, QB records, success rates, and several touchdown/fumble counts. So the script also loads the full play-by-play (~50K plays per season), and derives 15+ fields by aggregating individual plays. Each derived field was verified against published reference values to 99%+ accuracy. The script handles a circular dependency: new players must exist in the players table before their season rows can be inserted (foreign key), but the players table is built from season data. It breaks the cycle by seeding new players before writing seasons."
               />
               <Decision
-                title="run_etl.py — orchestration with dependency order"
-                why="The 6 pipeline steps must run in strict order: seasons first (creates the base data), then career views (aggregates seasons), then FDV (needs career views), then secondary loaders (injuries, NGS, snaps — all depend on the players table). The runner wraps each step in error handling so a failure in step 4 doesn't prevent step 5 from running if they're independent. Each step reports timing and row counts."
+                title="run_etl.py - orchestration with dependency order"
+                why="The 6 pipeline steps must run in strict order: seasons first (creates the base data), then career views (aggregates seasons), then FDV (needs career views), then secondary loaders (injuries, NGS, snaps - all depend on the players table). The runner wraps each step in error handling so a failure in step 4 doesn't prevent step 5 from running if they're independent. Each step reports timing and row counts."
               />
               <Decision
                 title="Idempotent re-runs"
@@ -282,11 +282,11 @@ export default function Portfolio() {
           </div>
 
           <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 space-y-3">
-            <p className="text-white font-bold text-sm">Career Views — Why Not Store Rates?</p>
+            <p className="text-white font-bold text-sm">Career Views - Why Not Store Rates?</p>
             <p className="text-slate-400 text-xs leading-relaxed">
               The six <code className="text-amber-400/80">*_career</code> views aggregate season tables into lifetime totals, but deliberately
               <strong className="text-white"> exclude rate columns</strong> (completion %, yards per attempt, FG%, etc.). Averaging a rate across
-              seasons of different lengths produces misleading numbers — a QB with 95% completion rate in a 2-game season shouldn't skew his career average.
+              seasons of different lengths produces misleading numbers - a QB with 95% completion rate in a 2-game season shouldn't skew his career average.
               Instead, rates are recomputed at query time from summed counting stats: <code className="text-amber-400/80">100.0 * SUM(cmp) / NULLIF(SUM(att), 0)</code>.
             </p>
           </div>
@@ -296,7 +296,7 @@ export default function Portfolio() {
         <section className="space-y-6">
           <div>
             <p className="text-amber-500 text-xs font-bold uppercase tracking-widest mb-1">Proprietary Metric</p>
-            <h2 className="text-2xl font-black text-white">FDV — Fourth & Data Value</h2>
+            <h2 className="text-2xl font-black text-white">FDV - Fourth & Data Value</h2>
             <p className="text-slate-400 text-sm mt-2">
               A position-aware career quality metric designed to replace PFR's Approximate Value. Built entirely from this platform's own
               statistical data with transparent, auditable formulas.
@@ -308,7 +308,7 @@ export default function Portfolio() {
               <p className="text-white font-bold text-sm">How FDV is computed (5 layers):</p>
               <div className="space-y-2">
                 {[
-                  { step: '1', title: 'Position-specific raw score', desc: '11 tailored formulas (QB, RB, WR, TE, EDGE, DT, LB, CB, S, K, P) — each weights the stats that matter most at that position.' },
+                  { step: '1', title: 'Position-specific raw score', desc: '11 tailored formulas (QB, RB, WR, TE, EDGE, DT, LB, CB, S, K, P) - each weights the stats that matter most at that position.' },
                   { step: '2', title: 'Era normalization', desc: 'Z-scored against same-position peers in the same season year. A great 1978 season counts the same as a great 2023 season.' },
                   { step: '3', title: 'Season FDV calculation', desc: 'Formula: max(0, 6 + 3z) × (games / full_season), capped at 18 per season. Games-ratio adjustment prevents part-season inflation.' },
                   { step: '4', title: 'Career aggregation with longevity decay', desc: 'Top 10 seasons at full value, seasons 11-13 at 50%, seasons 14+ at 30%. Prevents longevity alone from inflating scores.' },
@@ -378,7 +378,7 @@ export default function Portfolio() {
               <p className="text-white font-bold text-sm mb-2">Why build a new metric?</p>
               <p className="text-slate-400 text-xs leading-relaxed">
                 PFR's Career Approximate Value (AV) uses an undisclosed formula that can't be independently reproduced or
-                commercially distributed. FDV provides full transparency — every coefficient, threshold, and normalization
+                commercially distributed. FDV provides full transparency - every coefficient, threshold, and normalization
                 step is documented and auditable. It also improves on AV by using position-specific formulas rather than
                 a one-size-fits-all approach, and by incorporating era adjustment so historical players are compared fairly.
               </p>
@@ -393,30 +393,30 @@ export default function Portfolio() {
             <p className="text-amber-500 text-xs font-bold uppercase tracking-widest mb-1">AI Integration</p>
             <h2 className="text-2xl font-black text-white">AI-Powered Analysis</h2>
             <p className="text-slate-400 text-sm mt-2">
-              AI features built on Claude Sonnet 4.6 — each solving a specific analytical problem
+              AI features built on Claude Sonnet 4.6 - each solving a specific analytical problem
               that would be impractical to address with traditional queries or static reports.
             </p>
           </div>
 
-          {/* Smart Search — deep dive */}
+          {/* Smart Search - deep dive */}
           <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 space-y-4">
             <div>
-              <p className="text-white font-bold">Smart Search — Natural Language to SQL</p>
+              <p className="text-white font-bold">Smart Search - Natural Language to SQL</p>
               <p className="text-slate-400 text-xs leading-relaxed mt-1">
                 <span className="text-white font-medium">The problem:</span> A database with 14 tables, 100+ columns, and complex join paths
                 is inaccessible to anyone who doesn't write SQL. Even analysts spend time looking up column names and table relationships.
               </p>
               <p className="text-slate-400 text-xs leading-relaxed mt-2">
                 <span className="text-white font-medium">The solution:</span> Users type questions in plain English. Claude receives
-                the full database schema as a system prompt — every table, column, coverage window, and data quirk — and generates a single
+                the full database schema as a system prompt - every table, column, coverage window, and data quirk - and generates a single
                 read-only SQL query. The basic tier returns the SQL and a results table. The Pro tier (in development) adds a second AI pass
                 that analyzes the results: generating a 2-4 sentence insight summary and an auto-fitted chart (bar, line, or scatter).
               </p>
               <p className="text-slate-400 text-xs leading-relaxed mt-2">
                 <span className="text-white font-medium">Why this approach:</span> Rather than building a rigid form-based query builder
-                (which constrains users to predefined questions), NL-to-SQL lets users ask anything the data can answer — including complex
+                (which constrains users to predefined questions), NL-to-SQL lets users ask anything the data can answer - including complex
                 multi-join, GROUP BY, and HAVING queries they might not know how to formulate. The schema prompt includes rules that prevent
-                common mistakes (e.g., "never average a career rate column — recompute from summed counts").
+                common mistakes (e.g., "never average a career rate column - recompute from summed counts").
               </p>
             </div>
             <div className="bg-slate-800/60 rounded-xl p-4 space-y-2">
@@ -441,12 +441,12 @@ export default function Portfolio() {
             <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-5 space-y-2">
               <p className="text-white font-bold text-sm">Career Insights</p>
               <p className="text-slate-400 text-xs leading-relaxed">
-                <span className="text-slate-200">Problem:</span> A stat table shows what happened, not what it means. Users want narrative context —
+                <span className="text-slate-200">Problem:</span> A stat table shows what happened, not what it means. Users want narrative context -
                 was this career arc typical? Was the decline injury-related? How does this compare to peers?
               </p>
               <p className="text-slate-400 text-xs leading-relaxed">
                 <span className="text-slate-200">Approach:</span> Claude receives the player's full career stats across all categories and writes a
-                3-5 sentence analytical paragraph. Results are cached 24 hours. Users rate with thumbs up/down — feedback stored in ai_query_log
+                3-5 sentence analytical paragraph. Results are cached 24 hours. Users rate with thumbs up/down - feedback stored in ai_query_log
                 for ongoing quality monitoring and prompt iteration.
               </p>
             </div>
@@ -470,19 +470,19 @@ export default function Portfolio() {
             <div className="space-y-3">
               <Decision
                 title="Why Claude Sonnet 4.6 for everything"
-                why="Sonnet balances quality and cost — accurate enough for SQL generation and narrative writing, fast enough for interactive use (typically under 3 seconds). Opus would be more accurate but 5x the cost and 3x the latency. Haiku is too imprecise for SQL generation where a wrong column name breaks the query."
+                why="Sonnet balances quality and cost - accurate enough for SQL generation and narrative writing, fast enough for interactive use (typically under 3 seconds). Opus would be more accurate but 5x the cost and 3x the latency. Haiku is too imprecise for SQL generation where a wrong column name breaks the query."
               />
               <Decision
                 title="Full schema in every system prompt"
-                why="Rather than training a model or using RAG, we inject the complete schema (table names, columns, data types, coverage windows, and known quirks) directly into the system prompt. This ensures Claude always has current, accurate metadata — no stale embeddings, no retrieval misses. The schema is small enough (~4K tokens) that the cost is negligible."
+                why="Rather than training a model or using RAG, we inject the complete schema (table names, columns, data types, coverage windows, and known quirks) directly into the system prompt. This ensures Claude always has current, accurate metadata - no stale embeddings, no retrieval misses. The schema is small enough (~4K tokens) that the cost is negligible."
               />
               <Decision
                 title="Thumbs feedback loop over automated evaluation"
-                why="AI output quality is subjective — a factually correct but boring insight is worse than a slightly imprecise but engaging one. User thumbs up/down feedback, stored with the full query context in ai_query_log, provides real signal for prompt iteration. Token counts and latency are also logged for cost monitoring."
+                why="AI output quality is subjective - a factually correct but boring insight is worse than a slightly imprecise but engaging one. User thumbs up/down feedback, stored with the full query context in ai_query_log, provides real signal for prompt iteration. Token counts and latency are also logged for cost monitoring."
               />
               <Decision
                 title="Two-pass Smart Search (SQL + analysis)"
-                why="Generating SQL and analyzing results are fundamentally different tasks. Combining them in one prompt degraded both: Claude would hedge on SQL or skip the analysis. Splitting into two sequential calls — SQL generation, then result analysis — improved quality on both steps."
+                why="Generating SQL and analyzing results are fundamentally different tasks. Combining them in one prompt degraded both: Claude would hedge on SQL or skip the analysis. Splitting into two sequential calls - SQL generation, then result analysis - improved quality on both steps."
               />
             </div>
           </div>
@@ -494,7 +494,7 @@ export default function Portfolio() {
             <p className="text-amber-500 text-xs font-bold uppercase tracking-widest mb-1">Analysis</p>
             <h2 className="text-2xl font-black text-white">What The Platform Enables</h2>
             <p className="text-slate-400 text-sm mt-2">
-              Beyond storing data, the platform is designed for interactive analysis — combining statistical methods,
+              Beyond storing data, the platform is designed for interactive analysis - combining statistical methods,
               visualization, and AI to surface insights that raw tables can't show.
             </p>
           </div>
@@ -503,11 +503,11 @@ export default function Portfolio() {
               {[
                 {
                   title: 'Cross-era comparison',
-                  desc: 'FDV\'s era-normalized z-scoring lets users meaningfully compare a 1978 player to a 2023 player — something raw stats can\'t do because the game changed (rule changes, schedule length, passing evolution).',
+                  desc: 'FDV\'s era-normalized z-scoring lets users meaningfully compare a 1978 player to a 2023 player - something raw stats can\'t do because the game changed (rule changes, schedule length, passing evolution).',
                 },
                 {
                   title: 'Multi-dimensional player comparison',
-                  desc: 'Compare up to 4 players across any stat category with visual bar charts, full stat tables (basic + advanced), and AI-written narrative analysis — in career or single-season mode.',
+                  desc: 'Compare up to 4 players across any stat category with visual bar charts, full stat tables (basic + advanced), and AI-written narrative analysis - in career or single-season mode.',
                   link: '/comparison', linkLabel: 'Player Comparison',
                 },
                 {
@@ -522,7 +522,7 @@ export default function Portfolio() {
                 },
                 {
                   title: 'Statistical anomaly detection',
-                  desc: 'Automated engine flags career highs, year-over-year surges (40%+), efficiency peaks (1.5σ above career mean), and dual-threat versatility — with severity scoring and volume thresholds to filter noise.',
+                  desc: 'Automated engine flags career highs, year-over-year surges (40%+), efficiency peaks (1.5σ above career mean), and dual-threat versatility - with severity scoring and volume thresholds to filter noise.',
                   link: '/anomalies', linkLabel: 'Season Highlights',
                 },
                 {
@@ -549,15 +549,15 @@ export default function Portfolio() {
           <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-8 space-y-5">
             <Decision
               title="Full rebuild over patching"
-              why="Legacy data had 4 distinct corruption patterns from a Power BI export pipeline — date-encoded integers, mangled QB records, broken hyphenated surnames, and UTF-8 mojibake. Surgical fixes would have been fragile. Instead, we rebuilt from raw CSV exports, writing a dedicated corruption_fixes.py module that recovers each pattern deterministically."
+              why="Legacy data had 4 distinct corruption patterns from a Power BI export pipeline - date-encoded integers, mangled QB records, broken hyphenated surnames, and UTF-8 mojibake. Surgical fixes would have been fragile. Instead, we rebuilt from raw CSV exports, writing a dedicated corruption_fixes.py module that recovers each pattern deterministically."
             />
             <Decision
               title="nflverse over web scraping"
-              why="Originally the platform scraped Pro Football Reference via Selenium. We migrated to nflverse (open-source NFL data ecosystem) for reliability — no Cloudflare challenges, no HTML structure changes, and the data is already cleaned. All formulas (passer rating, ANY/A, success rate) are re-derived from raw counts and verified against published values."
+              why="Originally the platform scraped Pro Football Reference via Selenium. We migrated to nflverse (open-source NFL data ecosystem) for reliability - no Cloudflare challenges, no HTML structure changes, and the data is already cleaned. All formulas (passer rating, ANY/A, success rate) are re-derived from raw counts and verified against published values."
             />
             <Decision
               title="Play-by-play derived stats over pre-computed aggregates"
-              why="nflverse's pre-computed wide table had known inaccuracies — games played was off by 38-78% depending on category, and defensive TD counts were provably wrong (Taron Johnson 2024: 2 real TDs, wide table reported 1). We derive games, touchdowns, fumbles, first downs, longest plays, 4QC, and GWD directly from play-by-play, which reproduces PFR's own figures at 99%+ accuracy."
+              why="nflverse's pre-computed wide table had known inaccuracies - games played was off by 38-78% depending on category, and defensive TD counts were provably wrong (Taron Johnson 2024: 2 real TDs, wide table reported 1). We derive games, touchdowns, fumbles, first downs, longest plays, 4QC, and GWD directly from play-by-play, which reproduces PFR's own figures at 99%+ accuracy."
             />
             <Decision
               title="Position-specific FDV over universal scoring"
@@ -573,7 +573,7 @@ export default function Portfolio() {
             />
             <Decision
               title="Single Docker container deployment"
-              why="The React SPA is built at Docker build time and served as static files from the FastAPI process. No nginx, no separate static host — one container, one port. Simplifies deployment and keeps the free-tier footprint minimal."
+              why="The React SPA is built at Docker build time and served as static files from the FastAPI process. No nginx, no separate static host - one container, one port. Simplifies deployment and keeps the free-tier footprint minimal."
             />
           </div>
         </section>
@@ -615,7 +615,7 @@ export default function Portfolio() {
           <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-8">
             <p className="text-slate-400 text-sm leading-relaxed mb-4">
               Rather than trusting pre-aggregated stats (which have known inaccuracies), we derive 15+ fields directly from
-              nflverse play-by-play data — every snap of every game. This gives us provably higher accuracy.
+              nflverse play-by-play data - every snap of every game. This gives us provably higher accuracy.
             </p>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {[
@@ -645,7 +645,7 @@ export default function Portfolio() {
             <h2 className="text-2xl font-black text-white">Validation & Accuracy</h2>
             <p className="text-slate-400 text-sm mt-2">
               Every derived field is verified against published reference data. When the source and our derivation disagree,
-              we investigate the root cause and document it — rather than silently accepting the discrepancy.
+              we investigate the root cause and document it - rather than silently accepting the discrepancy.
             </p>
           </div>
           <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-8 space-y-4">
@@ -686,7 +686,7 @@ export default function Portfolio() {
               <ul className="space-y-1.5 text-xs text-slate-400 leading-relaxed">
                 <li><span className="text-slate-300 font-medium">Penalty-affected return yardage:</span> nflverse records post-penalty enforcement spot, not play-text distance. 76 affected plays, +434 yards league-wide in 2024. Irreducible without free-text parsing.</li>
                 <li><span className="text-slate-300 font-medium">Targets (tgt):</span> Off by exactly 1 for ~40 players. PFR doesn't credit targets on plays nullified by offensive penalties; nflverse does.</li>
-                <li><span className="text-slate-300 font-medium">Defensive TDs:</span> The wide table's def_tds aggregate is provably wrong — Taron Johnson 2024 had 2 real defensive TDs (confirmed in play text), wide table reported 1. Our PBP derivation is correct.</li>
+                <li><span className="text-slate-300 font-medium">Defensive TDs:</span> The wide table's def_tds aggregate is provably wrong - Taron Johnson 2024 had 2 real defensive TDs (confirmed in play text), wide table reported 1. Our PBP derivation is correct.</li>
               </ul>
             </div>
           </div>
@@ -699,7 +699,7 @@ export default function Portfolio() {
             <h2 className="text-2xl font-black text-white">Statistical Anomaly Detection</h2>
             <p className="text-slate-400 text-sm mt-2">
               An automated system that flags statistically unusual seasons by comparing each player's current stats
-              against their own career baseline — surfacing breakout years, decline signals, and efficiency peaks.
+              against their own career baseline - surfacing breakout years, decline signals, and efficiency peaks.
             </p>
           </div>
           <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-8">
@@ -764,7 +764,7 @@ export default function Portfolio() {
                 { title: 'JWT authentication', desc: 'Access tokens (short-lived) + refresh tokens (persistent, stored server-side). Bcrypt password hashing. Admin role gating for premium features.' },
                 { title: 'SQL injection prevention', desc: 'AI-generated queries pass through a regex safety filter that rejects all write operations, DDL, and multi-statement queries before execution. Only single SELECT/WITH statements reach the database.' },
                 { title: 'Rate limiting', desc: 'Login endpoint tracks failed attempts per username. After repeated failures, the account is temporarily locked to prevent brute-force attacks.' },
-                { title: 'Role-based access', desc: 'Admin features are gated behind a require_admin dependency — returning 403 for non-admin users. Frontend components are conditionally rendered based on the is_admin flag in the JWT payload.' },
+                { title: 'Role-based access', desc: 'Admin features are gated behind a require_admin dependency - returning 403 for non-admin users. Frontend components are conditionally rendered based on the is_admin flag in the JWT payload.' },
               ].map(s => (
                 <div key={s.title} className="bg-slate-800/60 rounded-xl p-4">
                   <p className="text-white text-sm font-semibold mb-1">{s.title}</p>
@@ -783,7 +783,7 @@ export default function Portfolio() {
           </div>
           <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-8 space-y-4">
             <p className="text-slate-400 text-sm leading-relaxed">
-              Every AI call, user action, and system event is tracked — not for surveillance, but for debugging,
+              Every AI call, user action, and system event is tracked - not for surveillance, but for debugging,
               cost control, and quality iteration.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -813,7 +813,7 @@ export default function Portfolio() {
             <p className="text-amber-500 text-xs font-bold uppercase tracking-widest mb-1">Mobile</p>
             <h2 className="text-2xl font-black text-white">Admin Mobile App</h2>
             <p className="text-slate-400 text-sm mt-2">
-              A companion Android app for platform monitoring — built so the admin dashboard is always one tap away,
+              A companion Android app for platform monitoring - built so the admin dashboard is always one tap away,
               not buried behind a browser login.
             </p>
           </div>
@@ -822,7 +822,7 @@ export default function Portfolio() {
               {[
                 { title: 'Dashboard', desc: 'Real-time stats: total users, visits today/7d/30d, unresolved feedback count. Pull-to-refresh on every screen.' },
                 { title: 'Users', desc: 'Full user list with sort options (last active, total visits, 7d visits, join date) and search. Same data as the web admin panel.' },
-                { title: 'Feedback', desc: 'Threaded chat interface — read feedback, reply directly from the phone, mark as resolved or delete. Notifications push through the same API.' },
+                { title: 'Feedback', desc: 'Threaded chat interface - read feedback, reply directly from the phone, mark as resolved or delete. Notifications push through the same API.' },
               ].map(s => (
                 <div key={s.title} className="bg-slate-800/60 rounded-xl p-4">
                   <p className="text-white text-sm font-semibold mb-1">{s.title}</p>
@@ -833,10 +833,10 @@ export default function Portfolio() {
             <div className="bg-slate-800/60 rounded-xl p-4 space-y-2">
               <p className="text-white text-sm font-semibold">Technical approach</p>
               <p className="text-slate-500 text-xs leading-relaxed">
-                Built with React Native (Expo). Calls the exact same REST API as the web admin — no separate backend.
+                Built with React Native (Expo). Calls the exact same REST API as the web admin - no separate backend.
                 JWT auth with admin-only gate (non-admin login is rejected at the app level). Over-the-air updates
                 via EAS Update + GitHub Actions: pushing code to the repo automatically publishes an update that the
-                app downloads on next launch — no reinstall needed.
+                app downloads on next launch - no reinstall needed.
               </p>
             </div>
           </div>
