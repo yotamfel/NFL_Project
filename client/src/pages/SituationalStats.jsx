@@ -44,6 +44,7 @@ const STAT_TIPS = {
   play_ydln: 'Yards from the end zone (1 = goal line, 99 = own 1-yard line).',
   play_players: 'For passes: QB -> Receiver. For runs: ball carrier.',
   play_result: 'TD = touchdown, INT = interception, Sack = QB sacked, Cmp = completed pass, Rush+ = successful rush, Inc = incomplete pass.',
+  epa_pctile: 'League percentile - where this player ranks among all players at the same position in this situation. 90th = top 10%.',
 }
 
 let _setColTip = null
@@ -310,10 +311,64 @@ function ClutchRankingsSection({ seasons }) {
   )
 }
 
+function PercentileBar({ pct }) {
+  if (pct == null) return null
+  const color = pct >= 75 ? 'bg-emerald-500' : pct >= 50 ? 'bg-amber-500' : pct >= 25 ? 'bg-orange-500' : 'bg-red-500'
+  const textColor = pct >= 75 ? 'text-emerald-400' : pct >= 50 ? 'text-amber-400' : pct >= 25 ? 'text-orange-400' : 'text-red-400'
+  return (
+    <div className="inline-flex items-center gap-1 ml-1.5">
+      <div className="w-10 h-1.5 bg-slate-800 rounded-full overflow-hidden"><div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} /></div>
+      <span className={`text-[9px] font-bold ${textColor}`}>{pct}th</span>
+    </div>
+  )
+}
+
+function RadarChart({ players, data, splitKeys }) {
+  const radarKeys = splitKeys.filter(k => !['overall'].includes(k)).slice(0, 10)
+  if (radarKeys.length < 3) return null
+  const colors = ['#f59e0b', '#3b82f6']
+  const cx = 150, cy = 140, R = 110
+  const n = radarKeys.length
+  const angle = (i) => (Math.PI * 2 * i / n) - Math.PI / 2
+
+  const allEpas = radarKeys.flatMap(k => players.map(p => data[p.player_id]?.splits?.[k]?.epa_per_play ?? 0))
+  const maxAbs = Math.max(...allEpas.map(Math.abs), 0.1)
+
+  const polygon = (pIdx) => radarKeys.map((k, i) => {
+    const epa = data[players[pIdx]?.player_id]?.splits?.[k]?.epa_per_play ?? 0
+    const r = Math.max((epa + maxAbs) / (2 * maxAbs), 0.05) * R
+    return `${cx + r * Math.cos(angle(i))},${cy + r * Math.sin(angle(i))}`
+  }).join(' ')
+
+  return (
+    <div className="flex justify-center">
+      <svg width={300} height={290} className="overflow-visible">
+        {[0.25, 0.5, 0.75, 1].map(s => (
+          <polygon key={s} points={radarKeys.map((_, i) => `${cx + R * s * Math.cos(angle(i))},${cy + R * s * Math.sin(angle(i))}`).join(' ')}
+            fill="none" stroke="#334155" strokeWidth={0.5} />
+        ))}
+        {radarKeys.map((k, i) => {
+          const lbl = data[players[0]?.player_id]?.splits?.[k]?.label || k
+          const lx = cx + (R + 18) * Math.cos(angle(i)), ly = cy + (R + 18) * Math.sin(angle(i))
+          return <g key={k}>
+            <line x1={cx} y1={cy} x2={cx + R * Math.cos(angle(i))} y2={cy + R * Math.sin(angle(i))} stroke="#334155" strokeWidth={0.5} />
+            <text x={lx} y={ly} textAnchor="middle" dominantBaseline="middle" className="fill-slate-500 text-[8px]">{lbl.length > 12 ? lbl.slice(0, 12) + '..' : lbl}</text>
+          </g>
+        })}
+        {players.map((p, pi) => (
+          <polygon key={pi} points={polygon(pi)} fill={colors[pi]} fillOpacity={0.15} stroke={colors[pi]} strokeWidth={1.5} />
+        ))}
+      </svg>
+    </div>
+  )
+}
+
 function SplitsSection({ players, season }) {
   const [data, setData] = useState({})
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [compareA, setCompareA] = useState('')
+  const [compareB, setCompareB] = useState('')
 
   useEffect(() => {
     if (players.length === 0) return
@@ -333,10 +388,26 @@ function SplitsSection({ players, season }) {
   if (error) return <p className="text-red-400 text-sm">{error}</p>
 
   const isCompare = players.length === 2
-  const splitKeys = Object.keys(data[players[0]?.player_id]?.splits || {})
+  const p0data = data[players[0]?.player_id]
+  const splitKeys = Object.keys(p0data?.splits || {})
+  const percentiles = p0data?.percentiles || {}
+
+  // Strength / weakness cards
+  const ranked = splitKeys
+    .filter(k => k !== 'overall' && (p0data?.splits?.[k]?.plays ?? 0) >= 10)
+    .map(k => ({ key: k, label: p0data?.splits?.[k]?.label || k, epa: p0data?.splits?.[k]?.epa_per_play ?? null }))
+    .filter(r => r.epa !== null)
+    .sort((a, b) => b.epa - a.epa)
+  const best = ranked.slice(0, 3)
+  const worst = ranked.slice(-3).reverse()
+
+  // Split comparison
+  const cmpSplitA = p0data?.splits?.[compareA] || {}
+  const cmpSplitB = p0data?.splits?.[compareB] || {}
+  const cmpMetrics = ['epa_per_play', 'success_rate', 'avg_yards', 'plays']
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* Enrichment badges */}
       {players.map(p => {
         const e = data[p.player_id]?.enrichment || {}
@@ -351,23 +422,91 @@ function SplitsSection({ players, season }) {
         )
       })}
 
+      {/* Strength / Weakness cards */}
+      {ranked.length >= 4 && (
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-3 space-y-1.5">
+            <p className="text-xs font-semibold text-emerald-400">Strongest Situations</p>
+            {best.map(s => (
+              <div key={s.key} className="flex justify-between text-xs">
+                <span className="text-slate-300">{s.label}</span>
+                <span className="text-emerald-400 font-bold">{s.epa} EPA{percentiles[s.key] != null && <span className="text-emerald-500/60 ml-1">{percentiles[s.key]}th</span>}</span>
+              </div>
+            ))}
+          </div>
+          <div className="bg-red-500/5 border border-red-500/20 rounded-xl p-3 space-y-1.5">
+            <p className="text-xs font-semibold text-red-400">Weakest Situations</p>
+            {worst.map(s => (
+              <div key={s.key} className="flex justify-between text-xs">
+                <span className="text-slate-300">{s.label}</span>
+                <span className="text-red-400 font-bold">{s.epa} EPA{percentiles[s.key] != null && <span className="text-red-500/60 ml-1">{percentiles[s.key]}th</span>}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Radar chart */}
+      <RadarChart players={players} data={data} splitKeys={splitKeys} />
+
+      {/* Split comparison builder */}
+      <div className="bg-slate-900/60 border border-slate-700/40 rounded-xl p-4 space-y-3">
+        <p className="text-xs text-slate-400 font-semibold">Compare Two Situations</p>
+        <div className="flex gap-3 items-center flex-wrap">
+          <select value={compareA} onChange={e => setCompareA(e.target.value)} className="bg-slate-800 border border-slate-700 text-slate-300 rounded px-2 py-1 text-xs flex-1 min-w-[140px]">
+            <option value="">Pick situation A...</option>
+            {splitKeys.map(k => <option key={k} value={k}>{p0data?.splits?.[k]?.label || k}</option>)}
+          </select>
+          <span className="text-slate-600 text-xs">vs</span>
+          <select value={compareB} onChange={e => setCompareB(e.target.value)} className="bg-slate-800 border border-slate-700 text-slate-300 rounded px-2 py-1 text-xs flex-1 min-w-[140px]">
+            <option value="">Pick situation B...</option>
+            {splitKeys.map(k => <option key={k} value={k}>{p0data?.splits?.[k]?.label || k}</option>)}
+          </select>
+        </div>
+        {compareA && compareB && compareA !== compareB && (
+          <div className="grid grid-cols-2 gap-3">
+            {cmpMetrics.map(m => {
+              const va = cmpSplitA[m] ?? 0, vb = cmpSplitB[m] ?? 0
+              const delta = (va - vb)
+              const label = { epa_per_play: 'EPA/play', success_rate: 'Success%', avg_yards: 'Avg Yards', plays: 'Plays' }[m]
+              return (
+                <div key={m} className="bg-slate-800/60 rounded-lg p-2.5">
+                  <p className="text-[10px] text-slate-500 mb-1">{label}</p>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-amber-400 font-bold">{va}</span>
+                    <span className={`font-bold ${delta > 0 ? 'text-emerald-400' : delta < 0 ? 'text-red-400' : 'text-slate-400'}`}>
+                      {delta > 0 ? '+' : ''}{m === 'plays' ? delta : typeof delta === 'number' ? delta.toFixed(3) : delta}
+                    </span>
+                    <span className="text-blue-400 font-bold">{vb}</span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Main splits table with percentile bars */}
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="text-slate-500 text-xs border-b border-slate-800">
               <th className="text-left py-2 pr-3">Situation</th>
               {players.map(p => (
-                <th key={p.player_id} colSpan={3} className="text-center py-2 px-1 text-amber-400/80">{isCompare ? p.player_name : ''}</th>
+                <Fragment key={p.player_id}>
+                  <th colSpan={isCompare ? 3 : 4} className="text-center py-2 px-1 text-amber-400/80">{isCompare ? p.player_name : ''}</th>
+                </Fragment>
               ))}
             </tr>
             <tr className="text-slate-600 text-xs border-b border-slate-800">
               <th></th>
               {players.map(p => (
-                <>
-                  <th key={`${p.player_id}-epa`} className="text-right py-1 px-1">EPA/play<Tip stat="epa_per_play" /></th>
-                  <th key={`${p.player_id}-sr`} className="text-right py-1 px-1">Success%<Tip stat="success_rate" /></th>
-                  <th key={`${p.player_id}-plays`} className="text-right py-1 px-1">Plays</th>
-                </>
+                <Fragment key={`h-${p.player_id}`}>
+                  <th className="text-right py-1 px-1">EPA/play<Tip stat="epa_per_play" /></th>
+                  {!isCompare && <th className="text-right py-1 px-1">Rank<Tip stat="epa_pctile" /></th>}
+                  <th className="text-right py-1 px-1">Success%<Tip stat="success_rate" /></th>
+                  <th className="text-right py-1 px-1">Plays</th>
+                </Fragment>
               ))}
             </tr>
           </thead>
@@ -378,11 +517,12 @@ function SplitsSection({ players, season }) {
                 <tr key={key} className="border-b border-slate-800/40 hover:bg-slate-800/20">
                   <td className="py-2 pr-3 text-slate-300 text-xs font-medium">{splits[0]?.label || key}</td>
                   {splits.map((s, i) => (
-                    <>
-                      <td key={`${i}-epa`} className="py-2 px-1 text-right"><EpaColorCell val={s.epa_per_play} /></td>
-                      <td key={`${i}-sr`} className="py-2 px-1 text-right text-slate-300">{s.success_rate ?? '-'}%</td>
-                      <td key={`${i}-plays`} className="py-2 px-1 text-right text-slate-500">{s.plays ?? '-'}</td>
-                    </>
+                    <Fragment key={`${i}-${key}`}>
+                      <td className="py-2 px-1 text-right"><EpaColorCell val={s.epa_per_play} /></td>
+                      {!isCompare && <td className="py-2 px-1 text-right"><PercentileBar pct={percentiles[key]} /></td>}
+                      <td className="py-2 px-1 text-right text-slate-300">{s.success_rate ?? '-'}%</td>
+                      <td className="py-2 px-1 text-right text-slate-500">{s.plays ?? '-'}</td>
+                    </Fragment>
                   ))}
                 </tr>
               )

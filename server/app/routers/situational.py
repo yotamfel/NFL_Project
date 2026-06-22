@@ -315,6 +315,39 @@ def situational_splits(
         if draft_row:
             enrichment["draft"] = {"round": draft_row.round, "pick": draft_row.pick, "year": draft_row.draft_year}
 
+        # League percentiles for key splits
+        percentiles = {}
+        key_splits = {
+            "overall": "",
+            "red_zone": "AND yardline_100 <= 20",
+            "third_down": "AND down = 3",
+            "clutch": "AND game_seconds_remaining <= 300 AND ABS(score_differential) <= 8",
+            "home": "AND posteam = home_team",
+            "away": "AND posteam = away_team",
+        }
+        if is_qb:
+            key_splits["deep"] = "AND air_yards >= 20"
+            key_splits["short"] = "AND air_yards < 10"
+        elif is_rb:
+            key_splits["short_yardage"] = "AND ydstogo <= 2"
+        min_p = 20
+
+        for skey, extra in key_splits.items():
+            league_rows = c.execute(text(f"""
+                SELECT {id_col} as pid, ROUND(AVG(epa)::numeric, 3) as epa
+                FROM pbp
+                WHERE {base_filter} AND {id_col} IS NOT NULL
+                      AND season = :season AND epa IS NOT NULL {extra}
+                GROUP BY {id_col} HAVING COUNT(*) >= :minp
+                ORDER BY epa
+            """), {"season": yr, "minp": min_p}).fetchall()
+            if league_rows:
+                vals = [float(r.epa) for r in league_rows]
+                player_epa = splits.get(skey, {}).get("epa_per_play")
+                if player_epa is not None:
+                    rank = sum(1 for v in vals if v <= float(player_epa))
+                    percentiles[skey] = round(rank / len(vals) * 100)
+
     return {
         "player": player.player_name,
         "player_id": player_id,
@@ -322,6 +355,7 @@ def situational_splits(
         "season": yr,
         "splits": splits,
         "enrichment": enrichment,
+        "percentiles": percentiles,
     }
 
 
