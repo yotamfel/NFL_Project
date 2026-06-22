@@ -1165,3 +1165,204 @@ def weekly_trend(
         "season": yr,
         "data": data,
     }
+
+
+# ── Dashboard ────────────────────────────────────────────────────────────────
+
+@router.get("/dashboard")
+def dashboard(
+    season: Optional[int] = None,
+    user: dict = Depends(require_admin),
+):
+    yr = season or _latest_season()
+    results = {}
+    with engine.connect() as c:
+        # Top 5 EPA QBs
+        results["top_qbs"] = [dict(r._mapping) for r in c.execute(text("""
+            SELECT passer_player_id as gsis_id, passer_player_name as name, posteam as team,
+                   COUNT(*) as plays, ROUND(AVG(epa)::numeric, 3) as epa
+            FROM pbp WHERE season = :yr AND pass_attempt = 1 AND passer_player_id IS NOT NULL AND epa IS NOT NULL AND season_type = 'REG'
+            GROUP BY passer_player_id, passer_player_name, posteam HAVING COUNT(*) >= 200
+            ORDER BY epa DESC LIMIT 5
+        """), {"yr": yr}).fetchall()]
+
+        # Top 5 EPA RBs
+        results["top_rbs"] = [dict(r._mapping) for r in c.execute(text("""
+            SELECT rusher_player_id as gsis_id, rusher_player_name as name, posteam as team,
+                   COUNT(*) as plays, ROUND(AVG(epa)::numeric, 3) as epa
+            FROM pbp WHERE season = :yr AND rush_attempt = 1 AND rusher_player_id IS NOT NULL AND epa IS NOT NULL AND season_type = 'REG'
+            GROUP BY rusher_player_id, rusher_player_name, posteam HAVING COUNT(*) >= 80
+            ORDER BY epa DESC LIMIT 5
+        """), {"yr": yr}).fetchall()]
+
+        # Most clutch
+        results["most_clutch"] = [dict(r._mapping) for r in c.execute(text("""
+            SELECT passer_player_id as gsis_id, passer_player_name as name, posteam as team,
+                   COUNT(*) as plays, ROUND(SUM(wpa)::numeric, 3) as clutch_wpa
+            FROM pbp WHERE season = :yr AND pass_attempt = 1 AND passer_player_id IS NOT NULL AND wpa IS NOT NULL
+                  AND season_type = 'REG' AND game_seconds_remaining <= 300 AND ABS(score_differential) <= 8
+            GROUP BY passer_player_id, passer_player_name, posteam HAVING COUNT(*) >= 15
+            ORDER BY clutch_wpa DESC LIMIT 3
+        """), {"yr": yr}).fetchall()]
+
+        # Best/worst teams by EPA
+        results["team_epa"] = [dict(r._mapping) for r in c.execute(text("""
+            SELECT posteam as team, COUNT(*) as plays,
+                   ROUND(AVG(epa)::numeric, 3) as epa,
+                   ROUND(AVG(CASE WHEN pass_attempt=1 THEN epa END)::numeric, 3) as pass_epa,
+                   ROUND(AVG(CASE WHEN rush_attempt=1 THEN epa END)::numeric, 3) as rush_epa
+            FROM pbp WHERE season = :yr AND play_type IN ('pass','run') AND epa IS NOT NULL AND season_type = 'REG'
+            GROUP BY posteam ORDER BY epa DESC
+        """), {"yr": yr}).fetchall()]
+
+        # League averages
+        results["league_avg"] = dict(c.execute(text("""
+            SELECT ROUND(AVG(epa)::numeric, 3) as epa,
+                   ROUND(AVG(CASE WHEN success=1 THEN 100.0 ELSE 0 END)::numeric, 1) as success_rate,
+                   ROUND(AVG(yards_gained)::numeric, 1) as avg_yards,
+                   COUNT(*) as total_plays
+            FROM pbp WHERE season = :yr AND play_type IN ('pass','run') AND epa IS NOT NULL AND season_type = 'REG'
+        """), {"yr": yr}).fetchone()._mapping)
+
+    return {"season": yr, **results}
+
+
+# ── Trending Players ─────────────────────────────────────────────────────────
+
+@router.get("/trending")
+def trending_players(
+    season: Optional[int] = None,
+    user: dict = Depends(require_admin),
+):
+    yr = season or _latest_season()
+    with engine.connect() as c:
+        # Compare first half (weeks 1-9) vs second half (weeks 10+) EPA
+        rows = c.execute(text("""
+            WITH halves AS (
+                SELECT passer_player_id as gsis_id, passer_player_name as name, posteam as team,
+                       ROUND(AVG(CASE WHEN week <= 9 THEN epa END)::numeric, 3) as epa_h1,
+                       ROUND(AVG(CASE WHEN week >= 10 THEN epa END)::numeric, 3) as epa_h2,
+                       COUNT(*) FILTER (WHERE week <= 9) as plays_h1,
+                       COUNT(*) FILTER (WHERE week >= 10) as plays_h2
+                FROM pbp WHERE season = :yr AND pass_attempt = 1 AND passer_player_id IS NOT NULL
+                      AND epa IS NOT NULL AND season_type = 'REG'
+                GROUP BY passer_player_id, passer_player_name, posteam
+                HAVING COUNT(*) FILTER (WHERE week <= 9) >= 80 AND COUNT(*) FILTER (WHERE week >= 10) >= 80
+            )
+            SELECT *, ROUND((epa_h2 - epa_h1)::numeric, 3) as delta
+            FROM halves WHERE epa_h1 IS NOT NULL AND epa_h2 IS NOT NULL
+            ORDER BY delta DESC
+        """), {"yr": yr}).fetchall()
+
+        improved = [dict(r._mapping) for r in rows[:5]]
+        declined = [dict(r._mapping) for r in rows[-5:][::-1]]
+
+        # RB trending
+        rb_rows = c.execute(text("""
+            WITH halves AS (
+                SELECT rusher_player_id as gsis_id, rusher_player_name as name, posteam as team,
+                       ROUND(AVG(CASE WHEN week <= 9 THEN epa END)::numeric, 3) as epa_h1,
+                       ROUND(AVG(CASE WHEN week >= 10 THEN epa END)::numeric, 3) as epa_h2,
+                       COUNT(*) FILTER (WHERE week <= 9) as plays_h1,
+                       COUNT(*) FILTER (WHERE week >= 10) as plays_h2
+                FROM pbp WHERE season = :yr AND rush_attempt = 1 AND rusher_player_id IS NOT NULL
+                      AND epa IS NOT NULL AND season_type = 'REG'
+                GROUP BY rusher_player_id, rusher_player_name, posteam
+                HAVING COUNT(*) FILTER (WHERE week <= 9) >= 40 AND COUNT(*) FILTER (WHERE week >= 10) >= 40
+            )
+            SELECT *, ROUND((epa_h2 - epa_h1)::numeric, 3) as delta
+            FROM halves WHERE epa_h1 IS NOT NULL AND epa_h2 IS NOT NULL
+            ORDER BY delta DESC
+        """), {"yr": yr}).fetchall()
+
+        rb_improved = [dict(r._mapping) for r in rb_rows[:5]]
+        rb_declined = [dict(r._mapping) for r in rb_rows[-5:][::-1]]
+
+    return {
+        "season": yr,
+        "qb_improved": improved,
+        "qb_declined": declined,
+        "rb_improved": rb_improved,
+        "rb_declined": rb_declined,
+    }
+
+
+# ── Matchup Finder ───────────────────────────────────────────────────────────
+
+@router.get("/matchup")
+def matchup_finder(
+    player_id: str = Query(...),
+    defense_rank: str = Query("top10"),
+    season: Optional[int] = None,
+    user: dict = Depends(require_admin),
+):
+    yr = season or _latest_season()
+    with engine.connect() as c:
+        player = c.execute(text("SELECT player_name, pos, gsis_id FROM players WHERE player_id = :pid"), {"pid": player_id}).fetchone()
+        if not player or not player.gsis_id:
+            return {"error": "Player not found"}
+
+        gsis = player.gsis_id
+        pos = player.pos or ""
+
+        if pos in ("QB",):
+            id_col, base = "passer_player_id", "pass_attempt = 1"
+        elif pos in ("RB", "FB"):
+            id_col, base = "rusher_player_id", "rush_attempt = 1"
+        else:
+            id_col, base = "receiver_player_id", "pass_attempt = 1"
+
+        # Rank defenses by EPA allowed
+        def_ranks = c.execute(text(f"""
+            SELECT defteam, ROUND(AVG(epa)::numeric, 3) as def_epa, COUNT(*) as plays
+            FROM pbp WHERE season = :yr AND {base} AND epa IS NOT NULL AND season_type = 'REG'
+            GROUP BY defteam ORDER BY def_epa
+        """), {"yr": yr}).fetchall()
+
+        n = len(def_ranks)
+        cutoff = {"top5": 5, "top10": 10, "bottom5": n - 5, "bottom10": n - 10}.get(defense_rank, 10)
+        if defense_rank.startswith("top"):
+            target_teams = [r.defteam for r in def_ranks[:cutoff]]
+            label = f"Top {cutoff} defenses"
+        else:
+            target_teams = [r.defteam for r in def_ranks[cutoff:]]
+            label = f"Bottom {n - cutoff} defenses"
+
+        # Player stats vs these defenses
+        stats = c.execute(text(f"""
+            SELECT COUNT(*) as plays,
+                   ROUND(AVG(epa)::numeric, 3) as epa_per_play,
+                   ROUND(AVG(CASE WHEN success=1 THEN 100.0 ELSE 0 END)::numeric, 1) as success_rate,
+                   ROUND(AVG(yards_gained)::numeric, 1) as avg_yards
+            FROM pbp WHERE {id_col} = :pid AND season = :yr AND {base} AND epa IS NOT NULL
+                  AND season_type = 'REG' AND defteam = ANY(:teams)
+        """), {"pid": gsis, "yr": yr, "teams": target_teams}).fetchone()
+
+        overall = c.execute(text(f"""
+            SELECT COUNT(*) as plays,
+                   ROUND(AVG(epa)::numeric, 3) as epa_per_play,
+                   ROUND(AVG(CASE WHEN success=1 THEN 100.0 ELSE 0 END)::numeric, 1) as success_rate,
+                   ROUND(AVG(yards_gained)::numeric, 1) as avg_yards
+            FROM pbp WHERE {id_col} = :pid AND season = :yr AND {base} AND epa IS NOT NULL AND season_type = 'REG'
+        """), {"pid": gsis, "yr": yr}).fetchone()
+
+        # Per-team breakdown
+        per_team = [dict(r._mapping) for r in c.execute(text(f"""
+            SELECT defteam as team, COUNT(*) as plays,
+                   ROUND(AVG(epa)::numeric, 3) as epa_per_play,
+                   ROUND(AVG(yards_gained)::numeric, 1) as avg_yards
+            FROM pbp WHERE {id_col} = :pid AND season = :yr AND {base} AND epa IS NOT NULL
+                  AND season_type = 'REG' AND defteam = ANY(:teams)
+            GROUP BY defteam ORDER BY epa_per_play DESC
+        """), {"pid": gsis, "yr": yr, "teams": target_teams}).fetchall()]
+
+    return {
+        "player": player.player_name,
+        "player_id": player_id,
+        "season": yr,
+        "defense_label": label,
+        "defense_teams": target_teams,
+        "vs_defense": dict(stats._mapping) if stats else {},
+        "overall": dict(overall._mapping) if overall else {},
+        "per_team": per_team,
+    }

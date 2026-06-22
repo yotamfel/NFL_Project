@@ -75,17 +75,29 @@ function ColTipPortal() {
 }
 
 const SECTIONS = [
+  { id: 'dashboard', label: 'Dashboard', icon: '🏠' },
   { id: 'epa', label: 'EPA Rankings', icon: '📊' },
   { id: 'clutch', label: 'Clutch Rankings', icon: '🔥' },
   { id: 'explorer', label: 'Custom Explorer', icon: '🔍' },
+  { id: 'trending', label: 'Trending', icon: '📈' },
   { id: 'splits', label: 'Situational Splits', icon: '📋' },
-  { id: 'trend', label: 'Weekly Trend', icon: '📈' },
+  { id: 'matchup', label: 'Matchup Finder', icon: '🆚' },
+  { id: 'trend', label: 'Weekly Trend', icon: '📉' },
   { id: 'playaction', label: 'Play-Action', icon: '🎭' },
   { id: 'pressure', label: 'Under Pressure', icon: '💨' },
   { id: 'decisions', label: 'QB Decisions', icon: '🧠' },
   { id: 'runheatmap', label: 'Run Heatmap', icon: '🏃' },
   { id: 'passheatmap', label: 'Pass Heatmap', icon: '🎯' },
   { id: 'formation', label: 'Formations', icon: '📐' },
+]
+
+const QUICK_PRESETS = [
+  { label: 'Red Zone Kings', filters: ['red_zone'], groupBy: 'team', position: 'QB' },
+  { label: 'Clutch QBs', filters: ['clutch'], groupBy: 'team', position: 'QB' },
+  { label: 'Best Under Pressure', section: 'pressure' },
+  { label: '3rd Down Efficiency', filters: ['third_down'], groupBy: 'team' },
+  { label: 'Deep Ball Leaders', filters: ['deep_pass'], groupBy: 'team', position: 'QB' },
+  { label: 'Home vs Away', groupBy: 'team', compareFilters: ['home', 'away'] },
 ]
 
 const TEAMS = ALL_TEAMS
@@ -625,7 +637,7 @@ export default function SituationalStats() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
 
-  const initSection = searchParams.get('tab') || 'epa'
+  const initSection = searchParams.get('tab') || 'dashboard'
   const initSeasons = searchParams.get('seasons')?.split(',').map(Number).filter(Boolean) || []
   const initST = searchParams.get('st') || 'REG'
   const initOpp = searchParams.get('opp')?.split(',').filter(Boolean) || []
@@ -672,7 +684,7 @@ export default function SituationalStats() {
   useEffect(() => {
     if (!urlInited) return
     const p = new URLSearchParams()
-    if (section !== 'epa') p.set('tab', section)
+    if (section !== 'dashboard') p.set('tab', section)
     if (selectedSeasons.length) p.set('seasons', selectedSeasons.join(','))
     if (players.length) p.set('p', players.map(pl => pl.player_id).join(','))
     if (ctxSeasonType !== 'REG') p.set('st', ctxSeasonType)
@@ -724,7 +736,7 @@ export default function SituationalStats() {
   }
   const removePlayer = (id) => setPlayers(prev => prev.filter(p => p.player_id !== id))
 
-  const needsPlayer = !['epa', 'clutch', 'formation', 'explorer'].includes(section)
+  const needsPlayer = !['epa', 'clutch', 'formation', 'explorer', 'dashboard', 'trending'].includes(section)
 
   return (
     <div className="flex gap-6">
@@ -838,17 +850,23 @@ export default function SituationalStats() {
 
         {/* Content */}
         <div className="bg-slate-800/50 border border-slate-700/60 rounded-2xl p-5">
+          {section === 'dashboard' && <DashboardSection season={selectedSeasons[0]} />}
           {section === 'epa' && <EpaRankingsSection seasons={selectedSeasons} />}
           {section === 'clutch' && <ClutchRankingsSection seasons={selectedSeasons} />}
           {section === 'explorer' && <ExplorerSection seasons={selectedSeasons} />}
+          {section === 'trending' && <TrendingSection season={selectedSeasons[0]} addPlayer={addPlayer} />}
+          {section === 'matchup' && <MatchupSection players={players} season={selectedSeasons[0]} />}
           {section === 'splits' && <SplitsSection players={players} ctxParams={ctxParams} />}
           {section === 'trend' && <WeeklyTrendSection players={players} season={selectedSeasons[0]} ctxParams={ctxParams} />}
           {section === 'playaction' && (
             <SimpleSection title="Play-Action" fetchFn={api.getPlayAction} players={players} season={selectedSeasons[0]} ctxParams={ctxParams}
               renderData={(d, p) => (
                 <div key={p.player_id} className="space-y-3">
-                  <p className="text-white font-semibold text-sm">{d.player || p.player_name} <span className="text-slate-600 text-xs font-normal">{d.season}</span></p>
-                  {d.data && Object.keys(d.data).length > 0 ? (
+                  <p className="text-white font-semibold text-sm">{d?.player || p.player_name} <span className="text-slate-600 text-xs font-normal">{d?.season || selectedSeasons[0]}</span></p>
+                  {d?.no_data && d.coverage && (
+                    <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-2 text-xs text-amber-400">{d.coverage}</div>
+                  )}
+                  {d?.data && Object.keys(d.data).length > 0 ? (
                     <div className="grid grid-cols-2 gap-3">
                       {['with_play_action', 'without_play_action'].map(key => {
                         const s = d.data?.[key]
@@ -879,7 +897,7 @@ export default function SituationalStats() {
             <SimpleSection title="Pressure" fetchFn={api.getPressureAnalysis} players={players} season={selectedSeasons[0]} ctxParams={ctxParams}
               renderData={(d, p) => (
                 <div key={p.player_id} className="space-y-3">
-                  <p className="text-white font-semibold text-sm">{d.player || p.player_name} <span className="text-slate-600 text-xs font-normal">{d.season}</span></p>
+                  <p className="text-white font-semibold text-sm">{d?.player || p.player_name} <span className="text-slate-600 text-xs font-normal">{d?.season || selectedSeasons[0]}</span></p>
                   {d.data && Object.keys(d.data).length > 0 ? (
                     <div className="grid grid-cols-2 gap-3">
                       {['clean_pocket', 'under_pressure'].map(key => {
@@ -910,7 +928,7 @@ export default function SituationalStats() {
             <SimpleSection title="Decisions" fetchFn={api.getQbDecisions} players={players} season={selectedSeasons[0]} ctxParams={ctxParams}
               renderData={(d, p) => (
                 <div key={p.player_id} className="space-y-3">
-                  <p className="text-white font-semibold text-sm">{d.player || p.player_name} <span className="text-slate-600 text-xs font-normal">{d.season}</span></p>
+                  <p className="text-white font-semibold text-sm">{d?.player || p.player_name} <span className="text-slate-600 text-xs font-normal">{d?.season || selectedSeasons[0]}</span></p>
                   {d.decisions && Object.keys(d.decisions).length > 0 && (
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                       {[
@@ -1798,6 +1816,223 @@ function WeeklyTrendSection({ players, season, ctxParams }) {
           </div>
         )
       })}
+    </div>
+  )
+}
+
+
+// ── Dashboard ────────────────────────────────────────────────────────────────
+
+function DashboardSection({ season }) {
+  const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    setLoading(true)
+    api.getDashboard(season).then(setData).catch(() => setData(null)).finally(() => setLoading(false))
+  }, [season])
+
+  if (loading) return <Loading text="Loading dashboard..." />
+  if (!data) return null
+
+  const avg = data.league_avg || {}
+
+  return (
+    <div className="space-y-5">
+      {/* League averages */}
+      <div className="flex gap-3 flex-wrap">
+        {[
+          { label: 'League EPA/play', val: avg.epa },
+          { label: 'Success Rate', val: `${avg.success_rate}%` },
+          { label: 'Avg Yards', val: avg.avg_yards },
+          { label: 'Total Plays', val: avg.total_plays?.toLocaleString() },
+        ].map(s => (
+          <div key={s.label} className="bg-slate-900/60 rounded-lg px-4 py-2.5 text-center flex-1 min-w-[100px]">
+            <p className="text-[10px] text-slate-500">{s.label}</p>
+            <p className="text-sm font-bold text-white">{s.val ?? '-'}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Top QBs */}
+        <div className="bg-slate-900/40 border border-slate-700/30 rounded-xl p-4 space-y-2">
+          <p className="text-xs font-bold text-amber-400">Top QBs by EPA/play</p>
+          {(data.top_qbs || []).map((r, i) => (
+            <div key={i} className="flex justify-between text-xs">
+              <span className="text-white">{i + 1}. {r.name} <span className="text-slate-600">{r.team}</span></span>
+              <EpaColorCell val={r.epa} />
+            </div>
+          ))}
+        </div>
+
+        {/* Top RBs */}
+        <div className="bg-slate-900/40 border border-slate-700/30 rounded-xl p-4 space-y-2">
+          <p className="text-xs font-bold text-amber-400">Top RBs by EPA/play</p>
+          {(data.top_rbs || []).map((r, i) => (
+            <div key={i} className="flex justify-between text-xs">
+              <span className="text-white">{i + 1}. {r.name} <span className="text-slate-600">{r.team}</span></span>
+              <EpaColorCell val={r.epa} />
+            </div>
+          ))}
+        </div>
+
+        {/* Most Clutch */}
+        <div className="bg-slate-900/40 border border-slate-700/30 rounded-xl p-4 space-y-2">
+          <p className="text-xs font-bold text-red-400">Most Clutch QBs (WPA)</p>
+          {(data.most_clutch || []).map((r, i) => (
+            <div key={i} className="flex justify-between text-xs">
+              <span className="text-white">{i + 1}. {r.name} <span className="text-slate-600">{r.team}</span></span>
+              <span className="text-emerald-400 font-bold">{r.clutch_wpa}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Team EPA */}
+        <div className="bg-slate-900/40 border border-slate-700/30 rounded-xl p-4 space-y-1">
+          <p className="text-xs font-bold text-blue-400">Team EPA Rankings</p>
+          <div className="max-h-48 overflow-y-auto space-y-0.5">
+            {(data.team_epa || []).map((r, i) => (
+              <div key={r.team} className="flex justify-between text-[10px] items-center">
+                <span className="text-slate-300">{i + 1}. {r.team}</span>
+                <span className="flex gap-2">
+                  <span className="text-slate-500">Pass <EpaColorCell val={r.pass_epa} /></span>
+                  <span className="text-slate-500">Rush <EpaColorCell val={r.rush_epa} /></span>
+                  <span className="font-bold"><EpaColorCell val={r.epa} /></span>
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Presets */}
+      <div>
+        <p className="text-xs font-bold text-slate-500 mb-2">QUICK PRESETS</p>
+        <div className="flex gap-2 flex-wrap">
+          {QUICK_PRESETS.map(p => (
+            <button key={p.label} onClick={() => {
+              if (p.section) { /* handled by parent */ }
+            }} className="px-3 py-1.5 bg-slate-800 text-slate-300 border border-slate-700 rounded-lg text-xs hover:border-amber-500/40 hover:text-amber-400 transition-colors">
+              {p.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+
+// ── Trending ─────────────────────────────────────────────────────────────────
+
+function TrendingSection({ season, addPlayer }) {
+  const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    setLoading(true)
+    api.getTrending(season).then(setData).catch(() => setData(null)).finally(() => setLoading(false))
+  }, [season])
+
+  if (loading) return <Loading text="Loading trends..." />
+  if (!data) return null
+
+  const TrendCard = ({ title, players, color, icon }) => (
+    <div className="bg-slate-900/40 border border-slate-700/30 rounded-xl p-4 space-y-2">
+      <p className="text-xs font-bold" style={{ color }}>{icon} {title}</p>
+      {players.map((r, i) => (
+        <div key={i} className="flex items-center justify-between text-xs">
+          <button onClick={() => addPlayer({ player_id: r.gsis_id, player_name: r.name, pos: 'QB' })} className="text-white hover:text-amber-400 transition-colors text-left">
+            {r.name} <span className="text-slate-600">{r.team}</span>
+          </button>
+          <div className="flex gap-3 text-right">
+            <span className="text-slate-500">H1: <EpaColorCell val={r.epa_h1} /></span>
+            <span className="text-slate-500">H2: <EpaColorCell val={r.epa_h2} /></span>
+            <span className={`font-bold ${r.delta > 0 ? 'text-emerald-400' : 'text-red-400'}`}>{r.delta > 0 ? '+' : ''}{r.delta}</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+
+  return (
+    <div className="space-y-4">
+      <p className="text-slate-400 text-xs">First half (weeks 1-9) vs second half (weeks 10+) EPA comparison</p>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <TrendCard title="QBs - Most Improved" players={data.qb_improved || []} color="#34d399" icon="↗" />
+        <TrendCard title="QBs - Biggest Decline" players={data.qb_declined || []} color="#f87171" icon="↘" />
+        <TrendCard title="RBs - Most Improved" players={data.rb_improved || []} color="#34d399" icon="↗" />
+        <TrendCard title="RBs - Biggest Decline" players={data.rb_declined || []} color="#f87171" icon="↘" />
+      </div>
+    </div>
+  )
+}
+
+
+// ── Matchup Finder ──────────────────────────────────────────────────────────
+
+function MatchupSection({ players, season }) {
+  const [defRank, setDefRank] = useState('top10')
+  const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (!players.length) return
+    setLoading(true)
+    api.getMatchup(players[0].player_id, defRank, season)
+      .then(setData).catch(() => setData(null)).finally(() => setLoading(false))
+  }, [players[0]?.player_id, defRank, season])
+
+  if (!players.length) return <p className="text-slate-500 text-sm">Search for a player above to see matchup analysis</p>
+  if (loading) return <Loading text="Loading matchup data..." />
+  if (!data || data.error) return <p className="text-red-400 text-sm">{data?.error || 'Failed to load'}</p>
+
+  const overall = data.overall || {}
+  const vsDef = data.vs_defense || {}
+  const delta = vsDef.epa_per_play != null && overall.epa_per_play != null ? (vsDef.epa_per_play - overall.epa_per_play).toFixed(3) : null
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-3 flex-wrap">
+        <p className="text-white font-semibold text-sm">{data.player}</p>
+        <span className="text-slate-600 text-xs">vs</span>
+        {['top5', 'top10', 'bottom10', 'bottom5'].map(r => (
+          <button key={r} onClick={() => setDefRank(r)}
+            className={`px-2.5 py-1 rounded text-xs ${defRank === r ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40' : 'bg-slate-800 text-slate-500 border border-slate-700'}`}>
+            {r === 'top5' ? 'Top 5 DEF' : r === 'top10' ? 'Top 10 DEF' : r === 'bottom10' ? 'Bottom 10 DEF' : 'Bottom 5 DEF'}
+          </button>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="bg-slate-900/60 border border-slate-700/30 rounded-xl p-4 space-y-2">
+          <p className="text-xs font-semibold text-slate-400">Overall</p>
+          <p className="text-2xl font-bold"><EpaColorCell val={overall.epa_per_play} /></p>
+          <p className="text-xs text-slate-500">Success: {overall.success_rate}% | {overall.avg_yards} yds | {overall.plays} plays</p>
+        </div>
+        <div className="bg-slate-900/60 border border-amber-500/20 rounded-xl p-4 space-y-2">
+          <p className="text-xs font-semibold text-amber-400">vs {data.defense_label}</p>
+          <p className="text-2xl font-bold"><EpaColorCell val={vsDef.epa_per_play} /></p>
+          <p className="text-xs text-slate-500">Success: {vsDef.success_rate}% | {vsDef.avg_yards} yds | {vsDef.plays} plays</p>
+          {delta && <p className="text-xs"><span className={Number(delta) >= 0 ? 'text-emerald-400' : 'text-red-400'}>{Number(delta) >= 0 ? '+' : ''}{delta} EPA vs overall</span></p>}
+        </div>
+      </div>
+
+      {data.per_team?.length > 0 && (
+        <div>
+          <p className="text-xs font-semibold text-slate-500 mb-2">Per-Team Breakdown ({data.defense_label})</p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {data.per_team.map(t => (
+              <div key={t.team} className="bg-slate-900/40 rounded-lg p-2.5 text-center">
+                <p className="text-xs text-slate-400 font-medium">{t.team}</p>
+                <p className="text-sm font-bold"><EpaColorCell val={t.epa_per_play} /></p>
+                <p className="text-[10px] text-slate-600">{t.plays}p | {t.avg_yards}y</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

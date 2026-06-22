@@ -260,6 +260,14 @@ export const api = {
   getExplorerFilters: () => get('/situational/explorer-filters'),
   postExplorer: (body) => post('/situational/explorer', body),
   postExplorerPlays: (body) => post('/situational/explorer-plays', body),
+  getDashboard: (season) => get(`/situational/dashboard${season ? `?season=${season}` : ''}`),
+  getTrending: (season) => get(`/situational/trending${season ? `?season=${season}` : ''}`),
+  getMatchup: (playerId, defenseRank, season) => {
+    const p = new URLSearchParams({ player_id: playerId })
+    if (defenseRank) p.set('defense_rank', defenseRank)
+    if (season) p.set('season', season)
+    return get(`/situational/matchup?${p}`)
+  },
   getWeeklyTrend: (playerId, season, ctx) => {
     const p = new URLSearchParams(); if (season) p.set('season', season)
     if (ctx?.season_type) p.set('season_type', ctx.season_type); if (ctx?.opponent) p.set('opponent', ctx.opponent)
