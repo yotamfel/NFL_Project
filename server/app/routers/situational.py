@@ -890,6 +890,23 @@ def explorer_plays(
     sort_col = body.get("sort", "epa")
     sort_dir = "DESC" if body.get("sort_dir", "desc") == "desc" else "ASC"
 
+    result_filter = body.get("result_filter", [])
+    if result_filter:
+        rf_parts = []
+        rf_map = {
+            "td": "touchdown = 1",
+            "int": "interception = 1",
+            "sack": "sack = 1",
+            "cmp": "complete_pass = 1 AND touchdown = 0 AND interception = 0",
+            "rush_success": "rush_attempt = 1 AND success = 1 AND touchdown = 0",
+            "inc": "pass_attempt = 1 AND complete_pass = 0 AND interception = 0 AND sack = 0",
+        }
+        for rf in result_filter:
+            if rf in rf_map:
+                rf_parts.append(f"({rf_map[rf]})")
+        if rf_parts:
+            where += f" AND ({' OR '.join(rf_parts)})"
+
     safe_cols = {"epa", "wpa", "yards_gained", "week", "play_id", "game_seconds_remaining"}
     if sort_col not in safe_cols:
         sort_col = "epa"

@@ -786,6 +786,15 @@ function EpaDistDetail({ buckets, label, onClose }) {
   )
 }
 
+const RESULT_FILTERS = [
+  { id: 'td', label: 'TD', cls: 'text-emerald-400 border-emerald-500/40 bg-emerald-500/10' },
+  { id: 'int', label: 'INT', cls: 'text-red-400 border-red-500/40 bg-red-500/10' },
+  { id: 'sack', label: 'Sack', cls: 'text-red-400 border-red-500/40 bg-red-500/10' },
+  { id: 'cmp', label: 'Cmp', cls: 'text-slate-300 border-slate-600 bg-slate-700/30' },
+  { id: 'rush_success', label: 'Rush+', cls: 'text-emerald-400 border-emerald-500/40 bg-emerald-500/10' },
+  { id: 'inc', label: 'Inc', cls: 'text-red-300 border-red-500/30 bg-red-500/5' },
+]
+
 function PlayLogPanel({ body, onClose }) {
   const [plays, setPlays] = useState([])
   const [total, setTotal] = useState(0)
@@ -794,11 +803,14 @@ function PlayLogPanel({ body, onClose }) {
   const [error, setError] = useState(null)
   const [sortCol, setSortCol] = useState('epa')
   const [sortDir, setSortDir] = useState('desc')
+  const [resultFilter, setResultFilter] = useState([])
   const limit = 50
 
-  const load = (off = 0, col = sortCol, dir = sortDir) => {
+  const load = (off = 0, col = sortCol, dir = sortDir, rf = resultFilter) => {
     setLoading(true); setError(null)
-    api.postExplorerPlays({ ...body, offset: off, limit, sort: col, sort_dir: dir })
+    const req = { ...body, offset: off, limit, sort: col, sort_dir: dir }
+    if (rf.length) req.result_filter = rf
+    api.postExplorerPlays(req)
       .then(d => { setPlays(d.plays); setTotal(d.total); setOffset(off) })
       .catch(e => setError(e.message || 'Failed to load plays'))
       .finally(() => setLoading(false))
@@ -808,7 +820,12 @@ function PlayLogPanel({ body, onClose }) {
 
   const toggleSort = (col) => {
     const dir = sortCol === col && sortDir === 'desc' ? 'asc' : 'desc'
-    setSortCol(col); setSortDir(dir); load(0, col, dir)
+    setSortCol(col); setSortDir(dir); load(0, col, dir, resultFilter)
+  }
+
+  const toggleResult = (id) => {
+    const next = resultFilter.includes(id) ? resultFilter.filter(r => r !== id) : [...resultFilter, id]
+    setResultFilter(next); load(0, sortCol, sortDir, next)
   }
 
   const exportCsv = () => {
@@ -838,6 +855,15 @@ function PlayLogPanel({ body, onClose }) {
           <button onClick={exportCsv} className="text-xs text-amber-400 hover:text-amber-300">Export CSV</button>
           <button onClick={onClose} className="text-xs text-slate-500 hover:text-slate-300">Close</button>
         </div>
+      </div>
+      <div className="flex gap-1 flex-wrap">
+        {RESULT_FILTERS.map(rf => (
+          <button key={rf.id} onClick={() => toggleResult(rf.id)}
+            className={`px-2 py-0.5 rounded text-[10px] font-medium border transition-colors ${resultFilter.includes(rf.id) ? rf.cls : 'text-slate-600 border-slate-700/50 bg-slate-800/50 hover:text-slate-400'}`}>
+            {rf.label}
+          </button>
+        ))}
+        {resultFilter.length > 0 && <button onClick={() => { setResultFilter([]); load(0, sortCol, sortDir, []) }} className="text-[10px] text-slate-600 hover:text-slate-400 ml-1">Clear</button>}
       </div>
       {error && <p className="text-red-400 text-xs">{error}</p>}
       {loading ? <Loading text="Loading plays..." /> : (
