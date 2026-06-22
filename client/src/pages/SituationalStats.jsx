@@ -674,11 +674,14 @@ export default function SituationalStats() {
   const browseByFilters = () => {
     if (!finderPos && !finderTeam.length) return
     setFinderLoading(true)
-    api.searchPlayers('', { pos: finderPos || undefined, team: finderTeam[0] || undefined, limit: 30 })
-      .then(setFinderResults).catch(() => setFinderResults([])).finally(() => setFinderLoading(false))
+    api.browseSituationalPlayers({
+      pos: finderPos || undefined,
+      team: finderTeam.length ? finderTeam.join(',') : undefined,
+      seasons: selectedSeasons,
+    }).then(setFinderResults).catch(() => setFinderResults([])).finally(() => setFinderLoading(false))
   }
 
-  useEffect(() => { if (finderPos || finderTeam.length) browseByFilters() }, [finderPos, finderTeam.join(',')])
+  useEffect(() => { if (finderPos || finderTeam.length) browseByFilters() }, [finderPos, finderTeam.join(','), selectedSeasons.join(',')])
 
   const needsPlayer = !['epa', 'clutch', 'formation', 'explorer'].includes(section)
 
@@ -740,14 +743,14 @@ export default function SituationalStats() {
               <TeamPicker selected={finderTeam} setSelected={setFinderTeam} />
               {finderResults.length > 0 && (
                 <div className="flex gap-1 flex-wrap max-w-xl">
-                  {finderResults.slice(0, 15).map(p => (
+                  {finderResults.slice(0, 20).map(p => (
                     <button key={p.player_id} onClick={() => addPlayer(p)}
                       disabled={players.some(x => x.player_id === p.player_id)}
                       className="px-2 py-0.5 rounded text-[10px] bg-slate-800 text-slate-300 border border-slate-700 hover:border-amber-500/40 hover:text-amber-400 transition-colors disabled:opacity-30">
-                      {p.player_name}
+                      {p.player_name} <span className="text-slate-600">{p.team}</span>
                     </button>
                   ))}
-                  {finderResults.length > 15 && <span className="text-[10px] text-slate-600">+{finderResults.length - 15} more</span>}
+                  {finderResults.length > 20 && <span className="text-[10px] text-slate-600">+{finderResults.length - 20} more</span>}
                 </div>
               )}
               {finderLoading && <span className="text-[10px] text-slate-600">...</span>}

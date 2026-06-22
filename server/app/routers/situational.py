@@ -37,6 +37,68 @@ def available_seasons(user: dict = Depends(require_admin)):
     return [r[0] for r in rows]
 
 
+@router.get("/browse-players")
+def browse_players(
+    pos: Optional[str] = None,
+    team: Optional[str] = None,
+    seasons: Optional[str] = None,
+    user: dict = Depends(require_admin),
+):
+    if seasons:
+        yrs = [int(s) for s in seasons.split(",")]
+    else:
+        with engine.connect() as c:
+            yrs = [r[0] for r in c.execute(text("SELECT DISTINCT season FROM pbp ORDER BY season DESC")).fetchall()]
+
+    pos_cols = {
+        "QB": ("passer_player_id", "passer_player_name", "pass_attempt = 1"),
+        "RB": ("rusher_player_id", "rusher_player_name", "rush_attempt = 1"),
+        "WR": ("receiver_player_id", "receiver_player_name", "pass_attempt = 1 AND receiver_player_id IS NOT NULL"),
+        "TE": ("receiver_player_id", "receiver_player_name", "pass_attempt = 1 AND receiver_player_id IS NOT NULL"),
+    }
+
+    if pos and pos in pos_cols:
+        id_col, name_col, where = pos_cols[pos]
+        positions = [(pos, id_col, name_col, where)]
+    else:
+        positions = [(p, *v) for p, v in pos_cols.items()]
+
+    teams_list = [t.strip().upper() for t in team.split(",")] if team else []
+    team_filter = ""
+    if teams_list:
+        team_filter = f"AND posteam = ANY(ARRAY{teams_list})" if len(teams_list) > 1 else f"AND posteam = '{teams_list[0]}'"
+
+    results = []
+    seen = set()
+    with engine.connect() as c:
+        for p, id_col, name_col, where in positions:
+            rows = c.execute(text(f"""
+                SELECT DISTINCT {id_col} as gsis_id, {name_col} as name, posteam as team,
+                       COUNT(*) as plays
+                FROM pbp
+                WHERE {where} AND {id_col} IS NOT NULL AND season = ANY(:seasons)
+                      AND epa IS NOT NULL {team_filter}
+                GROUP BY {id_col}, {name_col}, posteam
+                HAVING COUNT(*) >= 20
+                ORDER BY plays DESC
+                LIMIT 40
+            """), {"seasons": yrs}).fetchall()
+            for r in rows:
+                if r.gsis_id not in seen:
+                    seen.add(r.gsis_id)
+                    pl = c.execute(text("SELECT player_id, player_name FROM players WHERE gsis_id = :gsis"),
+                                   {"gsis": r.gsis_id}).fetchone()
+                    results.append({
+                        "player_id": pl.player_id if pl else r.gsis_id,
+                        "player_name": pl.player_name if pl else r.name,
+                        "pos": p,
+                        "team": r.team,
+                        "plays": r.plays,
+                    })
+    results.sort(key=lambda x: -x["plays"])
+    return results[:40]
+
+
 def _ftn_seasons():
     try:
         with engine.connect() as c:

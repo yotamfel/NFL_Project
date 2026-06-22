@@ -184,6 +184,13 @@ export const api = {
 
   // Situational Stats
   getSituationalSeasons: () => get('/situational/available-seasons'),
+  browseSituationalPlayers: (params = {}) => {
+    const p = new URLSearchParams()
+    if (params.pos) p.set('pos', params.pos)
+    if (params.team) p.set('team', params.team)
+    if (params.seasons?.length) p.set('seasons', params.seasons.join(','))
+    return get(`/situational/browse-players?${p}`)
+  },
   getEpaRankings: (params = {}) => {
     const p = new URLSearchParams()
     if (params.position) p.set('position', params.position)
