@@ -2032,7 +2032,7 @@ function DashboardSection({ season }) {
         {/* Team EPA */}
         <div className="bg-slate-900/40 border border-slate-700/30 rounded-xl p-4 space-y-1">
           <p className="text-xs font-bold text-blue-400">Team EPA Rankings</p>
-          <div className="flex justify-between text-[9px] text-slate-600 px-0.5 mb-1 sticky top-0">
+          <div className="flex justify-between text-[9px] text-slate-600 px-0.5 mb-1 pr-3">
             <span>Team</span>
             <span className="flex gap-3"><span className="w-12 text-right">Pass</span><span className="w-12 text-right">Rush</span><span className="w-12 text-right">Avg</span></span>
           </div>
