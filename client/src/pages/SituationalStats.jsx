@@ -80,7 +80,75 @@ const SECTIONS = [
   { id: 'formation', label: 'Formations', icon: '📐' },
 ]
 
-const TEAMS = ['ARI','ATL','BAL','BUF','CAR','CHI','CIN','CLE','DAL','DEN','DET','GB','HOU','IND','JAX','KC','LAC','LAR','LV','MIA','MIN','NE','NO','NYG','NYJ','PHI','PIT','SEA','SF','TB','TEN','WAS']
+const NFL_STRUCTURE = {
+  AFC: {
+    East: ['BUF','MIA','NE','NYJ'],
+    North: ['BAL','CIN','CLE','PIT'],
+    South: ['HOU','IND','JAX','TEN'],
+    West: ['DEN','KC','LAC','LV'],
+  },
+  NFC: {
+    East: ['DAL','NYG','PHI','WAS'],
+    North: ['CHI','DET','GB','MIN'],
+    South: ['ATL','CAR','NO','TB'],
+    West: ['ARI','LAR','SEA','SF'],
+  },
+}
+const ALL_TEAMS = Object.values(NFL_STRUCTURE).flatMap(conf => Object.values(conf).flat()).sort()
+const TEAMS = ALL_TEAMS
+
+function TeamPicker({ selected, setSelected }) {
+  const [open, setOpen] = useState(false)
+
+  const toggleTeams = (teams) => {
+    const allIn = teams.every(t => selected.includes(t))
+    setSelected(prev => allIn ? prev.filter(t => !teams.includes(t)) : [...new Set([...prev, ...teams])])
+  }
+  const confTeams = (conf) => Object.values(NFL_STRUCTURE[conf]).flat()
+  const divTeams = (conf, div) => NFL_STRUCTURE[conf][div]
+
+  const label = selected.length === 0 ? 'All teams'
+    : selected.length <= 3 ? selected.join(', ')
+    : `${selected.length} teams`
+
+  return (
+    <div className="relative">
+      <button onClick={() => setOpen(!open)}
+        className={`px-2.5 py-1 rounded text-xs border transition-colors flex items-center gap-1 ${selected.length > 0 ? 'bg-amber-500/15 text-amber-400 border-amber-500/40' : 'bg-slate-800 text-slate-400 border-slate-700'}`}>
+        {label} <span className="text-slate-600 text-[10px]">{open ? '▲' : '▼'}</span>
+      </button>
+      {open && (
+        <div className="absolute top-full mt-1 left-0 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl z-30 p-3 w-[340px] max-h-[400px] overflow-y-auto">
+          {selected.length > 0 && (
+            <button onClick={() => setSelected([])} className="text-xs text-red-400 hover:text-red-300 mb-2">Clear all</button>
+          )}
+          {Object.entries(NFL_STRUCTURE).map(([conf, divs]) => (
+            <div key={conf} className="mb-3">
+              <button onClick={() => toggleTeams(confTeams(conf))}
+                className={`text-xs font-bold mb-1 px-2 py-0.5 rounded transition-colors ${confTeams(conf).every(t => selected.includes(t)) ? 'bg-amber-500/20 text-amber-400' : 'text-slate-300 hover:text-white'}`}>
+                {conf}
+              </button>
+              {Object.entries(divs).map(([div, teams]) => (
+                <div key={div} className="flex items-center gap-1 mb-1 ml-2">
+                  <button onClick={() => toggleTeams(divTeams(conf, div))}
+                    className={`text-[10px] w-14 text-left px-1 py-0.5 rounded transition-colors ${teams.every(t => selected.includes(t)) ? 'text-amber-400 font-semibold' : 'text-slate-500 hover:text-slate-300'}`}>
+                    {div}
+                  </button>
+                  {teams.map(t => (
+                    <button key={t} onClick={() => toggleTeams([t])}
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-medium transition-colors ${selected.includes(t) ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40' : 'bg-slate-800 text-slate-500 border border-slate-700/50 hover:text-slate-300'}`}>
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 function EpaColorCell({ val }) {
   if (val == null) return <span className="text-slate-500">-</span>
@@ -147,16 +215,16 @@ function EpaRankingsSection({ seasons }) {
   const [loading, setLoading] = useState(false)
   const [seasonType, setSeasonType] = useState('REG')
   const [minPlays, setMinPlays] = useState(null)
-  const [teamFilter, setTeamFilter] = useState('')
+  const [teamFilter, setTeamFilter] = useState([])
   const [sort, setSort] = useState({ field: 'epa_per_play', dir: 'desc' })
 
   useEffect(() => {
     setLoading(true)
     const params = { position: pos, seasons, season_type: seasonType }
     if (minPlays) params.min_plays = minPlays
-    if (teamFilter) params.team = teamFilter
+    if (teamFilter.length) params.teams = teamFilter
     api.getEpaRankings(params).then(setData).catch(() => setData(null)).finally(() => setLoading(false))
-  }, [pos, seasons.join(','), seasonType, minPlays, teamFilter])
+  }, [pos, seasons.join(','), seasonType, minPlays, teamFilter.join(',')])
 
   const sorted = (data?.data || [])
     .sort((a, b) => {
@@ -183,11 +251,7 @@ function EpaRankingsSection({ seasons }) {
           </button>
         ))}
         <span className="text-slate-700">|</span>
-        <select value={teamFilter} onChange={e => setTeamFilter(e.target.value)}
-          className="bg-slate-800 border border-slate-700 text-slate-300 rounded px-2 py-1 text-xs">
-          <option value="">All teams</option>
-          {TEAMS.map(t => <option key={t} value={t}>{t}</option>)}
-        </select>
+        <TeamPicker selected={teamFilter} setSelected={setTeamFilter} />
         <label className="flex items-center gap-1.5 text-xs text-slate-500">
           Min plays:
           <input type="number" value={minPlays || ''} onChange={e => setMinPlays(e.target.value ? Number(e.target.value) : null)}
@@ -241,15 +305,15 @@ function ClutchRankingsSection({ seasons }) {
   const [pos, setPos] = useState('QB')
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(false)
-  const [teamFilter, setTeamFilter] = useState('')
+  const [teamFilter, setTeamFilter] = useState([])
   const [sort, setSort] = useState({ field: 'clutch_wpa', dir: 'desc' })
 
   useEffect(() => {
     setLoading(true)
     const params = { position: pos, seasons }
-    if (teamFilter) params.team = teamFilter
+    if (teamFilter.length) params.teams = teamFilter
     api.getClutchRankings(params).then(setData).catch(() => setData(null)).finally(() => setLoading(false))
-  }, [pos, seasons.join(','), teamFilter])
+  }, [pos, seasons.join(','), teamFilter.join(',')])
 
   const sorted = (data?.data || []).sort((a, b) => {
     const va = a[sort.field] ?? -999, vb = b[sort.field] ?? -999
@@ -267,11 +331,7 @@ function ClutchRankingsSection({ seasons }) {
           </button>
         ))}
         <span className="text-slate-700">|</span>
-        <select value={teamFilter} onChange={e => setTeamFilter(e.target.value)}
-          className="bg-slate-800 border border-slate-700 text-slate-300 rounded px-2 py-1 text-xs">
-          <option value="">All teams</option>
-          {TEAMS.map(t => <option key={t} value={t}>{t}</option>)}
-        </select>
+        <TeamPicker selected={teamFilter} setSelected={setTeamFilter} />
       </div>
       {loading && <Loading text="Loading clutch rankings..." />}
       {sorted.length > 0 && (
@@ -729,7 +789,7 @@ function ExplorerSection({ seasons }) {
   const season = seasons[0]
   const [filters, setFilters] = useState([])
   const [groupBy, setGroupBy] = useState('team')
-  const [team, setTeam] = useState('')
+  const [teamFilter, setTeamFilter] = useState([])
   const [position, setPosition] = useState('')
   const [seasonType, setSeasonType] = useState('REG')
   const [playerSearch, setPlayerSearch] = useState('')
@@ -751,7 +811,7 @@ function ExplorerSection({ seasons }) {
 
   const run = () => {
     setLoading(true)
-    api.postExplorer({ season, filters, group_by: groupBy, team: team || undefined, position: position || undefined, player_id: playerId || undefined, season_type: seasonType })
+    api.postExplorer({ season, filters, group_by: groupBy, team: teamFilter.length ? teamFilter.join(',') : undefined, position: position || undefined, player_id: playerId || undefined, season_type: seasonType })
       .then(setData).catch(() => setData(null)).finally(() => setLoading(false))
   }
 
@@ -801,11 +861,7 @@ function ExplorerSection({ seasons }) {
           <option value="POST">Playoffs</option>
           <option value="ALL">All</option>
         </select>
-        <select value={team} onChange={e => setTeam(e.target.value)}
-          className="bg-slate-800 border border-slate-700 text-slate-300 rounded px-2 py-1 text-xs">
-          <option value="">All teams</option>
-          {TEAMS.map(t => <option key={t} value={t}>{t}</option>)}
-        </select>
+        <TeamPicker selected={teamFilter} setSelected={setTeamFilter} />
         <select value={position} onChange={e => setPosition(e.target.value)}
           className="bg-slate-800 border border-slate-700 text-slate-300 rounded px-2 py-1 text-xs">
           <option value="">All positions</option>

@@ -191,7 +191,8 @@ export const api = {
     else if (params.season) p.set('season', params.season)
     if (params.season_type) p.set('season_type', params.season_type)
     if (params.min_plays) p.set('min_plays', params.min_plays)
-    if (params.team) p.set('team', params.team)
+    if (params.teams?.length) p.set('team', params.teams.join(','))
+    else if (params.team) p.set('team', params.team)
     return get(`/situational/epa-rankings?${p}`)
   },
   getClutchRankings: (params = {}) => {
@@ -199,7 +200,8 @@ export const api = {
     if (params.position) p.set('position', params.position)
     if (params.seasons) p.set('seasons', params.seasons.join(','))
     else if (params.season) p.set('season', params.season)
-    if (params.team) p.set('team', params.team)
+    if (params.teams?.length) p.set('team', params.teams.join(','))
+    else if (params.team) p.set('team', params.team)
     return get(`/situational/clutch-rankings?${p}`)
   },
   getSituationalSplits: (playerId, season) => get(`/situational/splits/${playerId}${season ? `?season=${season}` : ''}`),

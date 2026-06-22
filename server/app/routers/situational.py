@@ -74,6 +74,8 @@ def epa_rankings(
     else:
         yrs = [season or _latest_season()]
 
+    teams_list = [t.strip().upper() for t in team.split(",")] if team else []
+
     auto_min = _min_plays(position)
     if season_type == "POST":
         auto_min = max(auto_min // 5, 10)
@@ -92,7 +94,7 @@ def epa_rankings(
 
     id_col, name_col, where = pos_map[position]
     st_filter = "" if season_type == "ALL" else f"AND season_type = '{season_type}'"
-    team_filter = "AND posteam = :team" if team else ""
+    team_filter = "AND posteam = ANY(:teams)" if teams_list else ""
 
     sql = text(f"""
         WITH player_epa AS (
@@ -120,8 +122,8 @@ def epa_rankings(
     """)
 
     params = {"seasons": yrs, "min_plays": mp}
-    if team:
-        params["team"] = team.upper()
+    if teams_list:
+        params["teams"] = teams_list
     with engine.connect() as c:
         rows = c.execute(sql, params).fetchall()
     return {"seasons": yrs, "position": position, "data": [dict(r._mapping) for r in rows]}
@@ -151,7 +153,8 @@ def clutch_rankings(
         return []
 
     id_col, name_col, where = pos_map[position]
-    team_filter = "AND posteam = :team" if team else ""
+    teams_list = [t.strip().upper() for t in team.split(",")] if team else []
+    team_filter = "AND posteam = ANY(:teams)" if teams_list else ""
     min_clutch = max(8 * len(yrs), 10)
 
     sql = text(f"""
@@ -173,8 +176,8 @@ def clutch_rankings(
     """)
 
     params = {"seasons": yrs, "min_clutch": min_clutch}
-    if team:
-        params["team"] = team.upper()
+    if teams_list:
+        params["teams"] = teams_list
     with engine.connect() as c:
         rows = c.execute(sql, params).fetchall()
     return {"seasons": yrs, "position": position, "data": [dict(r._mapping) for r in rows]}
@@ -702,8 +705,13 @@ def custom_explorer(
             params["gsis"] = gsis
 
     if team:
-        where_parts.append("posteam = :team")
-        params["team"] = team.upper()
+        teams_list = [t.strip().upper() for t in team.split(",")]
+        if len(teams_list) == 1:
+            where_parts.append("posteam = :team")
+            params["team"] = teams_list[0]
+        else:
+            where_parts.append("posteam = ANY(:teams)")
+            params["teams"] = teams_list
 
     if position:
         pos_map = {
