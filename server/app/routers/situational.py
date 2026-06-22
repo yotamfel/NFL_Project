@@ -678,18 +678,15 @@ def explorer_filters(user: dict = Depends(require_admin)):
     return EXPLORER_FILTERS
 
 
-@router.post("/explorer")
-def custom_explorer(
-    body: dict,
-    user: dict = Depends(require_admin),
-):
+def _build_explorer_where(body: dict):
+    """Shared filter builder for explorer and play-log endpoints."""
     season = body.get("season") or _latest_season()
     filters = body.get("filters", [])
-    group_by = body.get("group_by", "team")
     player_id = body.get("player_id")
     position = body.get("position")
     team = body.get("team")
     season_type = body.get("season_type", "REG")
+    drill = body.get("drill")
 
     where_parts = ["season = :season", "epa IS NOT NULL", "play_type IN ('pass','run')"]
     params = {"season": season}
@@ -731,7 +728,33 @@ def custom_explorer(
                 where_parts.append(f"{spec['col']} = :fval_{f}")
                 params[f"fval_{f}"] = body[f"_{f}_val"]
 
-    where = " AND ".join(where_parts)
+    if drill:
+        drill_map = {
+            "team": "posteam = :drill_val",
+            "down": "down = :drill_val_i",
+            "quarter": "qtr = :drill_val_i",
+            "play_type": "play_type = :drill_val",
+            "week": "week = :drill_val_i",
+        }
+        drill_field = drill.get("field")
+        drill_value = drill.get("value")
+        if drill_field in drill_map and drill_value is not None:
+            where_parts.append(drill_map[drill_field])
+            if "_i" in drill_map[drill_field]:
+                params["drill_val_i"] = int(drill_value)
+            else:
+                params["drill_val"] = str(drill_value)
+
+    return " AND ".join(where_parts), params, season
+
+
+@router.post("/explorer")
+def custom_explorer(
+    body: dict,
+    user: dict = Depends(require_admin),
+):
+    where, params, season = _build_explorer_where(body)
+    group_by = body.get("group_by", "team")
 
     group_sql = {
         "team": ("posteam", "posteam"),
@@ -797,12 +820,74 @@ def custom_explorer(
     with engine.connect() as c:
         totals = c.execute(totals_sql, params).fetchone()
 
+    # EPA distribution per group (for mini sparklines)
+    hist_sql = text(f"""
+        SELECT {g_expr} as grp,
+               ROUND(epa::numeric, 0) as epa_bucket,
+               COUNT(*) as cnt
+        FROM pbp WHERE {where}
+        GROUP BY {g_expr}, ROUND(epa::numeric, 0)
+        ORDER BY grp, epa_bucket
+    """)
+    with engine.connect() as c:
+        hist_rows = c.execute(hist_sql, params).fetchall()
+    hist = {}
+    for r in hist_rows:
+        g = str(r[0])
+        if g not in hist:
+            hist[g] = []
+        hist[g].append({"epa": int(r[1]), "count": r[2]})
+
     return {
         "season": season,
         "group_by": group_by,
-        "filters": filters,
+        "filters": body.get("filters", []),
         "totals": dict(totals._mapping) if totals else {},
         "data": [dict(r._mapping) for r in rows],
+        "histograms": hist,
+    }
+
+
+@router.post("/explorer-plays")
+def explorer_plays(
+    body: dict,
+    user: dict = Depends(require_admin),
+):
+    where, params, season = _build_explorer_where(body)
+    offset = body.get("offset", 0)
+    limit = min(body.get("limit", 50), 200)
+    sort_col = body.get("sort", "epa")
+    sort_dir = "DESC" if body.get("sort_dir", "desc") == "desc" else "ASC"
+
+    safe_cols = {"epa", "wpa", "yards_gained", "week", "play_id", "game_seconds_remaining"}
+    if sort_col not in safe_cols:
+        sort_col = "epa"
+
+    sql = text(f"""
+        SELECT game_id, play_id, week, qtr, down, ydstogo, yardline_100,
+               play_type, yards_gained, epa, wpa, success,
+               passer_player_name, rusher_player_name, receiver_player_name,
+               posteam, defteam, score_differential,
+               pass_attempt, rush_attempt, complete_pass, interception, sack, touchdown,
+               game_seconds_remaining
+        FROM pbp
+        WHERE {where}
+        ORDER BY {sort_col} {sort_dir}
+        LIMIT :lim OFFSET :off
+    """)
+    count_sql = text(f"SELECT COUNT(*) FROM pbp WHERE {where}")
+
+    params["lim"] = limit
+    params["off"] = offset
+    with engine.connect() as c:
+        rows = c.execute(sql, params).fetchall()
+        total = c.execute(count_sql, {k: v for k, v in params.items() if k not in ("lim", "off")}).scalar()
+
+    return {
+        "total": total,
+        "offset": offset,
+        "limit": limit,
+        "plays": [dict(r._mapping) for r in rows],
     }
 
 

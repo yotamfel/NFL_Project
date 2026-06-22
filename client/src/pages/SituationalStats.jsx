@@ -718,6 +718,165 @@ const GROUP_OPTIONS = [
   { id: 'pass_depth', label: 'Pass Depth' },
 ]
 
+function MiniHist({ buckets }) {
+  if (!buckets?.length) return null
+  const max = Math.max(...buckets.map(b => b.count))
+  return (
+    <div className="flex items-end gap-px h-4 w-16 inline-flex align-middle ml-1">
+      {buckets.slice(0, 12).map((b, i) => (
+        <div key={i} className={`flex-1 rounded-sm ${b.epa >= 0 ? 'bg-emerald-500/60' : 'bg-red-500/60'}`}
+          style={{ height: `${Math.max((b.count / max) * 100, 8)}%` }} />
+      ))}
+    </div>
+  )
+}
+
+function PlayLogPanel({ body, onClose }) {
+  const [plays, setPlays] = useState([])
+  const [total, setTotal] = useState(0)
+  const [offset, setOffset] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const [sortCol, setSortCol] = useState('epa')
+  const [sortDir, setSortDir] = useState('desc')
+  const limit = 50
+
+  const load = (off = 0, col = sortCol, dir = sortDir) => {
+    setLoading(true)
+    api.postExplorerPlays({ ...body, offset: off, limit, sort: col, sort_dir: dir })
+      .then(d => { setPlays(d.plays); setTotal(d.total); setOffset(off) })
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }
+
+  useEffect(() => { load(0) }, [])
+
+  const toggleSort = (col) => {
+    const dir = sortCol === col && sortDir === 'desc' ? 'asc' : 'desc'
+    setSortCol(col); setSortDir(dir); load(0, col, dir)
+  }
+
+  const exportCsv = () => {
+    const headers = ['Week','Qtr','Down','Dist','YdLine','Type','Yards','EPA','WPA','Success','Player','Team','Def']
+    const rows = plays.map(p => [
+      p.week, p.qtr, p.down, p.ydstogo, p.yardline_100, p.play_type, p.yards_gained,
+      p.epa, p.wpa, p.success, p.passer_player_name || p.rusher_player_name || '', p.posteam, p.defteam
+    ])
+    const csv = [headers, ...rows].map(r => r.join(',')).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a'); a.href = url; a.download = 'plays.csv'; a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const SortTh = ({ label, col }) => (
+    <th className="py-1 px-1.5 text-right cursor-pointer hover:text-slate-300 select-none" onClick={() => toggleSort(col)}>
+      {label}{sortCol === col ? (sortDir === 'desc' ? ' ↓' : ' ↑') : ''}
+    </th>
+  )
+
+  return (
+    <div className="bg-slate-900/80 border border-slate-700 rounded-xl p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-slate-400">{total.toLocaleString()} plays found</p>
+        <div className="flex gap-2">
+          <button onClick={exportCsv} className="text-xs text-amber-400 hover:text-amber-300">Export CSV</button>
+          <button onClick={onClose} className="text-xs text-slate-500 hover:text-slate-300">Close</button>
+        </div>
+      </div>
+      {loading ? <Loading text="Loading plays..." /> : (
+        <>
+          <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
+            <table className="w-full text-xs">
+              <thead className="sticky top-0 bg-slate-900">
+                <tr className="text-slate-600 border-b border-slate-800">
+                  <th className="py-1 px-1.5 text-left">Wk</th>
+                  <th className="py-1 px-1.5 text-left">Q</th>
+                  <th className="py-1 px-1.5 text-left">Down</th>
+                  <th className="py-1 px-1.5 text-right">Dist</th>
+                  <th className="py-1 px-1.5 text-right">YdLn</th>
+                  <th className="py-1 px-1.5 text-left">Type</th>
+                  <SortTh label="Yards" col="yards_gained" />
+                  <SortTh label="EPA" col="epa" />
+                  <SortTh label="WPA" col="wpa" />
+                  <th className="py-1 px-1.5 text-left">Player</th>
+                  <th className="py-1 px-1.5 text-left">Teams</th>
+                  <th className="py-1 px-1.5 text-center">Result</th>
+                </tr>
+              </thead>
+              <tbody>
+                {plays.map((p, i) => (
+                  <tr key={i} className="border-b border-slate-800/30 hover:bg-slate-800/30">
+                    <td className="py-1 px-1.5 text-slate-400">{p.week}</td>
+                    <td className="py-1 px-1.5 text-slate-500">Q{p.qtr}</td>
+                    <td className="py-1 px-1.5 text-slate-400">{p.down ? `${p.down}` : '-'}</td>
+                    <td className="py-1 px-1.5 text-right text-slate-400">{p.ydstogo ?? '-'}</td>
+                    <td className="py-1 px-1.5 text-right text-slate-500">{p.yardline_100 ?? '-'}</td>
+                    <td className="py-1 px-1.5"><span className={p.play_type === 'pass' ? 'text-blue-400' : 'text-orange-400'}>{p.play_type}</span></td>
+                    <td className="py-1 px-1.5 text-right text-white font-medium">{p.yards_gained}</td>
+                    <td className="py-1 px-1.5 text-right"><EpaColorCell val={p.epa != null ? Math.round(p.epa * 1000) / 1000 : null} /></td>
+                    <td className="py-1 px-1.5 text-right"><EpaColorCell val={p.wpa != null ? Math.round(p.wpa * 10000) / 10000 : null} /></td>
+                    <td className="py-1 px-1.5 text-slate-300 truncate max-w-[100px]">{p.passer_player_name || p.rusher_player_name || '-'}</td>
+                    <td className="py-1 px-1.5 text-slate-500">{p.posteam} v {p.defteam}</td>
+                    <td className="py-1 px-1.5 text-center">
+                      {p.touchdown ? <span className="text-emerald-400">TD</span> : p.interception ? <span className="text-red-400">INT</span> : p.sack ? <span className="text-red-400">Sack</span> : p.complete_pass ? <span className="text-slate-400">Cmp</span> : p.success ? <span className="text-emerald-500/60">+</span> : ''}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="flex gap-2 items-center text-xs">
+            <button onClick={() => load(Math.max(0, offset - limit))} disabled={offset === 0} className="px-2 py-1 rounded bg-slate-800 text-slate-400 disabled:opacity-30">Prev</button>
+            <span className="text-slate-500">{offset + 1}-{Math.min(offset + limit, total)} of {total.toLocaleString()}</span>
+            <button onClick={() => load(offset + limit)} disabled={offset + limit >= total} className="px-2 py-1 rounded bg-slate-800 text-slate-400 disabled:opacity-30">Next</button>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+function ComparePanel({ rows, onClose }) {
+  if (rows.length !== 2) return null
+  const [a, b] = rows
+  const metrics = [
+    { key: 'epa_per_play', label: 'EPA/play' },
+    { key: 'total_epa', label: 'Total EPA' },
+    { key: 'success_rate', label: 'Success%' },
+    { key: 'avg_yards', label: 'Avg Yards' },
+    { key: 'pass_pct', label: 'Pass%' },
+    { key: 'wpa_per_play', label: 'WPA/play' },
+    { key: 'plays', label: 'Plays' },
+  ]
+  return (
+    <div className="bg-slate-900/80 border border-slate-700 rounded-xl p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-white font-semibold">Comparing: <span className="text-amber-400">{a._label}</span> vs <span className="text-blue-400">{b._label}</span></p>
+        <button onClick={onClose} className="text-xs text-slate-500 hover:text-slate-300">Close</button>
+      </div>
+      <div className="space-y-2">
+        {metrics.map(m => {
+          const va = a[m.key] ?? 0, vb = b[m.key] ?? 0
+          const max = Math.max(Math.abs(va), Math.abs(vb), 0.01)
+          const pctA = Math.abs(va) / max * 100, pctB = Math.abs(vb) / max * 100
+          return (
+            <div key={m.key}>
+              <div className="flex justify-between text-xs mb-0.5">
+                <span className="text-slate-500">{m.label}</span>
+                <span className="text-slate-400"><span className="text-amber-400">{va}</span> vs <span className="text-blue-400">{vb}</span></span>
+              </div>
+              <div className="flex gap-1 h-2">
+                <div className="flex-1 bg-slate-800 rounded-full overflow-hidden flex justify-end"><div className="bg-amber-500/60 rounded-full" style={{ width: `${pctA}%` }} /></div>
+                <div className="flex-1 bg-slate-800 rounded-full overflow-hidden"><div className="bg-blue-500/60 rounded-full" style={{ width: `${pctB}%` }} /></div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 function ExplorerSection({ seasons }) {
   const season = seasons[0]
   const [filters, setFilters] = useState([])
@@ -732,6 +891,9 @@ function ExplorerSection({ seasons }) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(false)
   const [sort, setSort] = useState({ field: 'epa_per_play', dir: 'desc' })
+  const [expandedRow, setExpandedRow] = useState(null)
+  const [compareRows, setCompareRows] = useState([])
+  const [drillStack, setDrillStack] = useState([])
 
   useEffect(() => {
     if (playerSearch.length < 2) { setSearchResults([]); return }
@@ -742,16 +904,60 @@ function ExplorerSection({ seasons }) {
     return () => clearTimeout(t)
   }, [playerSearch])
 
+  const buildBody = () => ({
+    season, filters, group_by: groupBy,
+    team: teamFilter.length ? teamFilter.join(',') : undefined,
+    position: position || undefined,
+    player_id: playerId || undefined,
+    season_type: seasonType,
+    drill: drillStack.length ? drillStack[drillStack.length - 1] : undefined,
+  })
+
   const run = () => {
-    setLoading(true)
-    api.postExplorer({ season, filters, group_by: groupBy, team: teamFilter.length ? teamFilter.join(',') : undefined, position: position || undefined, player_id: playerId || undefined, season_type: seasonType })
+    setLoading(true); setExpandedRow(null); setCompareRows([])
+    api.postExplorer(buildBody())
       .then(setData).catch(() => setData(null)).finally(() => setLoading(false))
   }
 
   useEffect(() => { run() }, [season])
 
-  const toggleFilter = (id) => {
-    setFilters(prev => prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id])
+  const drillDown = (field, value) => {
+    setDrillStack(prev => [...prev, { field, value }])
+    setLoading(true); setExpandedRow(null); setCompareRows([])
+    const nextGroupMap = { team: 'down', down: 'play_type', quarter: 'down', play_type: 'field_zone', week: 'down', field_zone: 'play_type', score_diff: 'play_type', pass_depth: 'team' }
+    const nextGroup = nextGroupMap[groupBy] || 'team'
+    api.postExplorer({ ...buildBody(), group_by: nextGroup, drill: { field, value } })
+      .then(d => { setData(d); setSort({ field: 'epa_per_play', dir: 'desc' }) })
+      .catch(() => setData(null)).finally(() => setLoading(false))
+  }
+
+  const popDrill = () => {
+    setDrillStack(prev => prev.slice(0, -1))
+    setTimeout(run, 0)
+  }
+
+  const toggleFilter = (id) => setFilters(prev => prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id])
+
+  const toggleCompare = (row, label) => {
+    setCompareRows(prev => {
+      const exists = prev.find(r => r._label === label)
+      if (exists) return prev.filter(r => r._label !== label)
+      if (prev.length >= 2) return [prev[1], { ...row, _label: label }]
+      return [...prev, { ...row, _label: label }]
+    })
+  }
+
+  const exportCsv = () => {
+    const headers = [GROUP_OPTIONS.find(g => g.id === (data?.group_by || groupBy))?.label || 'Group', 'EPA/play', 'Total EPA', 'Success%', 'Avg Yards', 'Pass%', 'WPA/play', 'Plays']
+    const rows = (data?.data || []).map(r => {
+      const gKey = r[data?.group_by || groupBy] || Object.values(r)[0]
+      return [gKey, r.epa_per_play, r.total_epa, r.success_rate, r.avg_yards, r.pass_pct, r.wpa_per_play, r.plays]
+    })
+    const csv = [headers, ...rows].map(r => r.join(',')).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a'); a.href = url; a.download = 'explorer_results.csv'; a.click()
+    URL.revokeObjectURL(url)
   }
 
   const sorted = (data?.data || []).sort((a, b) => {
@@ -761,10 +967,11 @@ function ExplorerSection({ seasons }) {
 
   const maxEpa = Math.max(...sorted.map(r => Math.abs(r.epa_per_play || 0)), 0.01)
   const groups = [...new Set(FILTER_OPTIONS.map(f => f.group))]
+  const activeGroupBy = data?.group_by || groupBy
 
   return (
     <div className="space-y-4">
-      <p className="text-slate-400 text-xs">Build custom queries - pick filters, choose how to group results, and explore EPA across any situation.</p>
+      <p className="text-slate-400 text-xs">Build custom queries - pick filters, group results, drill down into rows, compare, and export.</p>
 
       {/* Filters */}
       <div className="space-y-2">
@@ -813,14 +1020,27 @@ function ExplorerSection({ seasons }) {
           )}
         </div>
         {playerName && <button onClick={() => { setPlayerId(null); setPlayerName(''); setPlayerSearch('') }} className="text-xs text-red-400 hover:text-red-300">x {playerName}</button>}
-        <button onClick={run} className="px-4 py-1.5 bg-amber-500/20 text-amber-400 border border-amber-500/40 rounded-lg text-xs font-medium hover:bg-amber-500/30 transition-colors">
+        <button onClick={() => { setDrillStack([]); run() }} className="px-4 py-1.5 bg-amber-500/20 text-amber-400 border border-amber-500/40 rounded-lg text-xs font-medium hover:bg-amber-500/30 transition-colors">
           Run Query
         </button>
       </div>
 
+      {/* Drill breadcrumb */}
+      {drillStack.length > 0 && (
+        <div className="flex items-center gap-1 text-xs">
+          <button onClick={() => { setDrillStack([]); run() }} className="text-amber-400 hover:text-amber-300">Root</button>
+          {drillStack.map((d, i) => (
+            <span key={i} className="text-slate-500">
+              <span className="mx-1">/</span>
+              <button onClick={() => { setDrillStack(prev => prev.slice(0, i + 1)); setTimeout(run, 0) }} className="text-slate-300 hover:text-white">{d.field}={d.value}</button>
+            </span>
+          ))}
+        </div>
+      )}
+
       {/* Summary */}
       {data?.totals && (
-        <div className="flex gap-3 flex-wrap">
+        <div className="flex gap-3 flex-wrap items-center">
           {[
             { label: 'Plays', val: data.totals.plays?.toLocaleString() },
             { label: 'EPA/play', val: data.totals.epa_per_play, epa: true },
@@ -832,14 +1052,16 @@ function ExplorerSection({ seasons }) {
               <p className={`text-sm font-bold ${s.epa ? (s.val > 0 ? 'text-emerald-400' : 'text-red-400') : 'text-white'}`}>{s.val ?? '-'}</p>
             </div>
           ))}
-          <div className="bg-slate-900/60 rounded-lg px-3 py-2 text-center">
-            <p className="text-xs text-slate-500">Active Filters</p>
-            <p className="text-sm font-bold text-amber-400">{filters.length}</p>
+          <div className="ml-auto flex gap-2">
+            <button onClick={exportCsv} className="px-3 py-1.5 bg-slate-800 text-slate-400 border border-slate-700 rounded-lg text-xs hover:text-white transition-colors">Export CSV</button>
           </div>
         </div>
       )}
 
       {loading && <Loading text="Running query..." />}
+
+      {/* Compare panel */}
+      {compareRows.length === 2 && <ComparePanel rows={compareRows} onClose={() => setCompareRows([])} />}
 
       {/* Results table */}
       {sorted.length > 0 && (
@@ -847,7 +1069,9 @@ function ExplorerSection({ seasons }) {
           <table className="w-full text-sm">
             <thead>
               <tr className="text-slate-500 text-xs border-b border-slate-800">
-                <SortHeader label={GROUP_OPTIONS.find(g => g.id === groupBy)?.label || groupBy} field={groupBy} sort={sort} setSort={setSort} align="left" />
+                <th className="w-6 py-2"></th>
+                <SortHeader label={GROUP_OPTIONS.find(g => g.id === activeGroupBy)?.label || activeGroupBy} field={activeGroupBy} sort={sort} setSort={setSort} align="left" />
+                <th className="py-2 px-1 text-right text-[10px]">Dist</th>
                 <SortHeader label="EPA/play" field="epa_per_play" sort={sort} setSort={setSort} tip="epa_per_play" />
                 <SortHeader label="Total EPA" field="total_epa" sort={sort} setSort={setSort} tip="total_epa" />
                 <SortHeader label="Success%" field="success_rate" sort={sort} setSort={setSort} tip="success_rate" />
@@ -855,26 +1079,52 @@ function ExplorerSection({ seasons }) {
                 <SortHeader label="Pass%" field="pass_pct" sort={sort} setSort={setSort} />
                 <SortHeader label="WPA/play" field="wpa_per_play" sort={sort} setSort={setSort} tip="wpa_per_play" />
                 <SortHeader label="Plays" field="plays" sort={sort} setSort={setSort} />
+                <th className="py-2 px-1 w-20"></th>
               </tr>
             </thead>
             <tbody>
               {sorted.map(r => {
-                const gKey = r[groupBy] || r[Object.keys(r).find(k => k !== 'plays' && k !== 'epa_per_play' && k !== 'total_epa' && k !== 'success_rate' && k !== 'avg_yards' && k !== 'pass_pct' && k !== 'wpa_per_play')]
+                const gKey = r[activeGroupBy] || r[Object.keys(r).find(k => !['plays','epa_per_play','total_epa','success_rate','avg_yards','pass_pct','wpa_per_play'].includes(k))]
+                const isCompared = compareRows.some(c => c._label === gKey)
+                const isExpanded = expandedRow === gKey
                 return (
-                  <tr key={gKey} className="border-b border-slate-800/40 hover:bg-slate-800/30">
-                    <td className="py-2 pr-2 text-white font-medium">{gKey}</td>
-                    <td className="py-2 px-2 text-right"><EpaColorCell val={r.epa_per_play} /><EpaBar val={r.epa_per_play} max={maxEpa} /></td>
-                    <td className="py-2 px-2 text-right"><EpaColorCell val={r.total_epa} /></td>
-                    <td className="py-2 px-2 text-right text-slate-300">{r.success_rate}%</td>
-                    <td className="py-2 px-2 text-right text-slate-300">{r.avg_yards}</td>
-                    <td className="py-2 px-2 text-right text-slate-400">{r.pass_pct}%</td>
-                    <td className="py-2 px-2 text-right"><EpaColorCell val={r.wpa_per_play} /></td>
-                    <td className="py-2 px-2 text-right text-slate-500">{r.plays}</td>
-                  </tr>
+                  <>
+                    <tr key={gKey} className={`border-b border-slate-800/40 hover:bg-slate-800/30 ${isCompared ? 'bg-amber-500/5' : ''}`}>
+                      <td className="py-2 pl-1">
+                        <input type="checkbox" checked={isCompared} onChange={() => toggleCompare(r, gKey)}
+                          className="w-3 h-3 accent-amber-500 cursor-pointer" />
+                      </td>
+                      <td className="py-2 pr-2 text-white font-medium cursor-pointer hover:text-amber-400" onClick={() => drillDown(activeGroupBy, gKey)}>
+                        {gKey} <span className="text-slate-600 text-[10px] ml-0.5">drill</span>
+                      </td>
+                      <td className="py-2 px-1 text-right"><MiniHist buckets={data?.histograms?.[String(gKey)]} /></td>
+                      <td className="py-2 px-2 text-right"><EpaColorCell val={r.epa_per_play} /><EpaBar val={r.epa_per_play} max={maxEpa} /></td>
+                      <td className="py-2 px-2 text-right"><EpaColorCell val={r.total_epa} /></td>
+                      <td className="py-2 px-2 text-right text-slate-300">{r.success_rate}%</td>
+                      <td className="py-2 px-2 text-right text-slate-300">{r.avg_yards}</td>
+                      <td className="py-2 px-2 text-right text-slate-400">{r.pass_pct}%</td>
+                      <td className="py-2 px-2 text-right"><EpaColorCell val={r.wpa_per_play} /></td>
+                      <td className="py-2 px-2 text-right text-slate-500">{r.plays}</td>
+                      <td className="py-2 px-1">
+                        <button onClick={() => setExpandedRow(isExpanded ? null : gKey)}
+                          className="text-[10px] text-slate-500 hover:text-amber-400 transition-colors">
+                          {isExpanded ? 'Hide' : 'Plays'}
+                        </button>
+                      </td>
+                    </tr>
+                    {isExpanded && (
+                      <tr key={`${gKey}-log`}><td colSpan={11} className="p-0">
+                        <PlayLogPanel
+                          body={{ ...buildBody(), drill: { field: activeGroupBy, value: gKey } }}
+                          onClose={() => setExpandedRow(null)} />
+                      </td></tr>
+                    )}
+                  </>
                 )
               })}
             </tbody>
           </table>
+          <p className="text-xs text-slate-600 mt-2">{sorted.length} groups | Click group name to drill down | Check 2 rows to compare</p>
         </div>
       )}
     </div>

@@ -213,6 +213,7 @@ export const api = {
   getQbDecisions: (playerId, season) => get(`/situational/decisions/${playerId}${season ? `?season=${season}` : ''}`),
   getExplorerFilters: () => get('/situational/explorer-filters'),
   postExplorer: (body) => post('/situational/explorer', body),
+  postExplorerPlays: (body) => post('/situational/explorer-plays', body),
   getWeeklyTrend: (playerId, season) => get(`/situational/weekly-trend/${playerId}${season ? `?season=${season}` : ''}`),
 
   topPlayersByFdv: ({ pos, limit = 50 } = {}) => {
