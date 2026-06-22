@@ -8,6 +8,7 @@ import { api } from '../api'
 import { Loading, ErrorMsg } from '../components/Status'
 import { ExportableChart } from '../components/StatChart'
 import { CsvDownloadButton } from '../components/StatTable'
+import TeamPicker from '../components/TeamPicker'
 import { useAuth } from '../context/AuthContext'
 import SocialPostGenerator from '../components/SocialPostGenerator'
 
@@ -182,8 +183,10 @@ export default function LeagueTrends() {
   const [stat,       setStat]       = useState('td')
   const [agg,        setAgg]        = useState('sum')
   const [pos,        setPos]        = useState('')
-  const [team1,      setTeam1]      = useState('')
-  const [team2,      setTeam2]      = useState('')
+  const [teams1,     setTeams1]     = useState([])
+  const [teams2,     setTeams2]     = useState([])
+  const team1 = teams1[0] || ''
+  const team2 = teams2[0] || ''
   const [seasonFrom, setSeasonFrom] = useState('')
   const [seasonTo,   setSeasonTo]   = useState('')
   const [metaRange,  setMetaRange]  = useState({ min: 1970, max: 2025 })
@@ -386,20 +389,14 @@ export default function LeagueTrends() {
                 <span className="inline-block w-2 h-2 rounded-full mr-1.5" style={{ background: LINE_COLORS[0] }} />
                 Team 1
               </p>
-              <select value={team1} onChange={e => setTeam1(e.target.value)} className={inputCls}>
-                <option value="">All teams</option>
-                {TEAMS.map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
+              <TeamPicker selected={teams1} setSelected={setTeams1} />
             </div>
             <div>
               <p className={labelCls}>
                 <span className="inline-block w-2 h-2 rounded-full mr-1.5" style={{ background: LINE_COLORS[1] }} />
                 Team 2 <span className="text-slate-600">(optional - for comparison)</span>
               </p>
-              <select value={team2} onChange={e => setTeam2(e.target.value)} className={inputCls}>
-                <option value="">None</option>
-                {TEAMS.map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
+              <TeamPicker selected={teams2} setSelected={setTeams2} />
             </div>
           </div>
         </div>

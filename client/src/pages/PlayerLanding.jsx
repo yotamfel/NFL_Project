@@ -4,6 +4,7 @@ import { api } from '../api'
 import { posColor } from '../utils/posColors'
 import { useUser } from '../context/UserContext'
 import { addToHistory, topSearched, dominantPos } from '../utils/searchHistory'
+import TeamPicker from '../components/TeamPicker'
 
 const POSITIONS = ['QB', 'RB', 'WR', 'TE', 'OL', 'DL', 'LB', 'CB', 'S', 'K', 'P']
 const YEARS = Array.from({ length: 56 }, (_, i) => 2025 - i)
@@ -50,10 +51,10 @@ export default function PlayerLanding() {
   const [query,    setQuery]    = useState('')
   const [pos,      setPos]      = useState('')
   const [season,   setSeason]   = useState('')
-  const [team,     setTeam]     = useState('')
+  const [teamSel,  setTeamSel]  = useState([])
+  const team = teamSel[0] || ''
   const [posOpen,  setPosOpen]  = useState(false)
   const [yearOpen, setYearOpen] = useState(false)
-  const [teamOpen, setTeamOpen] = useState(false)
   const [results,  setResults]  = useState([])
   const [searching,setSearching]= useState(false)
 
@@ -63,7 +64,6 @@ export default function PlayerLanding() {
   const debounceRef = useRef(null)
   const posRef      = useRef(null)
   const yearRef     = useRef(null)
-  const teamRef     = useRef(null)
 
   const hasFilter = pos || season || team
 
@@ -87,7 +87,6 @@ export default function PlayerLanding() {
     const handler = e => {
       if (posRef.current  && !posRef.current.contains(e.target))  setPosOpen(false)
       if (yearRef.current && !yearRef.current.contains(e.target)) setYearOpen(false)
-      if (teamRef.current && !teamRef.current.contains(e.target)) setTeamOpen(false)
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
@@ -118,7 +117,7 @@ export default function PlayerLanding() {
     navigate(`/player/${player.player_id}`)
   }
 
-  const clearFilters = () => { setPos(''); setSeason(''); setTeam('') }
+  const clearFilters = () => { setPos(''); setSeason(''); setTeamSel([]) }
 
   const showDefault = !results.length && !searching && !(query.length < 2 && hasFilter)
 
@@ -159,12 +158,7 @@ export default function PlayerLanding() {
           onSelect={y => { setSeason(y); setYearOpen(false) }}
           listClass="max-h-56 overflow-y-auto"
         />
-        <FilterDropdown label="Team" value={team} open={teamOpen} setOpen={setTeamOpen} ref_={teamRef}
-          clearLabel="All teams" onClear={() => setTeam('')}
-          items={TEAMS}
-          onSelect={t => { setTeam(t); setTeamOpen(false) }}
-          listClass="max-h-56 overflow-y-auto"
-        />
+        <TeamPicker selected={teamSel} setSelected={setTeamSel} />
         {hasFilter && (
           <button onClick={clearFilters} className="text-xs text-slate-500 hover:text-slate-300 transition-colors">
             Clear
