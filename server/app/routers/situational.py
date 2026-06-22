@@ -30,25 +30,26 @@ def _get_gsis_id(conn, player_id: str) -> Optional[str]:
     return row.gsis_id if row and row.gsis_id else None
 
 
-def _ctx_filters(season_type="REG", opponent=None, week_from=None, week_to=None, location=None):
-    """Build common context filter SQL fragments."""
+def _ctx_filters(season_type="REG", opponent=None, week_from=None, week_to=None, location=None, prefix="p"):
+    """Build common context filter SQL fragments. Use prefix for JOINed queries."""
+    pre = f"{prefix}." if prefix else ""
     parts = []
     if season_type and season_type != "ALL":
-        parts.append(f"season_type = '{season_type}'")
+        parts.append(f"{pre}season_type = '{season_type}'")
     if opponent:
         opp_list = [t.strip().upper() for t in opponent.split(",")]
         if len(opp_list) == 1:
-            parts.append(f"defteam = '{opp_list[0]}'")
+            parts.append(f"{pre}defteam = '{opp_list[0]}'")
         else:
-            parts.append(f"defteam IN ({','.join(repr(t) for t in opp_list)})")
+            parts.append(f"{pre}defteam IN ({','.join(repr(t) for t in opp_list)})")
     if week_from:
-        parts.append(f"week >= {int(week_from)}")
+        parts.append(f"{pre}week >= {int(week_from)}")
     if week_to:
-        parts.append(f"week <= {int(week_to)}")
+        parts.append(f"{pre}week <= {int(week_to)}")
     if location == "home":
-        parts.append("posteam = home_team")
+        parts.append(f"{pre}posteam = {pre}home_team")
     elif location == "away":
-        parts.append("posteam = away_team")
+        parts.append(f"{pre}posteam = {pre}away_team")
     return (" AND " + " AND ".join(parts)) if parts else ""
 
 
@@ -613,7 +614,7 @@ def run_heatmap(
     user: dict = Depends(require_admin),
 ):
     yr = season or _latest_season()
-    ctx_sql = _ctx_filters(season_type, opponent, week_from, week_to, location)
+    ctx_sql = _ctx_filters(season_type, opponent, week_from, week_to, location, prefix="")
 
     with engine.connect() as c:
         player = c.execute(text("SELECT player_name, gsis_id FROM players WHERE player_id = :pid"), {"pid": player_id}).fetchone()
@@ -656,7 +657,7 @@ def pass_heatmap(
     user: dict = Depends(require_admin),
 ):
     yr = season or _latest_season()
-    ctx_sql = _ctx_filters(season_type, opponent, week_from, week_to, location)
+    ctx_sql = _ctx_filters(season_type, opponent, week_from, week_to, location, prefix="")
     id_col = "passer_player_id" if role == "passer" else "receiver_player_id"
 
     with engine.connect() as c:
@@ -1119,7 +1120,7 @@ def weekly_trend(
     user: dict = Depends(require_admin),
 ):
     yr = season or _latest_season()
-    ctx_sql = _ctx_filters(season_type, opponent, week_from, week_to, location)
+    ctx_sql = _ctx_filters(season_type, opponent, week_from, week_to, location, prefix="")
     with engine.connect() as c:
         player = c.execute(text("SELECT player_name, pos, gsis_id FROM players WHERE player_id = :pid"), {"pid": player_id}).fetchone()
         if not player or not player.gsis_id:
