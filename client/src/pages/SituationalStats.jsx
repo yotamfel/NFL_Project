@@ -922,26 +922,37 @@ export default function SituationalStats() {
           {section === 'trend' && <WeeklyTrendSection players={players} season={selectedSeasons[0]} ctxParams={ctxParams} />}
           {section === 'playaction' && (
             <SimpleSection title="Play-Action" fetchFn={api.getPlayAction} players={players} season={selectedSeasons[0]} ctxParams={ctxParams}
-              renderData={(d, p) => (
-                <div key={p.player_id} className="space-y-3">
-                  <p className="text-white font-semibold text-sm">{d?.player || p.player_name} <span className="text-slate-600 text-xs font-normal">{d?.season || selectedSeasons[0]}</span></p>
+              renderData={(d, p) => {
+                const pa = d?.data?.with_play_action, noPa = d?.data?.without_play_action
+                const delta = pa && noPa ? (pa.epa_per_play - noPa.epa_per_play).toFixed(3) : null
+                return (
+                <div key={p.player_id} className="space-y-4">
+                  <p className="text-white font-semibold text-sm">{d?.player || p.player_name} <span className="text-slate-600 text-xs font-normal">{d?.season || selectedSeasons[0]}</span>
+                    {d?.pa_percentile != null && <span className="ml-2 text-xs px-2 py-0.5 rounded bg-amber-500/15 text-amber-400">Play-action: top {100 - d.pa_percentile}%</span>}
+                  </p>
                   {d?.no_data && d.coverage && (
                     <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-2 text-xs text-amber-400">{d.coverage}</div>
                   )}
-                  {d?.data && Object.keys(d.data).length > 0 ? (
-                    <div className="grid grid-cols-2 gap-3">
-                      {['with_play_action', 'without_play_action'].map(key => {
-                        const s = d.data?.[key]
-                        if (!s) return null
-                        const label = key === 'with_play_action' ? 'With Play-Action' : 'Without Play-Action'
+                  {pa || noPa ? (<>
+                    {/* Main comparison + delta */}
+                    <div className="grid grid-cols-3 gap-3">
+                      {[{ s: pa, label: 'With Play-Action' }, { s: null, label: 'delta' }, { s: noPa, label: 'Without Play-Action' }].map(({ s, label }, idx) => {
+                        if (idx === 1) return (
+                          <div key="delta" className="bg-slate-900/80 border border-slate-700/40 rounded-xl p-4 flex flex-col items-center justify-center">
+                            <p className="text-[10px] text-slate-500 mb-1">Play-Action Boost</p>
+                            {delta && <p className={`text-2xl font-black ${Number(delta) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{Number(delta) >= 0 ? '+' : ''}{delta}</p>}
+                            <p className="text-[10px] text-slate-600">EPA/play difference</p>
+                          </div>
+                        )
+                        if (!s) return <div key={idx} />
                         return (
-                          <div key={key} className="bg-slate-900/60 border border-slate-700/30 rounded-xl p-4 space-y-2">
+                          <div key={label} className="bg-slate-900/60 border border-slate-700/30 rounded-xl p-4 space-y-2">
                             <p className="text-xs font-semibold text-slate-300">{label}</p>
-                            <p className="text-2xl font-bold"><EpaColorCell val={s.epa_per_play} /> <span className="text-xs text-slate-600 font-normal">EPA/play</span></p>
+                            <p className="text-2xl font-bold"><EpaColorCell val={s.epa_per_play} /> <span className="text-xs text-slate-600 font-normal">EPA</span></p>
                             <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
                               <span className="text-slate-500">Comp%</span><span className="text-slate-200 text-right">{s.comp_pct}%</span>
-                              <span className="text-slate-500">Avg Yards</span><span className="text-slate-200 text-right">{s.avg_yards}</span>
-                              <span className="text-slate-500">Air Yards</span><span className="text-slate-200 text-right">{s.avg_air_yards}</span>
+                              <span className="text-slate-500">Yards</span><span className="text-slate-200 text-right">{s.avg_yards}</span>
+                              <span className="text-slate-500">Air Yds</span><span className="text-slate-200 text-right">{s.avg_air_yards}</span>
                               <span className="text-slate-500">YAC</span><span className="text-slate-200 text-right">{s.avg_yac}</span>
                               <span className="text-slate-500">Success%</span><span className="text-slate-200 text-right">{s.success_rate}%</span>
                               <span className="text-slate-500">Plays</span><span className="text-slate-200 text-right">{s.plays}</span>
@@ -950,9 +961,76 @@ export default function SituationalStats() {
                         )
                       })}
                     </div>
-                  ) : <p className="text-slate-500 text-sm">No play-action data for this player/season</p>}
+
+                    {/* Depth split */}
+                    {d?.depth && Object.keys(d.depth).length > 0 && (
+                      <div>
+                        <p className="text-xs font-bold text-slate-500 mb-2">PASS DEPTH SPLIT</p>
+                        <div className="grid grid-cols-2 gap-3">
+                          {['short', 'deep'].map(dep => {
+                            const paD = d.depth[`pa_${dep}`], noPaD = d.depth[`no_pa_${dep}`]
+                            if (!paD && !noPaD) return null
+                            return (
+                              <div key={dep} className="bg-slate-900/40 border border-slate-700/20 rounded-lg p-3 space-y-1.5">
+                                <p className="text-xs font-semibold text-slate-300">{dep === 'short' ? 'Short (<15 air yds)' : 'Deep (15+ air yds)'}</p>
+                                <div className="grid grid-cols-3 gap-1 text-[10px]">
+                                  <span></span><span className="text-center text-slate-500">PA</span><span className="text-center text-slate-500">No PA</span>
+                                  <span className="text-slate-500">EPA</span>
+                                  <span className="text-center"><EpaColorCell val={paD?.epa} /></span>
+                                  <span className="text-center"><EpaColorCell val={noPaD?.epa} /></span>
+                                  <span className="text-slate-500">Comp%</span>
+                                  <span className="text-center text-slate-300">{paD?.comp_pct ?? '-'}%</span>
+                                  <span className="text-center text-slate-300">{noPaD?.comp_pct ?? '-'}%</span>
+                                  <span className="text-slate-500">Plays</span>
+                                  <span className="text-center text-slate-400">{paD?.plays ?? '-'}</span>
+                                  <span className="text-center text-slate-400">{noPaD?.plays ?? '-'}</span>
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Receiver breakdown */}
+                    {d?.receivers?.length > 0 && (
+                      <div>
+                        <p className="text-xs font-bold text-slate-500 mb-2">BY RECEIVER</p>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-xs">
+                            <thead>
+                              <tr className="text-slate-600 border-b border-slate-800">
+                                <th className="text-left py-1 px-1">Receiver</th>
+                                <th className="text-right py-1 px-1">PA EPA</th>
+                                <th className="text-right py-1 px-1">PA Plays</th>
+                                <th className="text-right py-1 px-1">No-PA EPA</th>
+                                <th className="text-right py-1 px-1">No-PA Plays</th>
+                                <th className="text-right py-1 px-1">Boost</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {d.receivers.map(r => {
+                                const boost = r.pa && r.no_pa ? (r.pa.epa - r.no_pa.epa).toFixed(3) : null
+                                return (
+                                  <tr key={r.name} className="border-b border-slate-800/30">
+                                    <td className="py-1 px-1 text-slate-300">{r.name}</td>
+                                    <td className="py-1 px-1 text-right"><EpaColorCell val={r.pa?.epa} /></td>
+                                    <td className="py-1 px-1 text-right text-slate-500">{r.pa?.plays ?? '-'}</td>
+                                    <td className="py-1 px-1 text-right"><EpaColorCell val={r.no_pa?.epa} /></td>
+                                    <td className="py-1 px-1 text-right text-slate-500">{r.no_pa?.plays ?? '-'}</td>
+                                    <td className="py-1 px-1 text-right font-bold"><span className={Number(boost) >= 0 ? 'text-emerald-400' : 'text-red-400'}>{boost ? (Number(boost) >= 0 ? '+' : '') + boost : '-'}</span></td>
+                                  </tr>
+                                )
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+                  </>) : <p className="text-slate-500 text-sm">No play-action data for this player/season</p>}
                 </div>
-              )}
+                )
+              }}
             />
           )}
           {section === 'pressure' && (

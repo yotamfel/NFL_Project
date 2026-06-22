@@ -545,11 +545,71 @@ def play_action_analysis(
         key = "with_play_action" if r.is_play_action else "without_play_action"
         data[key] = dict(r._mapping)
 
+    extras = {}
+    with engine.connect() as c2:
+        # League percentile for play-action EPA
+        league = c2.execute(text(f"""
+            SELECT p.passer_player_id as pid,
+                   ROUND(AVG(CASE WHEN f.is_play_action THEN p.epa END)::numeric, 3) as pa_epa,
+                   ROUND(AVG(CASE WHEN NOT f.is_play_action THEN p.epa END)::numeric, 3) as no_pa_epa
+            FROM pbp p JOIN ftn_charting f ON f.nflverse_game_id = p.game_id AND f.nflverse_play_id = p.play_id
+            WHERE p.season = :season AND p.pass_attempt = 1 AND p.sack = 0 AND p.epa IS NOT NULL
+                  AND f.is_play_action IS NOT NULL AND p.season_type = 'REG'
+            GROUP BY p.passer_player_id HAVING COUNT(*) >= 100
+        """), {"season": yr}).fetchall()
+        if league:
+            pa_vals = sorted([float(r.pa_epa) for r in league if r.pa_epa is not None])
+            player_pa = data.get("with_play_action", {}).get("epa_per_play")
+            if player_pa is not None and pa_vals:
+                extras["pa_percentile"] = round(sum(1 for v in pa_vals if v <= float(player_pa)) / len(pa_vals) * 100)
+
+        # Receiver breakdown
+        rec_rows = c2.execute(text(f"""
+            SELECT p.receiver_player_name as receiver,
+                   f.is_play_action as pa,
+                   COUNT(*) as plays,
+                   ROUND(AVG(p.epa)::numeric, 3) as epa
+            FROM pbp p JOIN ftn_charting f ON f.nflverse_game_id = p.game_id AND f.nflverse_play_id = p.play_id
+            WHERE p.passer_player_id = :pid AND p.season = :season AND p.pass_attempt = 1 AND p.sack = 0
+                  AND p.epa IS NOT NULL AND f.is_play_action IS NOT NULL AND p.receiver_player_name IS NOT NULL{ctx_sql}
+            GROUP BY p.receiver_player_name, f.is_play_action
+            HAVING COUNT(*) >= 5
+            ORDER BY plays DESC
+        """), {"pid": gsis, "season": yr}).fetchall()
+
+        receivers = {}
+        for r in rec_rows:
+            name = r.receiver
+            if name not in receivers:
+                receivers[name] = {}
+            receivers[name]["pa" if r.pa else "no_pa"] = {"plays": r.plays, "epa": float(r.epa)}
+        extras["receivers"] = [{"name": k, **v} for k, v in receivers.items() if "pa" in v and "no_pa" in v][:8]
+
+        # Depth split
+        depth_rows = c2.execute(text(f"""
+            SELECT f.is_play_action as pa,
+                   CASE WHEN p.air_yards >= 15 THEN 'deep' ELSE 'short' END as depth,
+                   COUNT(*) as plays,
+                   ROUND(AVG(p.epa)::numeric, 3) as epa,
+                   ROUND(AVG(CASE WHEN p.complete_pass=1 THEN 100.0 ELSE 0 END)::numeric, 1) as comp_pct
+            FROM pbp p JOIN ftn_charting f ON f.nflverse_game_id = p.game_id AND f.nflverse_play_id = p.play_id
+            WHERE p.passer_player_id = :pid AND p.season = :season AND p.pass_attempt = 1 AND p.sack = 0
+                  AND p.epa IS NOT NULL AND f.is_play_action IS NOT NULL AND p.air_yards IS NOT NULL{ctx_sql}
+            GROUP BY f.is_play_action, depth
+        """), {"pid": gsis, "season": yr}).fetchall()
+
+        depth = {}
+        for r in depth_rows:
+            key = f"{'pa' if r.pa else 'no_pa'}_{r.depth}"
+            depth[key] = {"plays": r.plays, "epa": float(r.epa), "comp_pct": float(r.comp_pct)}
+        extras["depth"] = depth
+
     return {
         "player": player.player_name if player else player_id,
         "player_id": player_id,
         "season": yr,
         "data": data,
+        **extras,
     }
 
 
