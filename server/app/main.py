@@ -36,7 +36,9 @@ async def validation_handler(request, exc):
 
 @app.exception_handler(SQLAlchemyError)
 async def db_error_handler(request, exc):
-    return JSONResponse(status_code=503, content={"detail": "Database temporarily unavailable. Please try again in a moment."})
+    import traceback
+    traceback.print_exc()
+    return JSONResponse(status_code=503, content={"detail": f"Database error: {str(exc)[:200]}"})
 
 
 def _run_migrations():
