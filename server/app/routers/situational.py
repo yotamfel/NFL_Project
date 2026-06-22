@@ -68,7 +68,10 @@ def epa_rankings(
     user: dict = Depends(require_admin),
 ):
     yr = season or _latest_season()
-    mp = min_plays or _min_plays(position)
+    auto_min = _min_plays(position)
+    if season_type == "POST":
+        auto_min = max(auto_min // 5, 10)
+    mp = min_plays or auto_min
 
     pos_map = {
         "QB": ("passer_player_id", "passer_player_name", "pass_attempt = 1"),
