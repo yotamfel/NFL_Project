@@ -204,7 +204,16 @@ export const api = {
     else if (params.team) p.set('team', params.team)
     return get(`/situational/clutch-rankings?${p}`)
   },
-  getSituationalSplits: (playerId, season) => get(`/situational/splits/${playerId}${season ? `?season=${season}` : ''}`),
+  getSituationalSplits: (playerId, params = {}) => {
+    const p = new URLSearchParams()
+    if (params.season) p.set('season', params.season)
+    if (params.opponent) p.set('opponent', params.opponent)
+    if (params.season_type) p.set('season_type', params.season_type)
+    if (params.week_from) p.set('week_from', params.week_from)
+    if (params.week_to) p.set('week_to', params.week_to)
+    if (params.location) p.set('location', params.location)
+    return get(`/situational/splits/${playerId}?${p}`)
+  },
   getPlayAction: (playerId, season) => get(`/situational/play-action/${playerId}${season ? `?season=${season}` : ''}`),
   getFormation: (team, season) => get(`/situational/formation/${team}${season ? `?season=${season}` : ''}`),
   getRunHeatmap: (playerId, season) => get(`/situational/run-heatmap/${playerId}${season ? `?season=${season}` : ''}`),

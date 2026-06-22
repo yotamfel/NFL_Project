@@ -189,9 +189,33 @@ def clutch_rankings(
 def situational_splits(
     player_id: str,
     season: Optional[int] = None,
+    opponent: Optional[str] = None,
+    season_type: str = Query("REG"),
+    week_from: Optional[int] = None,
+    week_to: Optional[int] = None,
+    location: Optional[str] = None,
     user: dict = Depends(require_admin),
 ):
     yr = season or _latest_season()
+
+    ctx_filters = []
+    if season_type != "ALL":
+        ctx_filters.append(f"season_type = '{season_type}'")
+    if opponent:
+        opp_list = [t.strip().upper() for t in opponent.split(",")]
+        if len(opp_list) == 1:
+            ctx_filters.append(f"defteam = '{opp_list[0]}'")
+        else:
+            ctx_filters.append(f"defteam IN ({','.join(repr(t) for t in opp_list)})")
+    if week_from:
+        ctx_filters.append(f"week >= {int(week_from)}")
+    if week_to:
+        ctx_filters.append(f"week <= {int(week_to)}")
+    if location == "home":
+        ctx_filters.append("posteam = home_team")
+    elif location == "away":
+        ctx_filters.append("posteam = away_team")
+    ctx_sql = (" AND " + " AND ".join(ctx_filters)) if ctx_filters else ""
 
     with engine.connect() as c:
         player = c.execute(text(
@@ -222,7 +246,7 @@ def situational_splits(
             return {"player": player.player_name, "pos": pos, "splits": {}, "note": "Position not supported for splits"}
 
         def _split(label, extra_where="", source="pbp"):
-            full_where = f"{base_filter} AND {id_col} = :pid AND season = :season AND epa IS NOT NULL"
+            full_where = f"{base_filter} AND {id_col} = :pid AND season = :season AND epa IS NOT NULL{ctx_sql}"
             if extra_where:
                 full_where += f" AND {extra_where}"
 

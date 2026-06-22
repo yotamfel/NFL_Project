@@ -363,17 +363,18 @@ function RadarChart({ players, data, splitKeys }) {
   )
 }
 
-function SplitsSection({ players, season }) {
+function SplitsSection({ players, season, ctxParams = {} }) {
   const [data, setData] = useState({})
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [compareA, setCompareA] = useState('')
   const [compareB, setCompareB] = useState('')
 
+  const ctxKey = JSON.stringify(ctxParams)
   useEffect(() => {
     if (players.length === 0) return
     setLoading(true); setError(null)
-    Promise.all(players.map(p => api.getSituationalSplits(p.player_id, season)))
+    Promise.all(players.map(p => api.getSituationalSplits(p.player_id, ctxParams)))
       .then(results => {
         const d = {}
         results.forEach((r, i) => { d[players[i].player_id] = r })
@@ -381,7 +382,7 @@ function SplitsSection({ players, season }) {
       })
       .catch(e => { setError(e.message || 'Failed to load splits') })
       .finally(() => setLoading(false))
-  }, [players.map(p => p.player_id).join(','), season])
+  }, [players.map(p => p.player_id).join(','), ctxKey])
 
   if (players.length === 0) return <p className="text-slate-500 text-sm">Search for a player above to see splits</p>
   if (loading) return <Loading text="Loading splits..." />
@@ -447,7 +448,20 @@ function SplitsSection({ players, season }) {
       )}
 
       {/* Radar chart */}
-      <RadarChart players={players} data={data} splitKeys={splitKeys} />
+      <div className="space-y-2">
+        <RadarChart players={players} data={data} splitKeys={splitKeys} />
+        <div className="text-center space-y-1">
+          <div className="flex justify-center gap-4">
+            {players.map((p, i) => (
+              <span key={p.player_id} className="flex items-center gap-1.5 text-xs">
+                <span className="w-3 h-3 rounded-full" style={{ background: ['#f59e0b', '#3b82f6'][i] }} />
+                <span className="text-white font-medium">{p.player_name}</span>
+              </span>
+            ))}
+          </div>
+          <p className="text-[10px] text-slate-600">Each axis is a game situation. Further from center = higher EPA. Overlapping areas show similar performance.</p>
+        </div>
+      </div>
 
       {/* Split comparison builder */}
       <div className="bg-slate-900/60 border border-slate-700/40 rounded-xl p-4 space-y-3">
@@ -595,12 +609,42 @@ export default function SituationalStats() {
 
   if (!user?.is_admin) return null
 
+  // Context filters for player-based sections
+  const [ctxOpponent, setCtxOpponent] = useState([])
+  const [ctxSeasonType, setCtxSeasonType] = useState('REG')
+  const [ctxWeekFrom, setCtxWeekFrom] = useState('')
+  const [ctxWeekTo, setCtxWeekTo] = useState('')
+  const [ctxLocation, setCtxLocation] = useState('')
+  // Player finder filters
+  const [finderPos, setFinderPos] = useState('')
+  const [finderTeam, setFinderTeam] = useState([])
+  const [finderResults, setFinderResults] = useState([])
+  const [finderLoading, setFinderLoading] = useState(false)
+
+  const ctxParams = {
+    season,
+    opponent: ctxOpponent.length ? ctxOpponent.join(',') : undefined,
+    season_type: ctxSeasonType,
+    week_from: ctxWeekFrom || undefined,
+    week_to: ctxWeekTo || undefined,
+    location: ctxLocation || undefined,
+  }
+
   const addPlayer = (p) => {
     if (players.length < 2 && !players.find(x => x.player_id === p.player_id)) {
       setPlayers(prev => [...prev, p])
     }
   }
   const removePlayer = (id) => setPlayers(prev => prev.filter(p => p.player_id !== id))
+
+  const browseByFilters = () => {
+    if (!finderPos && !finderTeam.length) return
+    setFinderLoading(true)
+    api.searchPlayers('', { pos: finderPos || undefined, team: finderTeam[0] || undefined, limit: 30 })
+      .then(setFinderResults).catch(() => setFinderResults([])).finally(() => setFinderLoading(false))
+  }
+
+  useEffect(() => { if (finderPos || finderTeam.length) browseByFilters() }, [finderPos, finderTeam.join(',')])
 
   const needsPlayer = !['epa', 'clutch', 'formation', 'explorer'].includes(section)
 
@@ -642,27 +686,82 @@ export default function SituationalStats() {
           )}
 
           {needsPlayer && (
-            <>
-              <div className="flex-1 min-w-[200px]">
-                <PlayerSearch onSelect={addPlayer} placeholder={players.length === 0 ? 'Search player...' : 'Add 2nd player to compare...'} />
-              </div>
-              {players.map(p => (
-                <div key={p.player_id} className="flex items-center gap-1.5 bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm">
-                  <span className="text-white font-medium">{p.player_name}</span>
-                  <span className="text-slate-500 text-xs">{p.pos}</span>
-                  <button onClick={() => removePlayer(p.player_id)} className="text-slate-600 hover:text-red-400 ml-1">x</button>
-                </div>
-              ))}
-            </>
+            <div className="flex-1 min-w-[200px]">
+              <PlayerSearch onSelect={addPlayer} placeholder={players.length === 0 ? 'Search player...' : 'Add 2nd player to compare...'} />
+            </div>
           )}
+          {needsPlayer && players.map(p => (
+            <div key={p.player_id} className="flex items-center gap-1.5 bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm">
+              <span className="text-white font-medium">{p.player_name}</span>
+              <span className="text-slate-500 text-xs">{p.pos}</span>
+              <button onClick={() => removePlayer(p.player_id)} className="text-slate-600 hover:text-red-400 ml-1">x</button>
+            </div>
+          ))}
         </div>
+
+        {/* Player finder by position/team + context filters */}
+        {needsPlayer && (
+          <div className="space-y-2">
+            {/* Browse by position/team */}
+            <div className="flex gap-2 items-center flex-wrap">
+              <span className="text-xs text-slate-600">Browse:</span>
+              <select value={finderPos} onChange={e => setFinderPos(e.target.value)}
+                className="bg-slate-800 border border-slate-700 text-slate-300 rounded px-2 py-1 text-xs">
+                <option value="">Position...</option>
+                {POSITIONS.map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
+              <TeamPicker selected={finderTeam} setSelected={setFinderTeam} />
+              {finderResults.length > 0 && (
+                <div className="flex gap-1 flex-wrap max-w-xl">
+                  {finderResults.slice(0, 15).map(p => (
+                    <button key={p.player_id} onClick={() => addPlayer(p)}
+                      disabled={players.some(x => x.player_id === p.player_id)}
+                      className="px-2 py-0.5 rounded text-[10px] bg-slate-800 text-slate-300 border border-slate-700 hover:border-amber-500/40 hover:text-amber-400 transition-colors disabled:opacity-30">
+                      {p.player_name}
+                    </button>
+                  ))}
+                  {finderResults.length > 15 && <span className="text-[10px] text-slate-600">+{finderResults.length - 15} more</span>}
+                </div>
+              )}
+              {finderLoading && <span className="text-[10px] text-slate-600">...</span>}
+            </div>
+
+            {/* Context filters */}
+            <div className="flex gap-2 items-center flex-wrap">
+              <span className="text-xs text-slate-600">Filters:</span>
+              {['REG', 'POST', 'ALL'].map(st => (
+                <button key={st} onClick={() => setCtxSeasonType(st)}
+                  className={`px-2 py-0.5 rounded text-[10px] ${ctxSeasonType === st ? 'bg-slate-700 text-white' : 'text-slate-500 hover:text-slate-300'}`}>
+                  {st}
+                </button>
+              ))}
+              <span className="text-slate-700">|</span>
+              <span className="text-[10px] text-slate-600">vs</span>
+              <TeamPicker selected={ctxOpponent} setSelected={setCtxOpponent} />
+              <span className="text-slate-700">|</span>
+              <select value={ctxLocation} onChange={e => setCtxLocation(e.target.value)}
+                className="bg-slate-800 border border-slate-700 text-slate-300 rounded px-2 py-0.5 text-[10px]">
+                <option value="">Home/Away</option>
+                <option value="home">Home</option>
+                <option value="away">Away</option>
+              </select>
+              <span className="text-slate-700">|</span>
+              <span className="text-[10px] text-slate-600">Weeks</span>
+              <input type="number" min={1} max={18} value={ctxWeekFrom} onChange={e => setCtxWeekFrom(e.target.value)}
+                placeholder="1" className="w-10 bg-slate-800 border border-slate-700 text-slate-300 rounded px-1.5 py-0.5 text-[10px]" />
+              <span className="text-slate-600 text-[10px]">-</span>
+              <input type="number" min={1} max={18} value={ctxWeekTo} onChange={e => setCtxWeekTo(e.target.value)}
+                placeholder="18" className="w-10 bg-slate-800 border border-slate-700 text-slate-300 rounded px-1.5 py-0.5 text-[10px]" />
+            </div>
+          </div>
+        )}
 
         {/* Content */}
         <div className="bg-slate-800/50 border border-slate-700/60 rounded-2xl p-5">
           {section === 'epa' && <EpaRankingsSection seasons={selectedSeasons} />}
           {section === 'clutch' && <ClutchRankingsSection seasons={selectedSeasons} />}
           {section === 'explorer' && <ExplorerSection seasons={selectedSeasons} />}
-          {section === 'splits' && <SplitsSection players={players} season={season} />}
+          {section === 'splits' && <SplitsSection players={players} season={season} ctxParams={ctxParams} />}
           {section === 'trend' && <WeeklyTrendSection players={players} season={season} />}
           {section === 'playaction' && (
             <SimpleSection title="Play-Action" fetchFn={api.getPlayAction} players={players} season={season}
