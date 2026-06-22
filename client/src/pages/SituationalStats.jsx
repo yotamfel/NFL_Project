@@ -846,23 +846,31 @@ export default function SituationalStats() {
           {section === 'playaction' && (
             <SimpleSection title="Play-Action" fetchFn={api.getPlayAction} players={players} season={selectedSeasons[0]} ctxParams={ctxParams}
               renderData={(d, p) => (
-                <div key={p.player_id} className="space-y-2">
-                  <p className="text-white font-semibold">{d.player}</p>
-                  {d.coverage && <p className="text-slate-600 text-xs">{d.coverage}</p>}
-                  <div className="grid grid-cols-2 gap-3">
-                    {['with_play_action', 'without_play_action'].map(key => {
-                      const s = d.data?.[key]
-                      return s ? (
-                        <div key={key} className="bg-slate-900/60 rounded-xl p-4 space-y-1">
-                          <p className="text-xs text-slate-400 font-medium">{key === 'with_play_action' ? 'With Play-Action' : 'Without'}</p>
-                          <p className="text-white">EPA/play<Tip stat="epa_per_play" />: <EpaColorCell val={s.epa_per_play} /></p>
-                          <p className="text-slate-300 text-sm">Comp%<Tip stat="comp_pct" />: {s.comp_pct}% | Yards: {s.avg_yards}</p>
-                          <p className="text-slate-300 text-sm">Air Yds<Tip stat="avg_air_yards" />: {s.avg_air_yards} | YAC<Tip stat="avg_yac" />: {s.avg_yac}</p>
-                          <p className="text-slate-400 text-xs">{s.plays} plays | Success%<Tip stat="success_rate" />: {s.success_rate}%</p>
-                        </div>
-                      ) : null
-                    })}
-                  </div>
+                <div key={p.player_id} className="space-y-3">
+                  <p className="text-white font-semibold text-sm">{d.player || p.player_name} <span className="text-slate-600 text-xs font-normal">{d.season}</span></p>
+                  {d.data && Object.keys(d.data).length > 0 ? (
+                    <div className="grid grid-cols-2 gap-3">
+                      {['with_play_action', 'without_play_action'].map(key => {
+                        const s = d.data?.[key]
+                        if (!s) return null
+                        const label = key === 'with_play_action' ? 'With Play-Action' : 'Without Play-Action'
+                        return (
+                          <div key={key} className="bg-slate-900/60 border border-slate-700/30 rounded-xl p-4 space-y-2">
+                            <p className="text-xs font-semibold text-slate-300">{label}</p>
+                            <p className="text-2xl font-bold"><EpaColorCell val={s.epa_per_play} /> <span className="text-xs text-slate-600 font-normal">EPA/play</span></p>
+                            <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+                              <span className="text-slate-500">Comp%</span><span className="text-slate-200 text-right">{s.comp_pct}%</span>
+                              <span className="text-slate-500">Avg Yards</span><span className="text-slate-200 text-right">{s.avg_yards}</span>
+                              <span className="text-slate-500">Air Yards</span><span className="text-slate-200 text-right">{s.avg_air_yards}</span>
+                              <span className="text-slate-500">YAC</span><span className="text-slate-200 text-right">{s.avg_yac}</span>
+                              <span className="text-slate-500">Success%</span><span className="text-slate-200 text-right">{s.success_rate}%</span>
+                              <span className="text-slate-500">Plays</span><span className="text-slate-200 text-right">{s.plays}</span>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  ) : <p className="text-slate-500 text-sm">No play-action data for this player/season</p>}
                 </div>
               )}
             />
@@ -870,25 +878,30 @@ export default function SituationalStats() {
           {section === 'pressure' && (
             <SimpleSection title="Pressure" fetchFn={api.getPressureAnalysis} players={players} season={selectedSeasons[0]} ctxParams={ctxParams}
               renderData={(d, p) => (
-                <div key={p.player_id} className="space-y-2">
-                  <p className="text-white font-semibold">{d.player}</p>
-                  {d.coverage && <p className="text-slate-600 text-xs">{d.coverage}</p>}
-                  {(!d.data || Object.keys(d.data).length === 0) && !d.no_data && (
-                    <p className="text-slate-500 text-sm">No pressure data found for this player in {d.season}</p>
-                  )}
-                  <div className="grid grid-cols-2 gap-3">
-                    {['clean_pocket', 'under_pressure'].map(key => {
-                      const s = d.data?.[key]
-                      return s ? (
-                        <div key={key} className={`bg-slate-900/60 rounded-xl p-4 space-y-1 ${key === 'under_pressure' ? 'border border-red-500/20' : ''}`}>
-                          <p className="text-xs text-slate-400 font-medium">{key === 'clean_pocket' ? 'Clean Pocket' : 'Under Pressure'}</p>
-                          <p className="text-white">EPA/play<Tip stat="epa_per_play" />: <EpaColorCell val={s.epa_per_play} /></p>
-                          <p className="text-slate-300 text-sm">Comp%<Tip stat="comp_pct" />: {s.comp_pct}% | Sack%<Tip stat="sack_rate" />: {s.sack_rate}% | INT%<Tip stat="int_rate" />: {s.int_rate}%</p>
-                          <p className="text-slate-400 text-xs">{s.plays} plays | Avg {s.avg_yards} yds</p>
-                        </div>
-                      ) : null
-                    })}
-                  </div>
+                <div key={p.player_id} className="space-y-3">
+                  <p className="text-white font-semibold text-sm">{d.player || p.player_name} <span className="text-slate-600 text-xs font-normal">{d.season}</span></p>
+                  {d.data && Object.keys(d.data).length > 0 ? (
+                    <div className="grid grid-cols-2 gap-3">
+                      {['clean_pocket', 'under_pressure'].map(key => {
+                        const s = d.data?.[key]
+                        if (!s) return null
+                        const label = key === 'clean_pocket' ? 'Clean Pocket' : 'Under Pressure'
+                        return (
+                          <div key={key} className={`bg-slate-900/60 border rounded-xl p-4 space-y-2 ${key === 'under_pressure' ? 'border-red-500/20' : 'border-slate-700/30'}`}>
+                            <p className="text-xs font-semibold text-slate-300">{label}</p>
+                            <p className="text-2xl font-bold"><EpaColorCell val={s.epa_per_play} /> <span className="text-xs text-slate-600 font-normal">EPA/play</span></p>
+                            <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+                              <span className="text-slate-500">Comp%</span><span className="text-slate-200 text-right">{s.comp_pct}%</span>
+                              <span className="text-slate-500">Sack%</span><span className="text-slate-200 text-right">{s.sack_rate}%</span>
+                              <span className="text-slate-500">INT%</span><span className="text-slate-200 text-right">{s.int_rate}%</span>
+                              <span className="text-slate-500">Avg Yards</span><span className="text-slate-200 text-right">{s.avg_yards}</span>
+                              <span className="text-slate-500">Plays</span><span className="text-slate-200 text-right">{s.plays}</span>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  ) : <p className="text-slate-500 text-sm">No pressure data for this player/season</p>}
                 </div>
               )}
             />
@@ -897,9 +910,8 @@ export default function SituationalStats() {
             <SimpleSection title="Decisions" fetchFn={api.getQbDecisions} players={players} season={selectedSeasons[0]} ctxParams={ctxParams}
               renderData={(d, p) => (
                 <div key={p.player_id} className="space-y-3">
-                  <p className="text-white font-semibold">{d.player}</p>
-                  {d.coverage && <p className="text-slate-600 text-xs">{d.coverage}</p>}
-                  {d.decisions && (
+                  <p className="text-white font-semibold text-sm">{d.player || p.player_name} <span className="text-slate-600 text-xs font-normal">{d.season}</span></p>
+                  {d.decisions && Object.keys(d.decisions).length > 0 && (
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                       {[
                         { k: 'catchable_pct', label: 'Catchable%', good: true },

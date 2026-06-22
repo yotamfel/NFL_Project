@@ -549,7 +549,6 @@ def play_action_analysis(
         "player": player.player_name if player else player_id,
         "player_id": player_id,
         "season": yr,
-        "coverage": f"FTN Charting: {', '.join(str(y) for y in ftn_years)}",
         "data": data,
     }
 
@@ -749,7 +748,6 @@ def pressure_analysis(
         "player": player.player_name if player else player_id,
         "player_id": player_id,
         "season": yr,
-        "coverage": f"Participation data: {', '.join(str(y) for y in part_years)}",
         "data": data,
     }
 
@@ -817,7 +815,6 @@ def qb_decisions(
         "player": player.player_name if player else player_id,
         "player_id": player_id,
         "season": yr,
-        "coverage": f"FTN Charting: {', '.join(str(y) for y in ftn_years)}",
         "decisions": dict(row._mapping) if row else {},
         "read_distribution": [dict(r._mapping) for r in reads],
     }
