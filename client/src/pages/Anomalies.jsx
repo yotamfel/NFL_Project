@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApi } from '../hooks/useApi'
+import { useAuth } from '../context/AuthContext'
 import { api } from '../api'
 import AnomalyFeed from '../components/AnomalyFeed'
 import { fmtSeason } from '../utils'
 
 export default function Anomalies() {
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const isGuest = user?.isGuest
   useEffect(() => { api.trackPage('anomalies') }, [])
   const [season, setSeason] = useState(null)
 
@@ -25,7 +28,7 @@ export default function Anomalies() {
         </button>
 
         {/* Year filter */}
-        {seasons && seasons.length > 1 && (
+        {!isGuest && seasons && seasons.length > 1 && (
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs text-slate-500 uppercase tracking-wider">Season</span>
             <div className="flex gap-1.5 flex-wrap">
@@ -57,7 +60,13 @@ export default function Anomalies() {
         )}
       </div>
 
-      <AnomalyFeed limit={500} season={season} />
+      <AnomalyFeed limit={isGuest ? 10 : 500} season={isGuest ? null : season} />
+      {isGuest && (
+        <div className="text-center space-y-2 py-4 border-t border-slate-800">
+          <p className="text-slate-500 text-sm">Showing 10 anomalies. Sign up to see all and filter by season.</p>
+          <a href="/login" className="text-amber-400 text-sm font-semibold hover:text-amber-300">Create free account</a>
+        </div>
+      )}
     </div>
   )
 }
