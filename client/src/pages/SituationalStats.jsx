@@ -2032,11 +2032,11 @@ function DashboardSection({ season }) {
         {/* Team EPA */}
         <div className="bg-slate-900/40 border border-slate-700/30 rounded-xl p-4 space-y-1">
           <p className="text-xs font-bold text-blue-400">Team EPA Rankings</p>
-          <div className="flex justify-between text-[9px] text-slate-600 px-0.5 mb-1 pr-[5px]">
-            <span>Team</span>
-            <span className="flex gap-3"><span className="w-12 text-right">Pass</span><span className="w-12 text-right">Rush</span><span className="w-12 text-right">Avg</span></span>
-          </div>
-          <div className="max-h-52 overflow-y-auto space-y-0.5 pr-1">
+          <div className="max-h-56 overflow-y-auto space-y-0.5">
+            <div className="flex justify-between text-[9px] text-slate-600 px-0.5 mb-1 sticky top-0 bg-slate-900/40">
+              <span>Team</span>
+              <span className="flex gap-3"><span className="w-12 text-right">Pass</span><span className="w-12 text-right">Rush</span><span className="w-12 text-right">Avg</span></span>
+            </div>
             {(data.team_epa || []).map((r, i) => (
               <div key={r.team} className="flex justify-between text-[10px] items-center">
                 <span className="text-slate-300">{i + 1}. {r.team}</span>
