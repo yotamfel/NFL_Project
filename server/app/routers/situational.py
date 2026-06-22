@@ -756,13 +756,25 @@ def _build_explorer_where(body: dict):
         }
         drill_field = drill.get("field")
         drill_value = drill.get("value")
-        if drill_field in drill_map and drill_value is not None:
+        drill_values = drill.get("values")
+        if drill_field in drill_map and (drill_value is not None or drill_values):
             sql_expr, val_type = drill_map[drill_field]
-            where_parts.append(sql_expr)
-            if val_type == "int":
-                params["drill_val_i"] = int(drill_value)
+            if drill_values and len(drill_values) > 1:
+                base_expr = sql_expr.rsplit("= :drill_val", 1)[0].rsplit("= :drill_val_i", 1)[0]
+                if val_type == "int":
+                    where_parts.append(f"{base_expr}= ANY(:drill_vals_i)")
+                    params["drill_vals_i"] = [int(v) for v in drill_values]
+                else:
+                    where_parts.append(f"{base_expr}= ANY(:drill_vals)")
+                    params["drill_vals"] = [str(v) for v in drill_values]
             else:
-                params["drill_val"] = str(drill_value)
+                v = drill_value or (drill_values[0] if drill_values else None)
+                if v is not None:
+                    where_parts.append(sql_expr)
+                    if val_type == "int":
+                        params["drill_val_i"] = int(v)
+                    else:
+                        params["drill_val"] = str(v)
 
     return " AND ".join(where_parts), params, season
 

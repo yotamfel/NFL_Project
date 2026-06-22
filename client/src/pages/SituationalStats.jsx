@@ -43,6 +43,7 @@ const STAT_TIPS = {
   play_dist: 'Yards to go for a first down.',
   play_ydln: 'Yards from the end zone (1 = goal line, 99 = own 1-yard line).',
   play_players: 'For passes: QB -> Receiver. For runs: ball carrier.',
+  play_result: 'TD = touchdown, INT = interception, Sack = QB sacked, Cmp = completed pass, Rush+ = successful rush, Inc = incomplete pass.',
 }
 
 let _setColTip = null
@@ -856,7 +857,7 @@ function PlayLogPanel({ body, onClose }) {
                   <SortTh label="WPA" col="wpa" tip="wpa_per_play" />
                   <th className="py-1 px-1.5 text-left">Player(s)<Tip stat="play_players" /></th>
                   <th className="py-1 px-1.5 text-left">Teams</th>
-                  <th className="py-1 px-1.5 text-center">Result</th>
+                  <th className="py-1 px-1.5 text-center">Result<Tip stat="play_result" /></th>
                 </tr>
               </thead>
               <tbody>
@@ -878,7 +879,7 @@ function PlayLogPanel({ body, onClose }) {
                     <td className="py-1 px-1.5 text-slate-300 truncate max-w-[140px]">{playerStr}</td>
                     <td className="py-1 px-1.5 text-slate-500">{p.posteam} v {p.defteam}</td>
                     <td className="py-1 px-1.5 text-center">
-                      {p.touchdown ? <span className="text-emerald-400">TD</span> : p.interception ? <span className="text-red-400">INT</span> : p.sack ? <span className="text-red-400">Sack</span> : p.complete_pass ? <span className="text-slate-400">Cmp</span> : p.success ? <span className="text-emerald-500/60">+</span> : ''}
+                      {p.touchdown ? <span className="text-emerald-400">TD</span> : p.interception ? <span className="text-red-400">INT</span> : p.sack ? <span className="text-red-400">Sack</span> : p.complete_pass ? <span className="text-slate-400">Cmp</span> : p.rush_attempt && p.success ? <span className="text-emerald-400/70">Rush+</span> : p.pass_attempt && !p.complete_pass ? <span className="text-red-400/60">Inc</span> : ''}
                     </td>
                   </tr>
                   )
@@ -962,6 +963,7 @@ function ExplorerSection({ seasons }) {
   const [expandedRow, setExpandedRow] = useState(null)
   const [expandedDist, setExpandedDist] = useState(null)
   const [compareRows, setCompareRows] = useState([])
+  const [showCheckedPlays, setShowCheckedPlays] = useState(false)
   const [drillStack, setDrillStack] = useState([])
 
   useEffect(() => {
@@ -1011,9 +1013,9 @@ function ExplorerSection({ seasons }) {
     setCompareRows(prev => {
       const exists = prev.find(r => r._label === label)
       if (exists) return prev.filter(r => r._label !== label)
-      if (prev.length >= 2) return [prev[1], { ...row, _label: label }]
       return [...prev, { ...row, _label: label }]
     })
+    setShowCheckedPlays(false)
   }
 
   const exportCsv = () => {
@@ -1131,6 +1133,23 @@ function ExplorerSection({ seasons }) {
 
       {/* Compare panel */}
       {compareRows.length === 2 && <ComparePanel rows={compareRows} onClose={() => setCompareRows([])} />}
+
+      {/* Checked rows actions */}
+      {compareRows.length > 0 && (
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-slate-500">{compareRows.length} selected</span>
+          <button onClick={() => setShowCheckedPlays(!showCheckedPlays)}
+            className="px-3 py-1 bg-amber-500/15 text-amber-400 border border-amber-500/30 rounded-lg text-xs hover:bg-amber-500/25 transition-colors">
+            {showCheckedPlays ? 'Hide plays' : `View plays (${compareRows.length} groups)`}
+          </button>
+          <button onClick={() => { setCompareRows([]); setShowCheckedPlays(false) }} className="text-xs text-slate-600 hover:text-slate-400">Clear</button>
+        </div>
+      )}
+      {showCheckedPlays && compareRows.length > 0 && (
+        <PlayLogPanel
+          body={{ ...buildBody(), drill: { field: activeGroupBy, values: compareRows.map(r => r._label) } }}
+          onClose={() => setShowCheckedPlays(false)} />
+      )}
 
       {/* Results table */}
       {sorted.length > 0 && (
