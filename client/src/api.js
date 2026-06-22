@@ -205,6 +205,9 @@ export const api = {
   getPassHeatmap: (playerId, season, role) => get(`/situational/pass-heatmap/${playerId}?${new URLSearchParams({ ...(season && { season }), ...(role && { role }) })}`),
   getPressureAnalysis: (playerId, season) => get(`/situational/pressure/${playerId}${season ? `?season=${season}` : ''}`),
   getQbDecisions: (playerId, season) => get(`/situational/decisions/${playerId}${season ? `?season=${season}` : ''}`),
+  getExplorerFilters: () => get('/situational/explorer-filters'),
+  postExplorer: (body) => post('/situational/explorer', body),
+  getWeeklyTrend: (playerId, season) => get(`/situational/weekly-trend/${playerId}${season ? `?season=${season}` : ''}`),
 
   topPlayersByFdv: ({ pos, limit = 50 } = {}) => {
     const p = new URLSearchParams({ limit })

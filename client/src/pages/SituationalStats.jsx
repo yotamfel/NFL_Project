@@ -69,7 +69,9 @@ function ColTipPortal() {
 const SECTIONS = [
   { id: 'epa', label: 'EPA Rankings', icon: '📊' },
   { id: 'clutch', label: 'Clutch Rankings', icon: '🔥' },
+  { id: 'explorer', label: 'Custom Explorer', icon: '🔍' },
   { id: 'splits', label: 'Situational Splits', icon: '📋' },
+  { id: 'trend', label: 'Weekly Trend', icon: '📈' },
   { id: 'playaction', label: 'Play-Action', icon: '🎭' },
   { id: 'pressure', label: 'Under Pressure', icon: '💨' },
   { id: 'decisions', label: 'QB Decisions', icon: '🧠' },
@@ -77,6 +79,8 @@ const SECTIONS = [
   { id: 'passheatmap', label: 'Pass Heatmap', icon: '🎯' },
   { id: 'formation', label: 'Formations', icon: '📐' },
 ]
+
+const TEAMS = ['ARI','ATL','BAL','BUF','CAR','CHI','CIN','CLE','DAL','DEN','DET','GB','HOU','IND','JAX','KC','LAC','LAR','LV','MIA','MIN','NE','NO','NYG','NYJ','PHI','PIT','SEA','SF','TB','TEN','WAS']
 
 function EpaColorCell({ val }) {
   if (val == null) return <span className="text-slate-500">-</span>
@@ -119,53 +123,104 @@ function PlayerSearch({ onSelect, placeholder }) {
 
 // ---- Section Components ----
 
+function EpaBar({ val, max }) {
+  if (val == null || max === 0) return null
+  const pct = Math.min(Math.abs(val) / max * 100, 100)
+  const color = val > 0 ? 'bg-emerald-500/60' : 'bg-red-500/60'
+  return <div className="w-16 h-2 bg-slate-800 rounded-full overflow-hidden inline-block align-middle ml-1.5"><div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} /></div>
+}
+
+function SortHeader({ label, field, sort, setSort, tip, align = 'right' }) {
+  const active = sort.field === field
+  const arrow = active ? (sort.dir === 'asc' ? ' ↑' : ' ↓') : ''
+  return (
+    <th className={`py-2 px-2 font-medium cursor-pointer hover:text-slate-300 transition-colors select-none ${align === 'left' ? 'text-left' : 'text-right'}`}
+      onClick={() => setSort(prev => ({ field, dir: prev.field === field && prev.dir === 'desc' ? 'asc' : 'desc' }))}>
+      {label}{arrow}{tip && <Tip stat={tip} />}
+    </th>
+  )
+}
+
 function EpaRankingsSection({ season }) {
   const [pos, setPos] = useState('QB')
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [seasonType, setSeasonType] = useState('REG')
+  const [minPlays, setMinPlays] = useState(null)
+  const [teamFilter, setTeamFilter] = useState('')
+  const [sort, setSort] = useState({ field: 'epa_per_play', dir: 'desc' })
 
   useEffect(() => {
     setLoading(true)
-    api.getEpaRankings({ position: pos, season }).then(setData).catch(() => setData(null)).finally(() => setLoading(false))
-  }, [pos, season])
+    const params = { position: pos, season, season_type: seasonType }
+    if (minPlays) params.min_plays = minPlays
+    api.getEpaRankings(params).then(setData).catch(() => setData(null)).finally(() => setLoading(false))
+  }, [pos, season, seasonType, minPlays])
+
+  const sorted = (data?.data || [])
+    .filter(r => !teamFilter || r.team === teamFilter)
+    .sort((a, b) => {
+      const va = a[sort.field] ?? -999, vb = b[sort.field] ?? -999
+      return sort.dir === 'desc' ? vb - va : va - vb
+    })
+
+  const maxEpa = Math.max(...sorted.map(r => Math.abs(r.epa_per_play || 0)), 0.01)
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap items-center">
         {POSITIONS.map(p => (
           <button key={p} onClick={() => setPos(p)}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${pos === p ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40' : 'bg-slate-800 text-slate-400 border border-slate-700'}`}>
             {p}
           </button>
         ))}
+        <span className="text-slate-700">|</span>
+        {['REG', 'POST', 'ALL'].map(st => (
+          <button key={st} onClick={() => setSeasonType(st)}
+            className={`px-2.5 py-1 rounded text-xs ${seasonType === st ? 'bg-slate-700 text-white' : 'text-slate-500 hover:text-slate-300'}`}>
+            {st}
+          </button>
+        ))}
+        <span className="text-slate-700">|</span>
+        <select value={teamFilter} onChange={e => setTeamFilter(e.target.value)}
+          className="bg-slate-800 border border-slate-700 text-slate-300 rounded px-2 py-1 text-xs">
+          <option value="">All teams</option>
+          {TEAMS.map(t => <option key={t} value={t}>{t}</option>)}
+        </select>
+        <label className="flex items-center gap-1.5 text-xs text-slate-500">
+          Min plays:
+          <input type="number" value={minPlays || ''} onChange={e => setMinPlays(e.target.value ? Number(e.target.value) : null)}
+            placeholder="auto" className="w-16 bg-slate-800 border border-slate-700 text-slate-300 rounded px-2 py-1 text-xs" />
+        </label>
       </div>
       {loading && <Loading text="Loading EPA rankings..." />}
-      {data?.data && (
+      {sorted.length > 0 && (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-slate-500 text-xs border-b border-slate-800">
-                <th className="text-left py-2 pr-2">#</th>
+                <th className="text-left py-2 pr-2 w-8">#</th>
                 <th className="text-left py-2 pr-2">Player</th>
                 <th className="text-left py-2 pr-2">Team</th>
-                <th className="text-right py-2 px-2">EPA/play<Tip stat="epa_per_play" /></th>
-                <th className="text-right py-2 px-2">Total EPA<Tip stat="total_epa" /></th>
-                <th className="text-right py-2 px-2">WPA/play<Tip stat="wpa_per_play" /></th>
-                <th className="text-right py-2 px-2">Plays</th>
-                <th className="text-right py-2 px-2">Success%<Tip stat="success_rate" /></th>
-                <th className="text-right py-2 px-2">FDV</th>
+                <SortHeader label="EPA/play" field="epa_per_play" sort={sort} setSort={setSort} tip="epa_per_play" />
+                <SortHeader label="Total EPA" field="total_epa" sort={sort} setSort={setSort} tip="total_epa" />
+                <SortHeader label="WPA/play" field="wpa_per_play" sort={sort} setSort={setSort} tip="wpa_per_play" />
+                <SortHeader label="Plays" field="plays" sort={sort} setSort={setSort} />
+                <SortHeader label="Success%" field="success_rate" sort={sort} setSort={setSort} tip="success_rate" />
+                <SortHeader label="FDV" field="fdv" sort={sort} setSort={setSort} />
               </tr>
             </thead>
             <tbody>
-              {data.data.map((r, i) => (
+              {sorted.map((r, i) => (
                 <tr key={r.player_id} className="border-b border-slate-800/40 hover:bg-slate-800/30">
                   <td className="py-2 pr-2 text-slate-600 text-xs">{i + 1}</td>
                   <td className="py-2 pr-2">
-                    <a href={`/player/${r.player_id}`} className="text-white hover:text-amber-400 transition-colors font-medium">{r.player_name}</a>
+                    <a href={`/player/${r.pfr_id || r.player_id}`} className="text-white hover:text-amber-400 transition-colors font-medium">{r.player_name}</a>
                     {r.draft_round && <span className="text-slate-600 text-xs ml-1.5">Rd{r.draft_round}</span>}
                   </td>
                   <td className="py-2 pr-2 text-slate-400">{r.team}</td>
-                  <td className="py-2 px-2 text-right"><EpaColorCell val={r.epa_per_play} /></td>
+                  <td className="py-2 px-2 text-right"><EpaColorCell val={r.epa_per_play} /><EpaBar val={r.epa_per_play} max={maxEpa} /></td>
                   <td className="py-2 px-2 text-right"><EpaColorCell val={r.total_epa} /></td>
                   <td className="py-2 px-2 text-right"><EpaColorCell val={r.wpa_per_play} /></td>
                   <td className="py-2 px-2 text-right text-slate-300">{r.plays}</td>
@@ -175,6 +230,7 @@ function EpaRankingsSection({ season }) {
               ))}
             </tbody>
           </table>
+          <p className="text-xs text-slate-600 mt-2">{sorted.length} players | Click any column header to sort</p>
         </div>
       )}
     </div>
@@ -389,7 +445,7 @@ export default function SituationalStats() {
   }
   const removePlayer = (id) => setPlayers(prev => prev.filter(p => p.player_id !== id))
 
-  const needsPlayer = !['epa', 'clutch', 'formation'].includes(section)
+  const needsPlayer = !['epa', 'clutch', 'formation', 'explorer'].includes(section)
 
   return (
     <div className="flex gap-6">
@@ -435,7 +491,9 @@ export default function SituationalStats() {
         <div className="bg-slate-800/50 border border-slate-700/60 rounded-2xl p-5">
           {section === 'epa' && <EpaRankingsSection season={season} />}
           {section === 'clutch' && <ClutchRankingsSection season={season} />}
+          {section === 'explorer' && <ExplorerSection season={season} />}
           {section === 'splits' && <SplitsSection players={players} season={season} />}
+          {section === 'trend' && <WeeklyTrendSection players={players} season={season} />}
           {section === 'playaction' && (
             <SimpleSection title="Play-Action" fetchFn={api.getPlayAction} players={players} season={season}
               renderData={(d, p) => (
@@ -607,12 +665,318 @@ export default function SituationalStats() {
   )
 }
 
+// ── Custom Explorer ──────────────────────────────────────────────────────────
+
+const FILTER_OPTIONS = [
+  { id: 'red_zone', label: 'Red Zone', group: 'Field' },
+  { id: 'goal_to_go', label: 'Goal to Go', group: 'Field' },
+  { id: 'third_down', label: '3rd Down', group: 'Situation' },
+  { id: 'clutch', label: 'Clutch (late & close)', group: 'Situation' },
+  { id: 'leading', label: 'Leading', group: 'Score' },
+  { id: 'trailing', label: 'Trailing', group: 'Score' },
+  { id: 'shotgun', label: 'Shotgun', group: 'Formation' },
+  { id: 'no_huddle', label: 'No Huddle', group: 'Formation' },
+  { id: 'home', label: 'Home', group: 'Context' },
+  { id: 'dome', label: 'Dome', group: 'Context' },
+  { id: 'cold', label: 'Cold (<40F)', group: 'Context' },
+  { id: 'deep_pass', label: 'Deep Pass (20+ air yds)', group: 'Pass' },
+  { id: 'short_pass', label: 'Short Pass (<10 air yds)', group: 'Pass' },
+]
+
+const GROUP_OPTIONS = [
+  { id: 'team', label: 'Team' },
+  { id: 'down', label: 'Down' },
+  { id: 'quarter', label: 'Quarter' },
+  { id: 'play_type', label: 'Run vs Pass' },
+  { id: 'week', label: 'Week' },
+  { id: 'field_zone', label: 'Field Position' },
+  { id: 'score_diff', label: 'Score Margin' },
+  { id: 'pass_depth', label: 'Pass Depth' },
+]
+
+function ExplorerSection({ season }) {
+  const [filters, setFilters] = useState([])
+  const [groupBy, setGroupBy] = useState('team')
+  const [team, setTeam] = useState('')
+  const [position, setPosition] = useState('')
+  const [seasonType, setSeasonType] = useState('REG')
+  const [playerSearch, setPlayerSearch] = useState('')
+  const [playerId, setPlayerId] = useState(null)
+  const [playerName, setPlayerName] = useState('')
+  const [searchResults, setSearchResults] = useState([])
+  const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [sort, setSort] = useState({ field: 'epa_per_play', dir: 'desc' })
+
+  useEffect(() => {
+    if (playerSearch.length < 2) { setSearchResults([]); return }
+    const t = setTimeout(async () => {
+      try { setSearchResults(await api.searchPlayers(playerSearch, { limit: 6 })) }
+      catch { setSearchResults([]) }
+    }, 300)
+    return () => clearTimeout(t)
+  }, [playerSearch])
+
+  const run = () => {
+    setLoading(true)
+    api.postExplorer({ season, filters, group_by: groupBy, team: team || undefined, position: position || undefined, player_id: playerId || undefined, season_type: seasonType })
+      .then(setData).catch(() => setData(null)).finally(() => setLoading(false))
+  }
+
+  useEffect(() => { run() }, [season])
+
+  const toggleFilter = (id) => {
+    setFilters(prev => prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id])
+  }
+
+  const sorted = (data?.data || []).sort((a, b) => {
+    const va = a[sort.field] ?? -999, vb = b[sort.field] ?? -999
+    return sort.dir === 'desc' ? vb - va : va - vb
+  })
+
+  const maxEpa = Math.max(...sorted.map(r => Math.abs(r.epa_per_play || 0)), 0.01)
+  const groups = [...new Set(FILTER_OPTIONS.map(f => f.group))]
+
+  return (
+    <div className="space-y-4">
+      <p className="text-slate-400 text-xs">Build custom queries - pick filters, choose how to group results, and explore EPA across any situation.</p>
+
+      {/* Filters */}
+      <div className="space-y-2">
+        {groups.map(g => (
+          <div key={g} className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-slate-600 text-xs w-16 shrink-0">{g}</span>
+            {FILTER_OPTIONS.filter(f => f.group === g).map(f => (
+              <button key={f.id} onClick={() => toggleFilter(f.id)}
+                className={`px-2 py-0.5 rounded text-xs transition-colors ${filters.includes(f.id) ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40' : 'bg-slate-800/80 text-slate-500 border border-slate-700/50 hover:text-slate-300'}`}>
+                {f.label}
+              </button>
+            ))}
+          </div>
+        ))}
+      </div>
+
+      {/* Controls row */}
+      <div className="flex gap-2 flex-wrap items-center">
+        <label className="text-xs text-slate-500">Group by:</label>
+        <select value={groupBy} onChange={e => setGroupBy(e.target.value)}
+          className="bg-slate-800 border border-slate-700 text-slate-300 rounded px-2 py-1 text-xs">
+          {GROUP_OPTIONS.map(g => <option key={g.id} value={g.id}>{g.label}</option>)}
+        </select>
+        <select value={seasonType} onChange={e => setSeasonType(e.target.value)}
+          className="bg-slate-800 border border-slate-700 text-slate-300 rounded px-2 py-1 text-xs">
+          <option value="REG">Regular</option>
+          <option value="POST">Playoffs</option>
+          <option value="ALL">All</option>
+        </select>
+        <select value={team} onChange={e => setTeam(e.target.value)}
+          className="bg-slate-800 border border-slate-700 text-slate-300 rounded px-2 py-1 text-xs">
+          <option value="">All teams</option>
+          {TEAMS.map(t => <option key={t} value={t}>{t}</option>)}
+        </select>
+        <select value={position} onChange={e => setPosition(e.target.value)}
+          className="bg-slate-800 border border-slate-700 text-slate-300 rounded px-2 py-1 text-xs">
+          <option value="">All positions</option>
+          {POSITIONS.map(p => <option key={p} value={p}>{p}</option>)}
+        </select>
+        <div className="relative">
+          <input value={playerSearch} onChange={e => { setPlayerSearch(e.target.value); if (!e.target.value) { setPlayerId(null); setPlayerName('') } }}
+            placeholder={playerName || 'Filter by player...'} className="w-40 bg-slate-800 border border-slate-700 text-slate-300 rounded px-2 py-1 text-xs placeholder-slate-500" />
+          {searchResults.length > 0 && (
+            <ul className="absolute top-full mt-1 w-full bg-slate-800 border border-slate-700 rounded-lg overflow-hidden shadow-xl z-20 max-h-40 overflow-y-auto">
+              {searchResults.map(p => (
+                <li key={p.player_id} onClick={() => { setPlayerId(p.player_id); setPlayerName(p.player_name); setPlayerSearch(''); setSearchResults([]) }}
+                  className="px-3 py-1.5 hover:bg-slate-700 cursor-pointer text-xs text-white">{p.player_name} <span className="text-slate-500">{p.pos}</span></li>
+              ))}
+            </ul>
+          )}
+        </div>
+        {playerName && <button onClick={() => { setPlayerId(null); setPlayerName(''); setPlayerSearch('') }} className="text-xs text-red-400 hover:text-red-300">x {playerName}</button>}
+        <button onClick={run} className="px-4 py-1.5 bg-amber-500/20 text-amber-400 border border-amber-500/40 rounded-lg text-xs font-medium hover:bg-amber-500/30 transition-colors">
+          Run Query
+        </button>
+      </div>
+
+      {/* Summary */}
+      {data?.totals && (
+        <div className="flex gap-3 flex-wrap">
+          {[
+            { label: 'Plays', val: data.totals.plays?.toLocaleString() },
+            { label: 'EPA/play', val: data.totals.epa_per_play, epa: true },
+            { label: 'Success%', val: `${data.totals.success_rate}%` },
+            { label: 'Avg Yards', val: data.totals.avg_yards },
+          ].map(s => (
+            <div key={s.label} className="bg-slate-900/60 rounded-lg px-3 py-2 text-center min-w-[80px]">
+              <p className="text-xs text-slate-500">{s.label}</p>
+              <p className={`text-sm font-bold ${s.epa ? (s.val > 0 ? 'text-emerald-400' : 'text-red-400') : 'text-white'}`}>{s.val ?? '-'}</p>
+            </div>
+          ))}
+          <div className="bg-slate-900/60 rounded-lg px-3 py-2 text-center">
+            <p className="text-xs text-slate-500">Active Filters</p>
+            <p className="text-sm font-bold text-amber-400">{filters.length}</p>
+          </div>
+        </div>
+      )}
+
+      {loading && <Loading text="Running query..." />}
+
+      {/* Results table */}
+      {sorted.length > 0 && (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-slate-500 text-xs border-b border-slate-800">
+                <SortHeader label={GROUP_OPTIONS.find(g => g.id === groupBy)?.label || groupBy} field={groupBy} sort={sort} setSort={setSort} align="left" />
+                <SortHeader label="EPA/play" field="epa_per_play" sort={sort} setSort={setSort} tip="epa_per_play" />
+                <SortHeader label="Total EPA" field="total_epa" sort={sort} setSort={setSort} tip="total_epa" />
+                <SortHeader label="Success%" field="success_rate" sort={sort} setSort={setSort} tip="success_rate" />
+                <SortHeader label="Avg Yds" field="avg_yards" sort={sort} setSort={setSort} />
+                <SortHeader label="Pass%" field="pass_pct" sort={sort} setSort={setSort} />
+                <SortHeader label="WPA/play" field="wpa_per_play" sort={sort} setSort={setSort} tip="wpa_per_play" />
+                <SortHeader label="Plays" field="plays" sort={sort} setSort={setSort} />
+              </tr>
+            </thead>
+            <tbody>
+              {sorted.map(r => {
+                const gKey = r[groupBy] || r[Object.keys(r).find(k => k !== 'plays' && k !== 'epa_per_play' && k !== 'total_epa' && k !== 'success_rate' && k !== 'avg_yards' && k !== 'pass_pct' && k !== 'wpa_per_play')]
+                return (
+                  <tr key={gKey} className="border-b border-slate-800/40 hover:bg-slate-800/30">
+                    <td className="py-2 pr-2 text-white font-medium">{gKey}</td>
+                    <td className="py-2 px-2 text-right"><EpaColorCell val={r.epa_per_play} /><EpaBar val={r.epa_per_play} max={maxEpa} /></td>
+                    <td className="py-2 px-2 text-right"><EpaColorCell val={r.total_epa} /></td>
+                    <td className="py-2 px-2 text-right text-slate-300">{r.success_rate}%</td>
+                    <td className="py-2 px-2 text-right text-slate-300">{r.avg_yards}</td>
+                    <td className="py-2 px-2 text-right text-slate-400">{r.pass_pct}%</td>
+                    <td className="py-2 px-2 text-right"><EpaColorCell val={r.wpa_per_play} /></td>
+                    <td className="py-2 px-2 text-right text-slate-500">{r.plays}</td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  )
+}
+
+
+// ── Weekly Trend ─────────────────────────────────────────────────────────────
+
+function WeeklyTrendSection({ players, season }) {
+  const [data, setData] = useState({})
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (players.length === 0) { setData({}); return }
+    setLoading(true)
+    Promise.all(players.map(p => api.getWeeklyTrend(p.player_id, season)))
+      .then(results => {
+        const d = {}
+        results.forEach((r, i) => { d[players[i].player_id] = r })
+        setData(d)
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [players.map(p => p.player_id).join(','), season])
+
+  if (players.length === 0) return <p className="text-slate-500 text-sm">Search for a player above to see their weekly EPA trend</p>
+  if (loading) return <Loading text="Loading weekly trend..." />
+
+  const colors = ['#f59e0b', '#3b82f6']
+  const allWeeks = [...new Set(Object.values(data).flatMap(d => (d.data || []).map(w => w.week)))].sort((a, b) => a - b)
+  if (allWeeks.length === 0) return <p className="text-slate-500 text-sm">No weekly data found</p>
+
+  const maxAbsEpa = Math.max(...Object.values(data).flatMap(d => (d.data || []).map(w => Math.abs(w.epa_per_play || 0))), 0.1)
+  const barH = 120
+
+  return (
+    <div className="space-y-4">
+      <p className="text-slate-400 text-xs">EPA per play by week - track performance consistency through the season</p>
+      <div className="flex items-center gap-4 mb-2">
+        {players.map((p, i) => (
+          <span key={p.player_id} className="flex items-center gap-1.5 text-xs">
+            <span className="w-3 h-3 rounded-full" style={{ background: colors[i] }} />
+            <span className="text-white font-medium">{p.player_name}</span>
+          </span>
+        ))}
+      </div>
+      <div className="overflow-x-auto">
+        <div className="flex items-end gap-1 min-w-[600px]" style={{ height: barH + 40 }}>
+          {allWeeks.map(week => (
+            <div key={week} className="flex-1 flex flex-col items-center">
+              <div className="relative w-full flex justify-center gap-0.5" style={{ height: barH }}>
+                {players.map((p, pi) => {
+                  const wd = (data[p.player_id]?.data || []).find(w => w.week === week)
+                  if (!wd) return <div key={pi} className="w-3" />
+                  const epa = wd.epa_per_play || 0
+                  const h = Math.max(Math.abs(epa) / maxAbsEpa * (barH / 2), 2)
+                  const isPos = epa >= 0
+                  return (
+                    <div key={pi} className="relative w-3 group" style={{ height: barH }}>
+                      <div className={`absolute ${isPos ? 'bottom-1/2' : 'top-1/2'} left-0 right-0 rounded-sm transition-all`}
+                        style={{ height: h, background: colors[pi], opacity: 0.8 }} />
+                      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 pointer-events-none z-10">
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs whitespace-nowrap">
+                          <span className="text-white font-bold">{epa}</span>
+                          <span className="text-slate-400 ml-1">EPA | {wd.plays}p | {wd.avg_yards}y</span>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+              <div className="h-px w-full bg-slate-700 mt-0" />
+              <span className="text-xs text-slate-600 mt-1">W{week}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      {/* Weekly table */}
+      {players.map((p, pi) => {
+        const weeks = data[p.player_id]?.data || []
+        if (weeks.length === 0) return null
+        return (
+          <div key={p.player_id} className="space-y-2">
+            <p className="text-xs font-medium" style={{ color: colors[pi] }}>{p.player_name} - Weekly Breakdown</p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-slate-600 border-b border-slate-800">
+                    <th className="text-left py-1 px-1">Week</th>
+                    <th className="text-right py-1 px-1">EPA/play<Tip stat="epa_per_play" /></th>
+                    <th className="text-right py-1 px-1">Total EPA<Tip stat="total_epa" /></th>
+                    <th className="text-right py-1 px-1">Success%<Tip stat="success_rate" /></th>
+                    <th className="text-right py-1 px-1">Avg Yds</th>
+                    <th className="text-right py-1 px-1">Plays</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {weeks.map(w => (
+                    <tr key={w.week} className="border-b border-slate-800/30">
+                      <td className="py-1 px-1 text-slate-400">Week {w.week}</td>
+                      <td className="py-1 px-1 text-right"><EpaColorCell val={w.epa_per_play} /></td>
+                      <td className="py-1 px-1 text-right"><EpaColorCell val={w.total_epa} /></td>
+                      <td className="py-1 px-1 text-right text-slate-300">{w.success_rate}%</td>
+                      <td className="py-1 px-1 text-right text-slate-300">{w.avg_yards}</td>
+                      <td className="py-1 px-1 text-right text-slate-500">{w.plays}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+
 function FormationSection({ season }) {
   const [team, setTeam] = useState('KC')
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(false)
-
-  const TEAMS = ['ARI','ATL','BAL','BUF','CAR','CHI','CIN','CLE','DAL','DEN','DET','GB','HOU','IND','JAX','KC','LAC','LAR','LV','MIA','MIN','NE','NO','NYG','NYJ','PHI','PIT','SEA','SF','TB','TEN','WAS']
 
   useEffect(() => {
     setLoading(true)

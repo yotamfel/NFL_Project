@@ -98,11 +98,11 @@ def epa_rankings(
             HAVING COUNT(*) >= :min_plays
         )
         SELECT pe.*,
-               p.fdv, p.pos,
+               p.fdv, p.pos, p.player_id as pfr_id,
                d.round as draft_round, d.draft_year
         FROM player_epa pe
-        LEFT JOIN players p ON p.player_id = pe.player_id
-        LEFT JOIN draft d ON d.player_id = pe.player_id
+        LEFT JOIN players p ON p.gsis_id = pe.player_id
+        LEFT JOIN draft d ON d.player_id = p.player_id
         ORDER BY epa_per_play DESC
         LIMIT 50
     """)
@@ -618,4 +618,199 @@ def qb_decisions(
         "coverage": f"FTN Charting: {', '.join(str(y) for y in ftn_years)}",
         "decisions": dict(row._mapping) if row else {},
         "read_distribution": [dict(r._mapping) for r in reads],
+    }
+
+
+# ── Custom Explorer ──────────────────────────────────────────────────────────
+
+EXPLORER_FILTERS = {
+    "down": {"col": "down", "type": "select", "options": [1, 2, 3, 4]},
+    "quarter": {"col": "qtr", "type": "select", "options": [1, 2, 3, 4, 5]},
+    "red_zone": {"col": "yardline_100 <= 20", "type": "bool"},
+    "goal_to_go": {"col": "goal_to_go = 1", "type": "bool"},
+    "shotgun": {"col": "shotgun = 1", "type": "bool"},
+    "no_huddle": {"col": "no_huddle = 1", "type": "bool"},
+    "play_type": {"col": "play_type", "type": "select", "options": ["pass", "run"]},
+    "home": {"col": "posteam = home_team", "type": "bool"},
+    "dome": {"col": "roof IN ('dome','closed')", "type": "bool"},
+    "cold": {"col": "temp < 40 AND temp IS NOT NULL", "type": "bool"},
+    "clutch": {"col": "game_seconds_remaining <= 300 AND ABS(score_differential) <= 8", "type": "bool"},
+    "leading": {"col": "score_differential > 0", "type": "bool"},
+    "trailing": {"col": "score_differential < 0", "type": "bool"},
+    "third_down": {"col": "down = 3", "type": "bool"},
+    "deep_pass": {"col": "air_yards >= 20", "type": "bool"},
+    "short_pass": {"col": "air_yards < 10 AND air_yards IS NOT NULL", "type": "bool"},
+}
+
+
+@router.get("/explorer-filters")
+def explorer_filters(user: dict = Depends(require_admin)):
+    return EXPLORER_FILTERS
+
+
+@router.post("/explorer")
+def custom_explorer(
+    body: dict,
+    user: dict = Depends(require_admin),
+):
+    season = body.get("season") or _latest_season()
+    filters = body.get("filters", [])
+    group_by = body.get("group_by", "team")
+    player_id = body.get("player_id")
+    position = body.get("position")
+    team = body.get("team")
+    season_type = body.get("season_type", "REG")
+
+    where_parts = ["season = :season", "epa IS NOT NULL", "play_type IN ('pass','run')"]
+    params = {"season": season}
+
+    if season_type != "ALL":
+        where_parts.append(f"season_type = '{season_type}'")
+
+    if player_id:
+        with engine.connect() as c:
+            gsis = _get_gsis_id(c, player_id)
+        if gsis:
+            where_parts.append("(passer_player_id = :gsis OR rusher_player_id = :gsis OR receiver_player_id = :gsis)")
+            params["gsis"] = gsis
+
+    if team:
+        where_parts.append("posteam = :team")
+        params["team"] = team.upper()
+
+    if position:
+        pos_map = {
+            "QB": "passer_player_id IS NOT NULL AND pass_attempt = 1",
+            "RB": "rusher_player_id IS NOT NULL AND rush_attempt = 1",
+            "WR": "receiver_player_id IS NOT NULL AND pass_attempt = 1",
+        }
+        if position in pos_map:
+            where_parts.append(pos_map[position])
+
+    for f in filters:
+        if f in EXPLORER_FILTERS:
+            spec = EXPLORER_FILTERS[f]
+            if spec["type"] == "bool":
+                where_parts.append(spec["col"])
+            elif spec["type"] == "select" and f"_{f}_val" in body:
+                where_parts.append(f"{spec['col']} = :fval_{f}")
+                params[f"fval_{f}"] = body[f"_{f}_val"]
+
+    where = " AND ".join(where_parts)
+
+    group_sql = {
+        "team": ("posteam", "posteam"),
+        "down": ("down::int::text", "down"),
+        "quarter": ("qtr::int::text", "quarter"),
+        "play_type": ("play_type", "play_type"),
+        "week": ("week::text", "week"),
+        "field_zone": (
+            "CASE WHEN yardline_100 <= 10 THEN 'Goal line (1-10)' "
+            "WHEN yardline_100 <= 20 THEN 'Red zone (11-20)' "
+            "WHEN yardline_100 <= 40 THEN 'Mid-field (21-40)' "
+            "WHEN yardline_100 <= 60 THEN 'Own territory (41-60)' "
+            "ELSE 'Deep own (61+)' END",
+            "field_zone"
+        ),
+        "score_diff": (
+            "CASE WHEN score_differential > 14 THEN 'Up big (14+)' "
+            "WHEN score_differential > 0 THEN 'Leading (1-14)' "
+            "WHEN score_differential = 0 THEN 'Tied' "
+            "WHEN score_differential > -14 THEN 'Trailing (1-14)' "
+            "ELSE 'Down big (14+)' END",
+            "score_diff"
+        ),
+        "pass_depth": (
+            "CASE WHEN air_yards IS NULL THEN 'Run' "
+            "WHEN air_yards < 0 THEN 'Behind LOS' "
+            "WHEN air_yards < 10 THEN 'Short (0-9)' "
+            "WHEN air_yards < 20 THEN 'Medium (10-19)' "
+            "ELSE 'Deep (20+)' END",
+            "pass_depth"
+        ),
+    }
+
+    g_expr, g_alias = group_sql.get(group_by, group_sql["team"])
+
+    sql = text(f"""
+        SELECT {g_expr} as {g_alias},
+               COUNT(*) as plays,
+               ROUND(AVG(epa)::numeric, 3) as epa_per_play,
+               ROUND(SUM(epa)::numeric, 1) as total_epa,
+               ROUND(AVG(CASE WHEN success = 1 THEN 100.0 ELSE 0.0 END)::numeric, 1) as success_rate,
+               ROUND(AVG(yards_gained)::numeric, 1) as avg_yards,
+               ROUND(AVG(CASE WHEN pass_attempt = 1 THEN 1.0 ELSE 0.0 END)::numeric * 100, 1) as pass_pct,
+               ROUND(AVG(wpa)::numeric, 4) as wpa_per_play
+        FROM pbp
+        WHERE {where}
+        GROUP BY {g_expr}
+        HAVING COUNT(*) >= 10
+        ORDER BY epa_per_play DESC
+    """)
+
+    with engine.connect() as c:
+        rows = c.execute(sql, params).fetchall()
+
+    totals_sql = text(f"""
+        SELECT COUNT(*) as plays,
+               ROUND(AVG(epa)::numeric, 3) as epa_per_play,
+               ROUND(SUM(epa)::numeric, 1) as total_epa,
+               ROUND(AVG(CASE WHEN success = 1 THEN 100.0 ELSE 0.0 END)::numeric, 1) as success_rate,
+               ROUND(AVG(yards_gained)::numeric, 1) as avg_yards
+        FROM pbp WHERE {where}
+    """)
+    with engine.connect() as c:
+        totals = c.execute(totals_sql, params).fetchone()
+
+    return {
+        "season": season,
+        "group_by": group_by,
+        "filters": filters,
+        "totals": dict(totals._mapping) if totals else {},
+        "data": [dict(r._mapping) for r in rows],
+    }
+
+
+@router.get("/weekly-trend/{player_id}")
+def weekly_trend(
+    player_id: str,
+    season: Optional[int] = None,
+    user: dict = Depends(require_admin),
+):
+    yr = season or _latest_season()
+    with engine.connect() as c:
+        player = c.execute(text("SELECT player_name, pos, gsis_id FROM players WHERE player_id = :pid"), {"pid": player_id}).fetchone()
+        if not player or not player.gsis_id:
+            return {"error": "Player not found or no PBP mapping"}
+
+        gsis = player.gsis_id
+        pos = player.pos or ""
+
+        if pos in ("QB",):
+            id_col, base = "passer_player_id", "pass_attempt = 1"
+        elif pos in ("RB", "FB", "HB"):
+            id_col, base = "rusher_player_id", "rush_attempt = 1"
+        elif pos in ("WR", "TE"):
+            id_col, base = "receiver_player_id", "pass_attempt = 1 AND receiver_player_id IS NOT NULL"
+        else:
+            return {"error": "Position not supported"}
+
+        rows = c.execute(text(f"""
+            SELECT week,
+                   COUNT(*) as plays,
+                   ROUND(AVG(epa)::numeric, 3) as epa_per_play,
+                   ROUND(SUM(epa)::numeric, 1) as total_epa,
+                   ROUND(AVG(CASE WHEN success = 1 THEN 100.0 ELSE 0.0 END)::numeric, 1) as success_rate,
+                   ROUND(AVG(yards_gained)::numeric, 1) as avg_yards
+            FROM pbp
+            WHERE {id_col} = :pid AND season = :season AND epa IS NOT NULL
+                  AND {base} AND season_type = 'REG'
+            GROUP BY week ORDER BY week
+        """), {"pid": gsis, "season": yr}).fetchall()
+
+    return {
+        "player": player.player_name,
+        "player_id": player_id,
+        "season": yr,
+        "data": [dict(r._mapping) for r in rows],
     }
