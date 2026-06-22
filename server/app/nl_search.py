@@ -1,6 +1,6 @@
 """
 Natural-language search (module 4): translates a free-text question
-(Hebrew or English) into a single read-only SQL query via Claude, validates
+into a single read-only SQL query via Claude, validates
 that it's safe to run, executes it, and returns the rows.
 
 Safety layer: `_validate_sql` rejects anything that isn't a single
@@ -26,8 +26,8 @@ MODEL = "claude-sonnet-4-6"
 ROW_LIMIT = 200
 
 SYSTEM_PROMPT = """\
-You translate natural-language questions about NFL data — asked in Hebrew \
-or English — into a single read-only PostgreSQL query.
+You translate natural-language questions about NFL data into a single \
+read-only PostgreSQL query.
 
 ## Schema (PostgreSQL, all in `public`)
 
@@ -229,7 +229,7 @@ JOIN players p USING (player_id)
 ORDER BY q.avg_cpoe DESC
 LIMIT 5
 
-Question: מי היו 10 המגנים הטובים ביותר לפי סאקים בעונת 2020?
+Question: Who were the top 10 defenders by sacks in 2020?
 SQL:
 SELECT player_name, team, sk
 FROM defense_seasons

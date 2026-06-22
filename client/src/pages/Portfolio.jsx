@@ -407,7 +407,7 @@ export default function Portfolio() {
                 is inaccessible to anyone who doesn't write SQL. Even analysts spend time looking up column names and table relationships.
               </p>
               <p className="text-slate-400 text-xs leading-relaxed mt-2">
-                <span className="text-white font-medium">The solution:</span> Users type questions in plain English (or Hebrew). Claude receives
+                <span className="text-white font-medium">The solution:</span> Users type questions in plain English. Claude receives
                 the full database schema as a system prompt — every table, column, coverage window, and data quirk — and generates a single
                 read-only SQL query. The basic tier returns the SQL and a results table. The Pro tier (in development) adds a second AI pass
                 that analyzes the results: generating a 2-4 sentence insight summary and an auto-fitted chart (bar, line, or scatter).
