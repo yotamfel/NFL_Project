@@ -2,7 +2,7 @@
 etl/build_fdv.py
 ================
 Compute FDV (Fourth & Data Value) — Fourth & Data's proprietary
-position-neutral career value metric.  Replaces Career AV.
+career value metric.  Replaces Career AV.
 
 Algorithm
 ---------
@@ -306,18 +306,20 @@ def build_fdv(engine) -> pd.DataFrame:
     merged['fdv_returns'] = merged['fdv_returns'].fillna(0)
     merged['fdv_total']   = merged['fdv_primary'] + merged['fdv_returns']
 
-    def _career(grp):
-        s    = grp['fdv_total'].values
-        base  = float(s.sum())
-        top3  = sorted(s, reverse=True)[:3]
-        bonus = 0.10 * sum(top3)
-        return round(base + bonus, 1)
+    # Vectorised career aggregation: top-10 seasons at full value, rest at 0.5.
+    # This caps the longevity bonus so an 18-season solid career doesn't
+    # outscore a shorter but more dominant career.
+    merged_s = merged.sort_values(['player_id', 'fdv_total'], ascending=[True, False])
+    merged_s['_rank'] = merged_s.groupby('player_id').cumcount() + 1  # 1 = best season
+    merged_s['_w']    = np.where(merged_s['_rank'] <= 10, 1.0, 0.5)
+    merged_s['_wfdv'] = merged_s['fdv_total'] * merged_s['_w']
 
     career = (
-        merged.groupby('player_id')
-        .apply(_career)
+        merged_s.groupby('player_id')['_wfdv']
+        .sum()
+        .round(1)
         .reset_index()
-        .rename(columns={0: 'fdv'})
+        .rename(columns={'_wfdv': 'fdv'})
     )
     return career
 
@@ -330,16 +332,15 @@ def main():
 
     engine = get_engine()
 
+    # Load players table now, before build_fdv disposes the connection pool.
+    players_df = pd.read_sql('SELECT player_id, player_name, pos FROM players', engine)
+
     print('Computing FDV…')
     career_fdv = build_fdv(engine)
 
     if career_fdv.empty:
         print('No data. Nothing to write.')
         return
-
-    players_df = pd.read_sql(
-        'SELECT player_id, player_name, pos FROM players', engine
-    )
     val = career_fdv.merge(players_df, on='player_id', how='left')
     val = val.sort_values('fdv', ascending=False)
 

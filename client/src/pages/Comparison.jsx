@@ -123,19 +123,19 @@ const TABLE_COLS = {
   passing: [
     { key: 'player_name', label: 'Player' },
     { key: 'g',   label: 'G' },
-    { key: 'yds', label: 'Yards', format: v => v?.toLocaleString() ?? '—' },
+    { key: 'yds', label: 'Yards', format: v => v?.toLocaleString() ?? '-' },
     { key: 'td',  label: 'TD' },
     { key: 'int', label: 'INT' },
-    { key: 'cmp', label: 'Cmp',  format: v => v?.toLocaleString() ?? '—' },
-    { key: 'att', label: 'Att',  format: v => v?.toLocaleString() ?? '—' },
+    { key: 'cmp', label: 'Cmp',  format: v => v?.toLocaleString() ?? '-' },
+    { key: 'att', label: 'Att',  format: v => v?.toLocaleString() ?? '-' },
   ],
   offense: [
     { key: 'player_name', label: 'Player' },
     { key: 'g',        label: 'G' },
-    { key: 'rush_yds', label: 'RushYds', format: v => v?.toLocaleString() ?? '—' },
+    { key: 'rush_yds', label: 'RushYds', format: v => v?.toLocaleString() ?? '-' },
     { key: 'rush_td',  label: 'RushTD' },
     { key: 'rec',      label: 'Rec' },
-    { key: 'rec_yds',  label: 'RecYds',  format: v => v?.toLocaleString() ?? '—' },
+    { key: 'rec_yds',  label: 'RecYds',  format: v => v?.toLocaleString() ?? '-' },
     { key: 'rec_td',   label: 'RecTD' },
   ],
   defense: [
@@ -150,31 +150,31 @@ const TABLE_COLS = {
   kicking: [
     { key: 'player_name', label: 'Player' },
     { key: 'g',         label: 'G' },
-    { key: 'fgm_total', label: 'FGM', format: v => v?.toLocaleString() ?? '—' },
-    { key: 'fga_total', label: 'FGA', format: v => v?.toLocaleString() ?? '—' },
-    { key: 'xpm',       label: 'XPM', format: v => v?.toLocaleString() ?? '—' },
-    { key: 'xpa',       label: 'XPA', format: v => v?.toLocaleString() ?? '—' },
+    { key: 'fgm_total', label: 'FGM', format: v => v?.toLocaleString() ?? '-' },
+    { key: 'fga_total', label: 'FGA', format: v => v?.toLocaleString() ?? '-' },
+    { key: 'xpm',       label: 'XPM', format: v => v?.toLocaleString() ?? '-' },
+    { key: 'xpa',       label: 'XPA', format: v => v?.toLocaleString() ?? '-' },
   ],
   punting: [
     { key: 'player_name', label: 'Player' },
     { key: 'g',      label: 'G' },
     { key: 'pnt',    label: 'Punts' },
-    { key: 'yds',    label: 'Yards',  format: v => v?.toLocaleString() ?? '—' },
-    { key: 'netyds', label: 'NetYds', format: v => v?.toLocaleString() ?? '—' },
+    { key: 'yds',    label: 'Yards',  format: v => v?.toLocaleString() ?? '-' },
+    { key: 'netyds', label: 'NetYds', format: v => v?.toLocaleString() ?? '-' },
   ],
   returns: [
     { key: 'player_name', label: 'Player' },
     { key: 'g',            label: 'G' },
-    { key: 'kick_ret_yds', label: 'KRYds', format: v => v?.toLocaleString() ?? '—' },
+    { key: 'kick_ret_yds', label: 'KRYds', format: v => v?.toLocaleString() ?? '-' },
     { key: 'kick_ret_td',  label: 'KRTD' },
-    { key: 'punt_ret_yds', label: 'PRYds', format: v => v?.toLocaleString() ?? '—' },
+    { key: 'punt_ret_yds', label: 'PRYds', format: v => v?.toLocaleString() ?? '-' },
     { key: 'punt_ret_td',  label: 'PRTD' },
   ],
 }
 
 // Full column sets (all career stats) shown when user toggles "All stats"
-const loc = v => v?.toLocaleString() ?? '—'
-const d1  = v => v != null ? Number(v).toFixed(1) : '—'
+const loc = v => v?.toLocaleString() ?? '-'
+const d1  = v => v != null ? Number(v).toFixed(1) : '-'
 
 const ALL_TABLE_COLS = {
   passing: [
@@ -182,13 +182,13 @@ const ALL_TABLE_COLS = {
     { key: 'g',       label: 'G',      desc: STAT_DEFS.g },
     { key: 'cmp',     label: 'Cmp',    format: loc },
     { key: 'att',     label: 'Att',    format: loc },
-    { key: 'cmp_pct', label: 'Cmp%',   format: (_, r) => r.att ? `${(100*r.cmp/r.att).toFixed(1)}%` : '—' },
+    { key: 'cmp_pct', label: 'Cmp%',   format: (_, r) => r.att ? `${(100*r.cmp/r.att).toFixed(1)}%` : '-' },
     { key: 'yds',     label: 'Yds',    format: loc },
     { key: 'td',      label: 'TD',     desc: STAT_DEFS.td },
     { key: 'int',     label: 'INT',    desc: STAT_DEFS.int },
-    { key: 'y_a',     label: 'Y/A',    desc: STAT_DEFS.y_per_a,  format: (_, r) => r.att ? (r.yds/r.att).toFixed(1) : '—' },
-    { key: 'td_pct',  label: 'TD%',    format: (_, r) => r.att ? `${(100*r.td/r.att).toFixed(1)}%` : '—' },
-    { key: 'int_pct', label: 'INT%',   format: (_, r) => r.att ? `${(100*r.int/r.att).toFixed(1)}%` : '—' },
+    { key: 'y_a',     label: 'Y/A',    desc: STAT_DEFS.y_per_a,  format: (_, r) => r.att ? (r.yds/r.att).toFixed(1) : '-' },
+    { key: 'td_pct',  label: 'TD%',    format: (_, r) => r.att ? `${(100*r.td/r.att).toFixed(1)}%` : '-' },
+    { key: 'int_pct', label: 'INT%',   format: (_, r) => r.att ? `${(100*r.int/r.att).toFixed(1)}%` : '-' },
     { key: 'sk',      label: 'Sacks',  desc: STAT_DEFS.sk },
     { key: '_4qc',    label: '4QC',    desc: STAT_DEFS._4qc },
     { key: 'gwd',     label: 'GWD',    desc: STAT_DEFS.gwd },
@@ -198,16 +198,16 @@ const ALL_TABLE_COLS = {
     { key: 'g',               label: 'G',        desc: STAT_DEFS.g },
     { key: 'rec',             label: 'Rec',       desc: STAT_DEFS.rec },
     { key: 'tgt',             label: 'Tgt',       desc: STAT_DEFS.tgt },
-    { key: 'ctch_pct',        label: 'Ctch%',     desc: STAT_DEFS.ctch_pct,   format: (_, r) => r.tgt ? `${(100*r.rec/r.tgt).toFixed(1)}%` : '—' },
+    { key: 'ctch_pct',        label: 'Ctch%',     desc: STAT_DEFS.ctch_pct,   format: (_, r) => r.tgt ? `${(100*r.rec/r.tgt).toFixed(1)}%` : '-' },
     { key: 'rec_yds',         label: 'RecYds',    format: loc },
     { key: 'rec_td',          label: 'RecTD',     desc: STAT_DEFS.rec_td },
-    { key: 'y_per_r',         label: 'Y/Rec',     desc: STAT_DEFS.y_per_r,    format: (_, r) => r.rec ? (r.rec_yds/r.rec).toFixed(1) : '—' },
-    { key: 'y_per_tgt',       label: 'Y/Tgt',     desc: STAT_DEFS.y_per_tgt,  format: (_, r) => r.tgt ? (r.rec_yds/r.tgt).toFixed(1) : '—' },
+    { key: 'y_per_r',         label: 'Y/Rec',     desc: STAT_DEFS.y_per_r,    format: (_, r) => r.rec ? (r.rec_yds/r.rec).toFixed(1) : '-' },
+    { key: 'y_per_tgt',       label: 'Y/Tgt',     desc: STAT_DEFS.y_per_tgt,  format: (_, r) => r.tgt ? (r.rec_yds/r.tgt).toFixed(1) : '-' },
     { key: 'rec_first_downs', label: 'RecFD',     desc: STAT_DEFS.rec_first_downs },
     { key: 'att',             label: 'RushAtt' },
     { key: 'rush_yds',        label: 'RushYds',   format: loc },
     { key: 'rush_td',         label: 'RushTD',    desc: STAT_DEFS.rush_td },
-    { key: 'ypc',             label: 'Y/Carry',   format: (_, r) => r.att ? (r.rush_yds/r.att).toFixed(1) : '—' },
+    { key: 'ypc',             label: 'Y/Carry',   format: (_, r) => r.att ? (r.rush_yds/r.att).toFixed(1) : '-' },
     { key: 'rush_first_downs',label: 'RushFD',    desc: STAT_DEFS.rush_first_downs },
     { key: 'yscm',            label: 'ScrmYds',   desc: STAT_DEFS.yscm,        format: loc },
     { key: 'fmb',             label: 'Fmb',       desc: STAT_DEFS.fmb },
@@ -234,7 +234,7 @@ const ALL_TABLE_COLS = {
     { key: 'g',           label: 'G',          desc: STAT_DEFS.g },
     { key: 'fgm_total',   label: 'FGM',        desc: STAT_DEFS.fgm_total },
     { key: 'fga_total',   label: 'FGA',        desc: STAT_DEFS.fga_total },
-    { key: 'fg_pct',      label: 'FG%',        format: (_, r) => r.fga_total ? `${(100*r.fgm_total/r.fga_total).toFixed(1)}%` : '—' },
+    { key: 'fg_pct',      label: 'FG%',        format: (_, r) => r.fga_total ? `${(100*r.fgm_total/r.fga_total).toFixed(1)}%` : '-' },
     { key: 'fgm_20_29',   label: 'FGM 20-29',  desc: STAT_DEFS.fgm_20_29 },
     { key: 'fgm_30_39',   label: 'FGM 30-39',  desc: STAT_DEFS.fgm_30_39 },
     { key: 'fgm_40_49',   label: 'FGM 40-49',  desc: STAT_DEFS.fgm_40_49 },
@@ -252,9 +252,9 @@ const ALL_TABLE_COLS = {
     { key: 'g',       label: 'G',          desc: STAT_DEFS.g },
     { key: 'pnt',     label: 'Punts',      desc: STAT_DEFS.pnt },
     { key: 'yds',     label: 'Gross Yds',  format: loc },
-    { key: 'y_per_p', label: 'Y/Punt',     desc: STAT_DEFS.y_per_p,  format: (_, r) => r.pnt ? (r.yds/r.pnt).toFixed(1) : '—' },
+    { key: 'y_per_p', label: 'Y/Punt',     desc: STAT_DEFS.y_per_p,  format: (_, r) => r.pnt ? (r.yds/r.pnt).toFixed(1) : '-' },
     { key: 'netyds',  label: 'Net Yds',    desc: STAT_DEFS.netyds,   format: loc },
-    { key: 'ny_per_p',label: 'Net Y/Punt', desc: STAT_DEFS.ny_per_p, format: (_, r) => r.pnt ? (r.netyds/r.pnt).toFixed(1) : '—' },
+    { key: 'ny_per_p',label: 'Net Y/Punt', desc: STAT_DEFS.ny_per_p, format: (_, r) => r.pnt ? (r.netyds/r.pnt).toFixed(1) : '-' },
     { key: 'tb',      label: 'TB',          desc: STAT_DEFS.tb },
     { key: 'pnt20',   label: 'In20',        desc: STAT_DEFS.pnt20 },
     { key: 'retyds',  label: 'Ret Yds',     desc: STAT_DEFS.retyds,   format: loc },
@@ -265,12 +265,12 @@ const ALL_TABLE_COLS = {
     { key: 'g',              label: 'G',          desc: STAT_DEFS.g },
     { key: 'punt_ret',       label: 'PR',          desc: STAT_DEFS.punt_ret },
     { key: 'punt_ret_yds',   label: 'PR Yds',      desc: STAT_DEFS.punt_ret_yds,   format: loc },
-    { key: 'y_per_pr',       label: 'Y/PR',        desc: STAT_DEFS.y_per_punt_ret, format: (_, r) => r.punt_ret ? (r.punt_ret_yds/r.punt_ret).toFixed(1) : '—' },
+    { key: 'y_per_pr',       label: 'Y/PR',        desc: STAT_DEFS.y_per_punt_ret, format: (_, r) => r.punt_ret ? (r.punt_ret_yds/r.punt_ret).toFixed(1) : '-' },
     { key: 'punt_ret_td',    label: 'PR TD',       desc: STAT_DEFS.punt_ret_td },
     { key: 'punt_ret_lng',   label: 'PR Lng',      desc: STAT_DEFS.punt_ret_lng },
     { key: 'kick_ret',       label: 'KR',          desc: STAT_DEFS.kick_ret },
     { key: 'kick_ret_yds',   label: 'KR Yds',      desc: STAT_DEFS.kick_ret_yds,   format: loc },
-    { key: 'y_per_kr',       label: 'Y/KR',        desc: STAT_DEFS.y_per_kick_ret, format: (_, r) => r.kick_ret ? (r.kick_ret_yds/r.kick_ret).toFixed(1) : '—' },
+    { key: 'y_per_kr',       label: 'Y/KR',        desc: STAT_DEFS.y_per_kick_ret, format: (_, r) => r.kick_ret ? (r.kick_ret_yds/r.kick_ret).toFixed(1) : '-' },
     { key: 'kick_ret_td',    label: 'KR TD',       desc: STAT_DEFS.kick_ret_td },
     { key: 'kick_ret_lng',   label: 'KR Lng',      desc: STAT_DEFS.kick_ret_lng },
     { key: 'apyd',           label: 'All-Purpose', desc: STAT_DEFS.apyd,            format: loc },
@@ -495,11 +495,11 @@ export default function Comparison() {
         <div className="rounded-2xl border border-slate-700/60 p-5 space-y-4"
           style={{ background: 'linear-gradient(160deg, #0f172a 0%, #1e1b2e 100%)' }}>
           <div>
-            <h2 className="text-white font-bold mb-1">FDV — Fourth & Data Value</h2>
+            <h2 className="text-white font-bold mb-1">FDV - Fourth & Data Value</h2>
             <p className="text-slate-400 text-sm leading-relaxed">
               FDV is our proprietary, position-neutral career value metric built entirely
               from the statistics in this platform. It uses era-adjusted z-scores so a
-              great season in 1978 counts the same as a great season in 2018 — an FDV
+              great season in 1978 counts the same as a great season in 2018 - an FDV
               of 90 means roughly the same thing for a QB, a DE, or a kicker.
             </p>
             <p className="text-violet-400 text-xs mt-2">
@@ -696,7 +696,7 @@ export default function Comparison() {
         </div>
       )}
 
-      {/* Career / Season toggle — visible once players are selected */}
+      {/* Career / Season toggle - visible once players are selected */}
       {playerIds.length > 0 && (
         <div className="flex items-center gap-3 flex-wrap">
           <span className="text-xs text-slate-500 uppercase tracking-wider">Comparing:</span>
@@ -806,7 +806,7 @@ export default function Comparison() {
           {user?.is_admin && data && (
             <SocialPostGenerator
               data={data.career}
-              context={`Player comparison: ${data.players?.map(p => p.player_name).join(' vs ')} — ${category} stats`}
+              context={`Player comparison: ${data.players?.map(p => p.player_name).join(' vs ')} - ${category} stats`}
             />
           )}
 
@@ -819,7 +819,7 @@ export default function Comparison() {
                   ? `${compSeason} season`
                   : (seasonFrom || seasonTo)
                     ? `${seasonFrom || '1970'}–${seasonTo || '2025'}`
-                    : 'Career totals'} — {category}
+                    : 'Career totals'} - {category}
               </h2>
               <div className="flex items-center gap-3 flex-wrap">
                 {data.players.map((p, i) => (
@@ -849,7 +849,7 @@ export default function Comparison() {
                   ? `${compSeason} stats`
                   : (seasonFrom || seasonTo)
                     ? `${seasonFrom || '1970'}–${seasonTo || '2025'} stats`
-                    : 'Career stats'} — {category}
+                    : 'Career stats'} - {category}
               </h2>
               <div className="flex rounded-lg overflow-hidden border border-slate-700 text-xs">
                 <button
@@ -865,18 +865,18 @@ export default function Comparison() {
               </div>
             </div>
             <StatTable columns={tableCols} rows={data.career} keyField="player_id"
-              title={`${compSeason ? compSeason : (seasonFrom || seasonTo) ? `${seasonFrom || '1970'}–${seasonTo || '2025'}` : 'Career'} stats — ${category}`} />
+              title={`${compSeason ? compSeason : (seasonFrom || seasonTo) ? `${seasonFrom || '1970'}–${seasonTo || '2025'}` : 'Career'} stats - ${category}`} />
           </div>
         </>
       )}
 
-      {/* Leaderboard — always visible */}
+      {/* Leaderboard - always visible */}
       <div className="bg-slate-800/70 border border-slate-700/60 rounded-2xl p-5">
         <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
           <div>
             <h2 className="text-white font-bold">Top 20 Leaderboard</h2>
             <p className="text-slate-500 text-xs mt-0.5">
-              {isFdvMode ? 'All-time career value' : (compSeason ? `${compSeason} season` : 'Career totals')} — {playerIds.length > 0 ? 'compared players highlighted' : 'add players above to highlight them'}
+              {isFdvMode ? 'All-time career value' : (compSeason ? `${compSeason} season` : 'Career totals')} - {playerIds.length > 0 ? 'compared players highlighted' : 'add players above to highlight them'}
             </p>
           </div>
           <select
@@ -907,7 +907,7 @@ export default function Comparison() {
                 { key: 'best_value', label: STAT_OPTIONS[category]?.find(s => s.key === lbStat)?.label ?? lbStat },
               ]}
               rows={lbData.map((p, i) => ({ ...p, _rank: i + 1 }))}
-              title={isFdvMode ? 'Leaderboard — FDV (Career Value)' : `Leaderboard — ${STAT_OPTIONS[category]?.find(s => s.key === lbStat)?.label ?? lbStat}`}
+              title={isFdvMode ? 'Leaderboard - FDV (Career Value)' : `Leaderboard - ${STAT_OPTIONS[category]?.find(s => s.key === lbStat)?.label ?? lbStat}`}
             />
           <div className="scroll-x"><table className="min-w-full text-sm">
             <thead>
@@ -944,11 +944,11 @@ export default function Comparison() {
                     </td>
                     <td className="py-2 pr-4 text-slate-500 text-xs">{p.pos}</td>
                     <td className="py-2 text-right text-white font-semibold">
-                      {isFdvMode ? (p.fdv?.toLocaleString() ?? '—') : (p.best_value?.toLocaleString() ?? '—')}
+                      {isFdvMode ? (p.fdv?.toLocaleString() ?? '-') : (p.best_value?.toLocaleString() ?? '-')}
                     </td>
                     {isFdvMode && (
                       <td className="py-2 pl-4 text-right text-slate-400 text-xs font-mono">
-                        {p.pos_group ? `#${p.pos_rank} ${p.pos_group}` : '—'}
+                        {p.pos_group ? `#${p.pos_rank} ${p.pos_group}` : '-'}
                       </td>
                     )}
                   </tr>

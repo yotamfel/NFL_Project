@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 
 // Runs `fn` (an async function) whenever `deps` change, and exposes
-// { data, loading, error } — the standard three-state async pattern.
+// { data, loading, error } - the standard three-state async pattern.
 // An AbortController ensures a stale in-flight request never overwrites
 // a newer result when deps change quickly (e.g. typing in a search box).
 export function useApi(fn, deps) {

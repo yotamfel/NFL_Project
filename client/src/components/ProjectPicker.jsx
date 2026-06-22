@@ -68,7 +68,7 @@ export default function ProjectPicker({ type, label, data, onDone }) {
       <p className="text-xs font-semibold text-slate-400">Save to projects:</p>
 
       {projects.length === 0 && (
-        <p className="text-slate-600 text-xs">No projects yet — create one below</p>
+        <p className="text-slate-600 text-xs">No projects yet - create one below</p>
       )}
 
       <div className="space-y-1.5">

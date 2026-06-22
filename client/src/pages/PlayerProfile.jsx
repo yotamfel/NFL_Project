@@ -18,9 +18,9 @@ import ProjectPicker from '../components/ProjectPicker'
 import { STAT_DEFS } from '../utils/statDefinitions'
 import AiFeedback from '../components/AiFeedback'
 
-const pct1  = v => v != null ? `${Number(v).toFixed(1)}%`   : '—'
-const dec1  = v => v != null ? Number(v).toFixed(1)          : '—'
-const loc   = v => v?.toLocaleString() ?? '—'
+const pct1  = v => v != null ? `${Number(v).toFixed(1)}%`   : '-'
+const dec1  = v => v != null ? Number(v).toFixed(1)          : '-'
+const loc   = v => v?.toLocaleString() ?? '-'
 
 // Each category has { basic: [...cols], advanced: [...cols] }
 const COLS = {
@@ -31,7 +31,7 @@ const COLS = {
       { key: 'g',       label: 'G',    desc: STAT_DEFS.g },
       { key: 'cmp',     label: 'Cmp',  desc: STAT_DEFS.cmp },
       { key: 'att',     label: 'Att',  desc: STAT_DEFS.att },
-      { key: 'cmp_pct', label: 'Cmp%', format: (_, r) => (r.att && r.cmp != null) ? `${(100 * r.cmp / r.att).toFixed(1)}%` : '—' },
+      { key: 'cmp_pct', label: 'Cmp%', format: (_, r) => (r.att && r.cmp != null) ? `${(100 * r.cmp / r.att).toFixed(1)}%` : '-' },
       { key: 'yds',     label: 'Yds',  desc: STAT_DEFS.yds,  format: loc },
       { key: 'td',      label: 'TD',   desc: STAT_DEFS.td },
       { key: 'int',     label: 'INT',  desc: STAT_DEFS.int },
@@ -113,7 +113,7 @@ const COLS = {
       { key: 'g',         label: 'G',    desc: STAT_DEFS.g },
       { key: 'fgm_total', label: 'FGM',  desc: STAT_DEFS.fgm_total },
       { key: 'fga_total', label: 'FGA',  desc: STAT_DEFS.fga_total },
-      { key: 'fg_pct',    label: 'FG%',  format: (_, r) => r.fga_total ? `${(100 * r.fgm_total / r.fga_total).toFixed(1)}%` : '—' },
+      { key: 'fg_pct',    label: 'FG%',  format: (_, r) => r.fga_total ? `${(100 * r.fgm_total / r.fga_total).toFixed(1)}%` : '-' },
       { key: 'xpm',       label: 'XPM',  desc: STAT_DEFS.xpm },
       { key: 'xpa',       label: 'XPA',  desc: STAT_DEFS.xpa },
     ],
@@ -320,24 +320,24 @@ function InjurySection({ playerId, accentColor }) {
                   <td className="py-2 pr-4 text-center text-slate-400 text-xs">
                     {row.games_played != null
                       ? `${row.games_played}/${row.games_expected}`
-                      : <span className="text-slate-700">—</span>}
+                      : <span className="text-slate-700">-</span>}
                   </td>
                   <td className="py-2 pr-4 text-center">
                     {missedDisplay > 0
                       ? <span className="font-bold text-red-400">
                           {missedDisplay}{showEst ? <sup className="text-slate-500 font-normal ml-0.5">†</sup> : null}
                         </span>
-                      : <span className="text-slate-700">—</span>}
+                      : <span className="text-slate-700">-</span>}
                   </td>
                   <td className="py-2 pr-4 text-center">
                     {row.games_doubtful > 0
                       ? <span className="font-semibold text-orange-400">{row.games_doubtful}</span>
-                      : <span className="text-slate-700">—</span>}
+                      : <span className="text-slate-700">-</span>}
                   </td>
                   <td className="py-2 pr-4 text-center">
                     {row.games_questionable > 0
                       ? <span className="text-amber-400">{row.games_questionable}</span>
-                      : <span className="text-slate-700">—</span>}
+                      : <span className="text-slate-700">-</span>}
                   </td>
                   <td className="py-2">
                     <div className="flex flex-wrap gap-1">
@@ -356,7 +356,7 @@ function InjurySection({ playerId, accentColor }) {
       </div>
       <p className="text-xs text-slate-600">
         G = games played / expected. Missed = games listed Out on official injury report.
-        {hasEst && <> <sup>†</sup> estimated from games played — player likely on IR.</>}
+        {hasEst && <> <sup>†</sup> estimated from games played - player likely on IR.</>}
         {' '}Seasons with 4+ missed games show red bands on career charts.
       </p>
     </div>
@@ -373,9 +373,9 @@ function AdvReceivingSection({ playerId, pos, accentColor }) {
   if (loading) return null
   if (!data || data.length === 0) return null
 
-  const fmt1 = v => v != null ? Number(v).toFixed(1) : '—'
-  const fmt2 = v => v != null ? Number(v).toFixed(2) : '—'
-  const fmtPct = v => v != null ? `${(Number(v)*100).toFixed(1)}%` : '—'
+  const fmt1 = v => v != null ? Number(v).toFixed(1) : '-'
+  const fmt2 = v => v != null ? Number(v).toFixed(2) : '-'
+  const fmtPct = v => v != null ? `${(Number(v)*100).toFixed(1)}%` : '-'
 
   const showTip = (e, text) => {
     const r = e.currentTarget.getBoundingClientRect()
@@ -384,16 +384,16 @@ function AdvReceivingSection({ playerId, pos, accentColor }) {
 
   const cols = [
     { key: 'season',     label: 'Season' },
-    { key: 'adot',       label: 'ADOT',    desc: 'Average Depth of Target — how deep (yards) the ball travels on passes thrown to this receiver.',         format: fmt1 },
-    { key: 'yac_r',      label: 'YAC/Rec', desc: 'Yards After Catch per reception — yards gained after the ball is caught.',                               format: fmt1 },
-    { key: 'ybc_r',      label: 'YBC/Rec', desc: 'Yards Before Catch per reception — air yards on completions only.',                                      format: fmt1 },
-    { key: 'brk_tkl',    label: 'BrkTkl',  desc: 'Broken Tackles — number of tackle attempts the player evaded after the catch.',                          format: v => v ?? '—' },
-    { key: 'drop',       label: 'Drops',   desc: 'Dropped Passes — catchable targets that were not held.',                                                  format: v => v ?? '—' },
-    { key: 'drop_pct',   label: 'Drop%',   desc: 'Drop Percentage — drops divided by catchable targets. Lower is better.',                                  format: fmtPct },
+    { key: 'adot',       label: 'ADOT',    desc: 'Average Depth of Target - how deep (yards) the ball travels on passes thrown to this receiver.',         format: fmt1 },
+    { key: 'yac_r',      label: 'YAC/Rec', desc: 'Yards After Catch per reception - yards gained after the ball is caught.',                               format: fmt1 },
+    { key: 'ybc_r',      label: 'YBC/Rec', desc: 'Yards Before Catch per reception - air yards on completions only.',                                      format: fmt1 },
+    { key: 'brk_tkl',    label: 'BrkTkl',  desc: 'Broken Tackles - number of tackle attempts the player evaded after the catch.',                          format: v => v ?? '-' },
+    { key: 'drop',       label: 'Drops',   desc: 'Dropped Passes - catchable targets that were not held.',                                                  format: v => v ?? '-' },
+    { key: 'drop_pct',   label: 'Drop%',   desc: 'Drop Percentage - drops divided by catchable targets. Lower is better.',                                  format: fmtPct },
     { key: 'tgt_rating', label: 'TgtRtg',  desc: 'Passer Rating when this player is the intended target (0–158.3 scale).',                                 format: fmt1 },
     { key: 'avg_sep',    label: 'Sep',     desc: 'Avg Separation (ft) from the nearest defender at the moment of the throw. Higher = more open. (NGS)',    format: fmt2 },
     { key: 'avg_cushion',label: 'Cush',    desc: 'Avg Cushion (ft) between receiver and corner at the snap. Higher = more room to work. (NGS)',            format: fmt2 },
-    { key: 'yac_oe',     label: 'YAC+',    desc: 'YAC Above Expectation per reception — positive means the player gains more YAC than models predict. (NGS)', format: fmt2 },
+    { key: 'yac_oe',     label: 'YAC+',    desc: 'YAC Above Expectation per reception - positive means the player gains more YAC than models predict. (NGS)', format: fmt2 },
   ]
 
   return (
@@ -442,7 +442,7 @@ function AdvReceivingSection({ playerId, pos, accentColor }) {
               <tr key={row.season} className="border-t border-slate-800/60 hover:bg-slate-800/30 transition-colors">
                 {cols.map((c, i) => (
                   <td key={c.key} className={`py-2 px-2 ${i === 0 ? 'text-slate-300 font-medium' : 'text-right text-white font-semibold'}`}>
-                    {c.format ? c.format(row[c.key]) : (row[c.key] ?? '—')}
+                    {c.format ? c.format(row[c.key]) : (row[c.key] ?? '-')}
                   </td>
                 ))}
               </tr>
@@ -534,9 +534,9 @@ function SnapCountsSection({ playerId, pos, accentColor, playerName }) {
       {weeks.length > 0 && (
         <div>
           <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">
-            {selectedSeason} — {snapLabel} by week
+            {selectedSeason} - {snapLabel} by week
           </p>
-          <ExportableChart title={`${playerName} — ${snapLabel} ${selectedSeason} by week`}>
+          <ExportableChart title={`${playerName} - ${snapLabel} ${selectedSeason} by week`}>
             <ResponsiveContainer width="100%" height={160}>
               <BarChart data={weeks} margin={{ top: 0, right: 8, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
@@ -568,9 +568,9 @@ function SnapCountsSection({ playerId, pos, accentColor, playerName }) {
       {careerBars.length > 1 && (
         <div>
           <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">
-            Career — avg {snapLabel} per season
+            Career - avg {snapLabel} per season
           </p>
-          <ExportableChart title={`${playerName} — ${snapLabel} career`}>
+          <ExportableChart title={`${playerName} - ${snapLabel} career`}>
             <ResponsiveContainer width="100%" height={120}>
               <BarChart data={careerBars} margin={{ top: 0, right: 8, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
@@ -616,9 +616,9 @@ function NgsSection({ playerId, pos, accentColor }) {
   const rows = isQB ? (data?.passing ?? []) : (data?.rushing ?? [])
   if (!rows.length) return null
 
-  const dec2 = v => v != null ? Number(v).toFixed(2) : '—'
-  const dec1 = v => v != null ? Number(v).toFixed(1) : '—'
-  const pct1 = v => v != null ? `${Number(v).toFixed(1)}%` : '—'
+  const dec2 = v => v != null ? Number(v).toFixed(2) : '-'
+  const dec1 = v => v != null ? Number(v).toFixed(1) : '-'
+  const pct1 = v => v != null ? `${Number(v).toFixed(1)}%` : '-'
 
   const showTip = (e, text) => {
     const r = e.currentTarget.getBoundingClientRect()
@@ -627,21 +627,21 @@ function NgsSection({ playerId, pos, accentColor }) {
 
   const passingCols = [
     { key: 'season',          label: 'Season' },
-    { key: 'avg_ttt',         label: 'TT',      desc: 'Avg Time to Throw (sec) — how long the QB holds the ball before releasing. Lower = quicker release.',                                                    format: dec2 },
-    { key: 'avg_iay',         label: 'IAY',     desc: 'Avg Intended Air Yards — average depth of all pass attempts (completed or not). Measures how deep the QB throws.',                                       format: dec1 },
-    { key: 'avg_cay',         label: 'CAY',     desc: 'Avg Completed Air Yards — air yards on completions only. Compared to IAY, shows how much the QB converts deep attempts.',                               format: dec1 },
-    { key: 'avg_adot_sticks', label: 'ADOTS',   desc: 'Avg Air Yards to the Sticks — how far past (positive) or short of (negative) the first-down marker the QB targets.',                                    format: dec1 },
-    { key: 'aggressiveness',  label: 'Aggr%',   desc: 'Aggressiveness — % of throws into tight windows (≤1 yard of separation). Higher = more willing to test the defense.',                                   format: pct1 },
-    { key: 'cpoe',            label: 'CPOE',    desc: 'Completion % Over Expected — how much better or worse the QB completes passes vs. model predictions based on throw difficulty. Best single accuracy metric.', format: dec2 },
-    { key: 'max_air_dist',    label: 'MaxDist', desc: 'Max Completed Air Distance — the longest completed pass (air yards) in a single game that season.',                                                      format: dec1 },
+    { key: 'avg_ttt',         label: 'TT',      desc: 'Avg Time to Throw (sec) - how long the QB holds the ball before releasing. Lower = quicker release.',                                                    format: dec2 },
+    { key: 'avg_iay',         label: 'IAY',     desc: 'Avg Intended Air Yards - average depth of all pass attempts (completed or not). Measures how deep the QB throws.',                                       format: dec1 },
+    { key: 'avg_cay',         label: 'CAY',     desc: 'Avg Completed Air Yards - air yards on completions only. Compared to IAY, shows how much the QB converts deep attempts.',                               format: dec1 },
+    { key: 'avg_adot_sticks', label: 'ADOTS',   desc: 'Avg Air Yards to the Sticks - how far past (positive) or short of (negative) the first-down marker the QB targets.',                                    format: dec1 },
+    { key: 'aggressiveness',  label: 'Aggr%',   desc: 'Aggressiveness - % of throws into tight windows (≤1 yard of separation). Higher = more willing to test the defense.',                                   format: pct1 },
+    { key: 'cpoe',            label: 'CPOE',    desc: 'Completion % Over Expected - how much better or worse the QB completes passes vs. model predictions based on throw difficulty. Best single accuracy metric.', format: dec2 },
+    { key: 'max_air_dist',    label: 'MaxDist', desc: 'Max Completed Air Distance - the longest completed pass (air yards) in a single game that season.',                                                      format: dec1 },
   ]
 
   const rushingCols = [
     { key: 'season',       label: 'Season' },
-    { key: 'efficiency',   label: 'Eff',    desc: 'NGS Rushing Efficiency Score — composite metric measuring how efficiently the RB uses blocks and hits gaps.',                                              format: dec2 },
-    { key: 'avg_tlos',     label: 'TLOS',   desc: 'Avg Time to Line of Scrimmage (sec) — how quickly the RB reaches the LOS. Lower can indicate decisiveness.',                                             format: dec2 },
-    { key: 'ryoe_per_att', label: 'RYOE/A', desc: 'Rush Yards Over Expected per Attempt — yards gained above what an average back would given the same blocking. Best single metric for true RB impact.',    format: dec2 },
-    { key: 'rush_pct_oe',  label: 'RPOE%',  desc: 'Rush % Over Expected — similar to RYOE but expressed as a rate rather than raw yards.',                                                                   format: dec1 },
+    { key: 'efficiency',   label: 'Eff',    desc: 'NGS Rushing Efficiency Score - composite metric measuring how efficiently the RB uses blocks and hits gaps.',                                              format: dec2 },
+    { key: 'avg_tlos',     label: 'TLOS',   desc: 'Avg Time to Line of Scrimmage (sec) - how quickly the RB reaches the LOS. Lower can indicate decisiveness.',                                             format: dec2 },
+    { key: 'ryoe_per_att', label: 'RYOE/A', desc: 'Rush Yards Over Expected per Attempt - yards gained above what an average back would given the same blocking. Best single metric for true RB impact.',    format: dec2 },
+    { key: 'rush_pct_oe',  label: 'RPOE%',  desc: 'Rush % Over Expected - similar to RYOE but expressed as a rate rather than raw yards.',                                                                   format: dec1 },
     { key: 'pct_8box',     label: '8-Box%', desc: '% of rush attempts where 8+ defenders were in the box. Higher = the offense faced stacked fronts, making rushing harder.',                               format: pct1 },
   ]
 
@@ -658,7 +658,7 @@ function NgsSection({ playerId, pos, accentColor }) {
   ]
   const chartLines = isQB ? passingLines : rushingLines
 
-  const title = isQB ? 'Next Gen Stats — Passing' : 'Next Gen Stats — Rushing'
+  const title = isQB ? 'Next Gen Stats - Passing' : 'Next Gen Stats - Rushing'
 
   return (
     <div className="bg-slate-800/70 border border-slate-700/60 rounded-2xl p-5 space-y-4">
@@ -696,7 +696,7 @@ function NgsSection({ playerId, pos, accentColor }) {
                 {cols.map((c, i) => (
                   <td key={c.key}
                     className={`py-2 px-2 ${i === 0 ? 'text-slate-300 font-medium' : 'text-right text-white font-semibold'}`}>
-                    {c.format ? c.format(row[c.key]) : (row[c.key] ?? '—')}
+                    {c.format ? c.format(row[c.key]) : (row[c.key] ?? '-')}
                   </td>
                 ))}
               </tr>
@@ -834,7 +834,7 @@ export default function PlayerProfile() {
   const { savePlayer, removePlayer, isPlayerSaved } = useUser()
   const saved = isPlayerSaved(player.player_id)
 
-  // Priority order per position group — first matching category floats to top
+  // Priority order per position group - first matching category floats to top
   const CAT_PRIORITY = {
     QB: ['passing', 'offense', 'defense', 'returns', 'kicking', 'punting'],
     RB: ['offense', 'returns', 'defense', 'passing', 'kicking', 'punting'],
@@ -1075,12 +1075,12 @@ export default function PlayerProfile() {
                   {chartGroups.map((lines, i) => (
                     <SelectableChart key={i} data={cat.seasons} xKey="season"
                       defaultLines={lines} availableStats={availableStats} injuryMap={injuryMap}
-                      exportPrefix={`${player.player_name} — ${cat.category}`} />
+                      exportPrefix={`${player.player_name} - ${cat.category}`} />
                   ))}
                 </div>
               )
             })()}
-            <StatTable columns={cols} rows={cat.seasons} keyField="season" title={`${player.player_name} — ${cat.category}`} />
+            <StatTable columns={cols} rows={cat.seasons} keyField="season" title={`${player.player_name} - ${cat.category}`} />
 
             {cat.career && (
               <div className="rounded-xl px-4 py-3 text-sm text-slate-400"
@@ -1104,7 +1104,7 @@ export default function PlayerProfile() {
       {user?.is_admin && profile?.categories?.length > 0 && (
         <SocialPostGenerator
           data={profile.categories.flatMap(cat => cat.career ? [cat.career] : [])}
-          context={`Player Profile — ${player.player_name} (${player.pos})`}
+          context={`Player Profile - ${player.player_name} (${player.pos})`}
         />
       )}
 

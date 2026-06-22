@@ -33,7 +33,7 @@ export default function Feedback() {
     <div className="max-w-2xl mx-auto">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-white">Feedback</h1>
-        <p className="text-slate-400 text-sm mt-1">Help us improve — report bugs, suggest features, or share any thoughts.</p>
+        <p className="text-slate-400 text-sm mt-1">Help us improve - report bugs, suggest features, or share any thoughts.</p>
       </div>
 
       {status === 'sent' ? (

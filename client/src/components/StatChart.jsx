@@ -64,8 +64,8 @@ function BookmarkIcon({ filled }) {
 }
 
 // lines = [{dataKey, label, color}]
-// injuryMap = { season: games_missed } — seasons with 4+ missed games get a red marker
-// exportPrefix = prepended to line labels in the exported PNG title (e.g. "Patrick Mahomes — passing")
+// injuryMap = { season: games_missed } - seasons with 4+ missed games get a red marker
+// exportPrefix = prepended to line labels in the exported PNG title (e.g. "Patrick Mahomes - passing")
 // hideActions = true in dashboard context (no save/download buttons shown)
 export function CareerLineChart({ data, xKey, lines, injuryMap = {}, height = 260, exportPrefix, hideActions, fill }) {
   const wrapperRef = useRef(null)
@@ -77,14 +77,14 @@ export function CareerLineChart({ data, xKey, lines, injuryMap = {}, height = 26
     .map(([s]) => Number(s))
 
   const title = exportPrefix
-    ? `${exportPrefix} — ${lines.map(l => l.label).join(' / ')}`
+    ? `${exportPrefix} - ${lines.map(l => l.label).join(' / ')}`
     : lines.map(l => l.label).join(' / ')
 
   const isSaved = isChartSaved?.(title) ?? false
 
   const handleExport = () => {
     if (!wrapperRef.current) return
-    const filename = `${title.replace(/[^a-z0-9 \-—]/gi, '').replace(/\s+/g, '_')}.png`
+    const filename = `${title.replace(/[^a-z0-9 \--]/gi, '').replace(/\s+/g, '_')}.png`
     exportChartAsPng(wrapperRef.current, title, filename)
   }
 
@@ -153,7 +153,7 @@ export function CareerLineChart({ data, xKey, lines, injuryMap = {}, height = 26
 }
 
 // Generic wrapper that adds a hover download button to any chart
-// chartData = { chartType, config, data } — when provided, also shows a save button
+// chartData = { chartType, config, data } - when provided, also shows a save button
 export function ExportableChart({ title, filename, children, chartData }) {
   const wrapperRef = useRef(null)
   const { saveChart, removeChart, isChartSaved } = useUser() || {}
@@ -164,7 +164,7 @@ export function ExportableChart({ title, filename, children, chartData }) {
   const handleExport = () => {
     if (!wrapperRef.current) return
     const fn = filename
-      || `${(title || 'chart').replace(/[^a-z0-9 \-—]/gi, '').replace(/\s+/g, '_')}.png`
+      || `${(title || 'chart').replace(/[^a-z0-9 \--]/gi, '').replace(/\s+/g, '_')}.png`
     exportChartAsPng(wrapperRef.current, title, fn)
   }
 
@@ -201,7 +201,7 @@ export function ExportableChart({ title, filename, children, chartData }) {
   )
 }
 
-// data = [{name, value, color?}, ...] — one entry per player, all for the same metric
+// data = [{name, value, color?}, ...] - one entry per player, all for the same metric
 export function MetricBarChart({ title, data, colors }) {
   return (
     <ExportableChart title={title}>

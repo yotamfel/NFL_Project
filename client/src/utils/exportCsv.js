@@ -15,5 +15,5 @@ export function exportTableAsCsv(columns, rows, filename = 'data.csv') {
 }
 
 export function csvFilename(title) {
-  return `${(title || 'data').replace(/[^a-z0-9 \-—]/gi, '').replace(/\s+/g, '_')}.csv`
+  return `${(title || 'data').replace(/[^a-z0-9 \--]/gi, '').replace(/\s+/g, '_')}.csv`
 }

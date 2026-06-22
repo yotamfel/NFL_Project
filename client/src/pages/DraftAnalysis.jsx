@@ -189,7 +189,7 @@ function CriterionBuilder({ value, onChange, onAdd, mode }) {
           </select>
         </div>
 
-        {/* Position — required */}
+        {/* Position - required */}
         <div>
           <p className={labelCls}>Position <span className="text-rose-500">*</span></p>
           <select value={value.pos}
@@ -334,7 +334,7 @@ function SystemRecommendation({ def, mode, onApply }) {
 
       <p className="text-xs text-slate-400 leading-relaxed">
         Among <span className="text-white font-semibold">{stats.count}</span> {roundLabel}{posLabel} picks
-        ({yearNote}≥4 seasons elapsed) — <span className="text-slate-300">{statName}</span>:
+        ({yearNote}≥4 seasons elapsed) - <span className="text-slate-300">{statName}</span>:
         avg = <span className="text-white font-semibold">{stats.avg}</span>,
         median = <span className="text-white font-semibold">{stats.p50}</span>.
         {filterNote && <span className="text-slate-600"> {filterNote}</span>}
@@ -407,9 +407,9 @@ function DraftScatter({ results, yKey = 'fdv', statLabel: yLabel }) {
   return (
     <div className="rounded-2xl border border-slate-700/60 bg-slate-900/60 p-5">
       <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-4">
-        Scatter — Round vs {yLabel}
+        Scatter - Round vs {yLabel}
       </p>
-      <ExportableChart title={`Draft — Round vs ${yLabel}`}>
+      <ExportableChart title={`Draft - Round vs ${yLabel}`}>
         <ResponsiveContainer width="100%" height={260}>
           <ScatterChart margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
@@ -510,7 +510,7 @@ function RankingChart({ ranked, isSteal, selectedCriteria }) {
     <div className="rounded-2xl border border-slate-700/60 bg-slate-900/60 p-5">
       <div className="flex items-center gap-2 mb-1">
         <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 flex-1">
-          {label} Ranking — top {top.length}
+          {label} Ranking - top {top.length}
         </p>
         <button
           onClick={() => setShowInfo(v => !v)}
@@ -525,16 +525,16 @@ function RankingChart({ ranked, isSteal, selectedCriteria }) {
           <p className="text-slate-200 font-semibold text-sm">How the {label} is calculated</p>
           <p>
             Each player is scored across <span className="text-white">every criterion you combined</span> (including FDV, which is always included).
-            For each stat, we compute how many standard deviations the player is above or below the <span className="text-white">average of all players in this result set</span> — this is called a <span className="text-white">z-score</span>.
+            For each stat, we compute how many standard deviations the player is above or below the <span className="text-white">average of all players in this result set</span> - this is called a <span className="text-white">z-score</span>.
           </p>
           <p>
             {isSteal
-              ? <>A player who dominated in <em>every</em> criterion — e.g. high FDV <em>and</em> high passing yards for a Round 5+ pick — gets a high average z-score. That makes them the <span className="text-white">biggest steal</span>.</>
-              : <>A player who underperformed in <em>every</em> criterion — e.g. low FDV <em>and</em> low passing yards for a Round 1–2 pick — gets a very negative average z-score. That makes them the <span className="text-white">biggest bust</span>.</>
+              ? <>A player who dominated in <em>every</em> criterion - e.g. high FDV <em>and</em> high passing yards for a Round 5+ pick - gets a high average z-score. That makes them the <span className="text-white">biggest steal</span>.</>
+              : <>A player who underperformed in <em>every</em> criterion - e.g. low FDV <em>and</em> low passing yards for a Round 1–2 pick - gets a very negative average z-score. That makes them the <span className="text-white">biggest bust</span>.</>
             }
           </p>
           <p>
-            Finally, the composite z-scores are <span className="text-white">normalised to 0–100</span> within this result set, so the {isSteal ? 'best steal' : 'biggest bust'} always shows 100 and the lowest-ranked player always shows 0. The score is <span className="text-white">relative to this specific query</span> — not an all-time absolute ranking.
+            Finally, the composite z-scores are <span className="text-white">normalised to 0–100</span> within this result set, so the {isSteal ? 'best steal' : 'biggest bust'} always shows 100 and the lowest-ranked player always shows 0. The score is <span className="text-white">relative to this specific query</span> - not an all-time absolute ranking.
           </p>
           <p className="text-slate-600">
             All criteria are weighted equally. FDV is always included as one component even if you didn't add it as an explicit criterion, since it is our position-neutral proxy for overall career quality.
@@ -564,14 +564,14 @@ function RankingChart({ ranked, isSteal, selectedCriteria }) {
                     {p.pos}{p.draft_pos && p.draft_pos !== p.pos ? ` (drafted ${p.draft_pos})` : ''} · Rd {p.round}, Pick {p.pick} · {p.draft_year} · {p.team}
                   </p>
                   <p className="text-slate-400">
-                    FDV: <span className="text-white font-semibold">{p.fdv != null ? Math.round(p.fdv) : '—'}</span>
+                    FDV: <span className="text-white font-semibold">{p.fdv != null ? Math.round(p.fdv) : '-'}</span>
                   </p>
                   {selectedCriteria.map((c, i) => {
                     if (c.category === 'fdv') return null
                     const val = p[`crit_${i}_value`]
                     return (
                       <p key={i} className="text-slate-400">
-                        {statLabel(c)}: <span className="text-white font-semibold">{val?.toLocaleString() ?? '—'}</span>
+                        {statLabel(c)}: <span className="text-white font-semibold">{val?.toLocaleString() ?? '-'}</span>
                       </p>
                     )
                   })}
@@ -703,7 +703,7 @@ function StealBustPanel({ mode }) {
     .map(c => ({
       key:    `crit_${c.idx}_value`,
       label:  statLabel(c),
-      format: v => v?.toLocaleString() ?? '—',
+      format: v => v?.toLocaleString() ?? '-',
     }))
   const rankCol  = { key: '_rank',  label: '#' }
   const scoreCol = { key: '_score', label: isSteal ? 'Steal Score' : 'Bust Score', format: v => `${v}/100` }
@@ -747,7 +747,7 @@ function StealBustPanel({ mode }) {
             </span>
           </div>
           <CriterionBuilder value={builder} onChange={setBuilder} onAdd={addCriterion} mode={mode} />
-          {/* Live recommendation preview — helps user decide what threshold to enter */}
+          {/* Live recommendation preview - helps user decide what threshold to enter */}
           <SystemRecommendation
             def={builder}
             mode={mode}
@@ -761,7 +761,7 @@ function StealBustPanel({ mode }) {
         <div className="rounded-2xl border border-slate-700/60 bg-slate-900/60 p-5 space-y-3">
           <div className="flex items-center gap-3 flex-wrap">
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 flex-1">
-              Saved criteria — select to combine
+              Saved criteria - select to combine
             </p>
             {firstSel && (
               <p className="text-xs text-slate-600">
@@ -880,7 +880,7 @@ function StealBustPanel({ mode }) {
           <DraftScatter results={ranked} yKey="fdv" statLabel="FDV" />
           <div className={`bg-slate-800/70 border rounded-2xl p-5 ${C.resBorder}`}>
             <p className="text-xs text-slate-600 mb-3">
-              {ranked.length} players found — sorted by {isSteal ? 'Steal' : 'Bust'} Score
+              {ranked.length} players found - sorted by {isSteal ? 'Steal' : 'Bust'} Score
             </p>
             <StatTable columns={resultCols} rows={ranked} keyField="player_name"
               title={isSteal ? 'Draft Steals' : 'Draft Busts'} />
@@ -929,11 +929,11 @@ export default function DraftAnalysis() {
         <div className="rounded-2xl border border-slate-700/60 p-5 space-y-4"
           style={{ background: 'linear-gradient(160deg, #0f172a 0%, #1e1b2e 100%)' }}>
           <div>
-            <h2 className="text-white font-bold mb-1">FDV — Fourth & Data Value</h2>
+            <h2 className="text-white font-bold mb-1">FDV - Fourth & Data Value</h2>
             <p className="text-slate-400 text-sm leading-relaxed">
               FDV is our proprietary, position-neutral career value metric built entirely
               from the statistics in this platform. It uses era-adjusted z-scores so a
-              great season in 1978 counts the same as a great season in 2018 — an FDV
+              great season in 1978 counts the same as a great season in 2018 - an FDV
               of 90 means roughly the same thing for a QB, a DE, or a kicker.
             </p>
             <p className="text-violet-400 text-xs mt-2">
@@ -1020,7 +1020,7 @@ export default function DraftAnalysis() {
       {user?.is_admin && picks?.length > 0 && (
         <SocialPostGenerator
           data={picks}
-          context={`Draft Analysis — ${filters.year || 'All Years'} ${filters.pos || 'All Positions'} ${filters.team || 'All Teams'}`}
+          context={`Draft Analysis - ${filters.year || 'All Years'} ${filters.pos || 'All Positions'} ${filters.team || 'All Teams'}`}
         />
       )}
     </div>

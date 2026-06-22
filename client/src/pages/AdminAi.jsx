@@ -2,9 +2,9 @@ import { api } from '../api'
 import { useApi } from '../hooks/useApi'
 import { Loading, ErrorMsg } from '../components/Status'
 
-const fmt = v => v != null ? Number(v).toLocaleString() : '—'
-const fmtMs = v => v != null ? `${Number(v).toLocaleString()}ms` : '—'
-const fmtDate = s => s ? new Date(s).toLocaleString() : '—'
+const fmt = v => v != null ? Number(v).toLocaleString() : '-'
+const fmtMs = v => v != null ? `${Number(v).toLocaleString()}ms` : '-'
+const fmtDate = s => s ? new Date(s).toLocaleString() : '-'
 
 const FEATURE_LABEL = {
   nl_search:              'Smart Search',
@@ -149,7 +149,7 @@ export default function AdminAi() {
                 <tr key={r.id} className="border-t border-slate-800/40">
                   <td className="py-1.5 pr-3 text-slate-500 whitespace-nowrap">{fmtDate(r.created_at)}</td>
                   <td className="py-1.5 pr-3 text-violet-400">{FEATURE_LABEL[r.feature] ?? r.feature}</td>
-                  <td className="py-1.5 pr-3 text-slate-300 max-w-xs truncate">{r.input_preview ?? '—'}</td>
+                  <td className="py-1.5 pr-3 text-slate-300 max-w-xs truncate">{r.input_preview ?? '-'}</td>
                   <td className="py-1.5 pr-3 text-slate-500">{fmt(r.tokens_used)}</td>
                   <td className="py-1.5 pr-3 text-slate-500">{fmtMs(r.response_ms)}</td>
                   <td className="py-1.5 pr-3">
@@ -158,7 +158,7 @@ export default function AdminAi() {
                       : <span className="text-rose-400" title={r.error_msg}>✗</span>}
                   </td>
                   <td className="py-1.5 pr-3">
-                    {r.thumbs === 1 ? '👍' : r.thumbs === -1 ? '👎' : <span className="text-slate-700">—</span>}
+                    {r.thumbs === 1 ? '👍' : r.thumbs === -1 ? '👎' : <span className="text-slate-700">-</span>}
                   </td>
                 </tr>
               ))}

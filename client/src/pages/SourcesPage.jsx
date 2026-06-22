@@ -12,7 +12,7 @@ const SOURCES = [
     sections: [
       {
         title: 'What it is',
-        body: 'nflverse is an open-source ecosystem of NFL data maintained by a community of independent developers and data scientists — not affiliated with the NFL or any team. It is the most widely used free NFL data resource in the data science and analytics community. The Python client is called nflreadpy; the R client is nflreadr. Both connect to the same underlying datasets hosted on GitHub.',
+        body: 'nflverse is an open-source ecosystem of NFL data maintained by a community of independent developers and data scientists - not affiliated with the NFL or any team. It is the most widely used free NFL data resource in the data science and analytics community. The Python client is called nflreadpy; the R client is nflreadr. Both connect to the same underlying datasets hosted on GitHub.',
       },
       {
         title: 'Who builds it',
@@ -20,7 +20,7 @@ const SOURCES = [
       },
       {
         title: 'Why we need it alongside PFR',
-        body: 'PFR is excellent for historical breadth but its data is accessed through web scraping, which is time-consuming and requires significant cleanup. nflverse provides clean, structured, rapidly-updated datasets that are especially strong for recent seasons (2019 onward) and for data types that PFR does not expose in machine-readable form — such as snap counts, week-by-week game logs, and detailed tracking-based metrics.',
+        body: 'PFR is excellent for historical breadth but its data is accessed through web scraping, which is time-consuming and requires significant cleanup. nflverse provides clean, structured, rapidly-updated datasets that are especially strong for recent seasons (2019 onward) and for data types that PFR does not expose in machine-readable form - such as snap counts, week-by-week game logs, and detailed tracking-based metrics.',
       },
       {
         title: 'Data it provides to this platform',
@@ -29,7 +29,7 @@ const SOURCES = [
     ],
   },
   {
-    name: 'FDV — Fourth & Data Value',
+    name: 'FDV - Fourth & Data Value',
     url: '/methodology',
     badge: 'Proprietary',
     badgeColor: 'bg-violet-500/20 text-violet-400',
@@ -38,7 +38,7 @@ const SOURCES = [
     sections: [
       {
         title: 'What it is',
-        body: 'FDV (Fourth & Data Value) is a proprietary career value metric built entirely from the statistics and draft data in this platform. It replaces PFR\'s Career Approximate Value (AV) as the primary career quality signal — with a fully transparent, position-aware, independently computed alternative.',
+        body: 'FDV (Fourth & Data Value) is a proprietary career value metric built entirely from the statistics and draft data in this platform. It replaces PFR\'s Career Approximate Value (AV) as the primary career quality signal - with a fully transparent, position-aware, independently computed alternative.',
       },
       {
         title: 'Why we built it',
@@ -90,15 +90,15 @@ const SOURCES = [
       },
       {
         title: 'Role in this platform',
-        body: 'PFR was used as a one-time historical source to build the foundational dataset — all season statistics from 1970 through 2024, draft records, and combine measurements. It is not an active live dependency. New season data is handled by nflverse.',
+        body: 'PFR was used as a one-time historical source to build the foundational dataset - all season statistics from 1970 through 2024, draft records, and combine measurements. It is not an active live dependency. New season data is handled by nflverse.',
       },
       {
         title: 'What we took from it',
-        body: 'All passing, rushing, receiving, defense, kicking, punting, and return statistics by season (1970–2024); draft pick records including round, pick, position, and college; combine measurements (height, weight, 40-yard dash, vertical jump, broad jump, bench press, 3-cone, shuttle). PFR\'s Career AV column is stored in the draft table as a legacy field but is no longer used — it has been replaced by our own FDV metric.',
+        body: 'All passing, rushing, receiving, defense, kicking, punting, and return statistics by season (1970–2024); draft pick records including round, pick, position, and college; combine measurements (height, weight, 40-yard dash, vertical jump, broad jump, bench press, 3-cone, shuttle). PFR\'s Career AV column is stored in the draft table as a legacy field but is no longer used - it has been replaced by our own FDV metric.',
       },
       {
         title: 'Why it is no longer the primary source',
-        body: 'PFR data is accessed via web scraping, which is brittle, slow, and subject to rate limits. Their Career AV metric is also opaque — the formula is not fully disclosed and cannot be independently reproduced. Going forward, nflverse provides cleaner, machine-readable, regularly updated data, and FDV replaces AV as the career quality signal.',
+        body: 'PFR data is accessed via web scraping, which is brittle, slow, and subject to rate limits. Their Career AV metric is also opaque - the formula is not fully disclosed and cannot be independently reproduced. Going forward, nflverse provides cleaner, machine-readable, regularly updated data, and FDV replaces AV as the career quality signal.',
       },
     ],
   },

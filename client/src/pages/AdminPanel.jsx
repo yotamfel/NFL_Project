@@ -86,7 +86,7 @@ function VisitsTab() {
   if (!data) return <Spinner />
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
-      <h2 className="text-white font-semibold mb-4">Daily Visits — last 90 days</h2>
+      <h2 className="text-white font-semibold mb-4">Daily Visits - last 90 days</h2>
       <ResponsiveContainer width="100%" height={300}>
         <LineChart data={data}>
           <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
@@ -192,7 +192,7 @@ function UsersTab() {
                   </td>
                   <td className="px-4 py-3 text-slate-300 text-sm font-medium">{u.visit_count ?? 0}</td>
                   <td className="px-4 py-3 text-slate-300 text-sm">{u.visits_7d ?? 0}</td>
-                  <td className="px-4 py-3 text-slate-500 text-xs">{u.last_visit ? new Date(u.last_visit).toLocaleDateString() : '—'}</td>
+                  <td className="px-4 py-3 text-slate-500 text-xs">{u.last_visit ? new Date(u.last_visit).toLocaleDateString() : '-'}</td>
                   <td className="px-4 py-3 text-slate-500 text-xs">{new Date(u.created_at).toLocaleDateString()}</td>
                   <td className="px-4 py-3 text-right">
                     {u.id !== me?.id && (
@@ -497,7 +497,7 @@ function UsageTab() {
       {/* Daily activity chart */}
       {dailyViews.length > 0 && (
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-          <h3 className="text-white font-semibold text-sm mb-4">Daily Page Views — last 30 days</h3>
+          <h3 className="text-white font-semibold text-sm mb-4">Daily Page Views - last 30 days</h3>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={dailyViews}>
               <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
@@ -513,7 +513,7 @@ function UsageTab() {
 
       {/* AI features breakdown */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-        <h3 className="text-white font-semibold text-sm mb-3">AI Features — Last 7 Days</h3>
+        <h3 className="text-white font-semibold text-sm mb-3">AI Features - Last 7 Days</h3>
         {(data.ai_features_7d || []).length === 0 ? (
           <p className="text-slate-500 text-sm text-center py-4">No AI usage in the last 7 days</p>
         ) : (
@@ -540,7 +540,7 @@ function UsageTab() {
 
       {/* AI features 30 days */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-        <h3 className="text-white font-semibold text-sm mb-3">AI Features — Last 30 Days</h3>
+        <h3 className="text-white font-semibold text-sm mb-3">AI Features - Last 30 Days</h3>
         {(data.ai_features_30d || []).length === 0 ? (
           <p className="text-slate-500 text-sm text-center py-4">No AI usage in the last 30 days</p>
         ) : (

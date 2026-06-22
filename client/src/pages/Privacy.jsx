@@ -26,7 +26,7 @@ export default function Privacy() {
             Your email is never shown publicly and is not shared with third parties.
           </Item>
           <Item label="Password">
-            Used to secure your account. Your password is <strong className="text-slate-300">never stored as plain text</strong> —
+            Used to secure your account. Your password is <strong className="text-slate-300">never stored as plain text</strong> -
             it is immediately converted to a one-way bcrypt hash before being saved.
             This means even we cannot see your actual password.
           </Item>
@@ -48,7 +48,7 @@ export default function Privacy() {
             <li>We do <strong className="text-slate-300">not</strong> sell, share, or transfer your data to any third party.</li>
             <li>We do <strong className="text-slate-300">not</strong> use your data for advertising or profiling.</li>
             <li>We do <strong className="text-slate-300">not</strong> send emails (no verification emails, no newsletters, no notifications).</li>
-            <li>We do <strong className="text-slate-300">not</strong> collect payment information — the platform is free.</li>
+            <li>We do <strong className="text-slate-300">not</strong> collect payment information - the platform is free.</li>
           </ul>
         </Section>
 

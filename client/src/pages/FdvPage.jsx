@@ -22,7 +22,7 @@ export default function FdvPage() {
       {/* Hero */}
       <div>
         <p className="text-xs font-bold uppercase tracking-widest text-violet-400 mb-1">Metric Methodology</p>
-        <h1 className="text-3xl font-black text-white tracking-tight">FDV — Fourth & Data Value</h1>
+        <h1 className="text-3xl font-black text-white tracking-tight">FDV - Fourth & Data Value</h1>
         <p className="text-slate-400 mt-2 leading-relaxed">
           FDV is our proprietary career value metric built entirely from the statistics and draft
           data in this platform. It replaces the third-party Career AV metric with a fully
@@ -30,7 +30,7 @@ export default function FdvPage() {
         </p>
       </div>
 
-      {/* Scale — up top so readers see the reference immediately */}
+      {/* Scale - up top so readers see the reference immediately */}
       <div className={card}>
         <p className={section}>FDV Scale</p>
         <div className="space-y-2">
@@ -58,7 +58,7 @@ export default function FdvPage() {
         <p className="text-slate-400 text-sm leading-relaxed">
           Career Approximate Value (AV), produced by Pro Football Reference, was previously
           the primary career quality signal on this platform. AV is useful but it is a
-          third-party proprietary metric — its exact formula is not fully disclosed,
+          third-party proprietary metric - its exact formula is not fully disclosed,
           and it cannot be independently reproduced or freely distributed in a commercial context.
         </p>
         <p className="text-slate-400 text-sm leading-relaxed">
@@ -70,40 +70,40 @@ export default function FdvPage() {
 
       {/* Core algorithm */}
       <div className={card}>
-        <p className={section}>Core Algorithm — Three Layers</p>
+        <p className={section}>Core Algorithm - Three Layers</p>
         <ol className="space-y-3 text-sm text-slate-400 list-decimal list-inside">
           <li>
             <span className="text-slate-200 font-semibold">Position-specific raw score</span>
-            {' '}— Each of the 11 position groups (QB, RB, WR, TE, EDGE, DT, LB, CB, S, K, P)
+            {' '}- Each of the 11 position groups (QB, RB, WR, TE, EDGE, DT, LB, CB, S, K, P)
             has its own formula tailored to the statistics that matter most at that role.
             A QB is evaluated on passing efficiency and clutch play; a CB on interceptions and
             pass deflections; a DT on sacks and tackles for loss.
           </li>
           <li>
             <span className="text-slate-200 font-semibold">Within-position era normalisation</span>
-            {' '}— Raw scores are z-scored against same-position peers in the same season-year.
+            {' '}- Raw scores are z-scored against same-position peers in the same season-year.
             A dominant 1978 CB is measured against 1978 CBs; a dominant 2022 CB against 2022 CBs.
           </li>
           <li>
             <span className="text-slate-200 font-semibold">Season FDV</span>
-            {' '}— <code className="text-violet-300 text-xs">max(0, 6 + 3 × z) × (games / full_season)</code>,
+            {' '}- <code className="text-violet-300 text-xs">max(0, 6 + 3 × z) × (games / full_season)</code>,
             capped at 18 per season. Returns are added as a 25% bonus.
           </li>
           <li>
             <span className="text-slate-200 font-semibold">Career aggregation with longevity decay</span>
-            {' '}— Top 10 seasons count at full value, seasons 11–13 at 50%, and seasons 14+ at 30%.
+            {' '}- Top 10 seasons count at full value, seasons 11–13 at 50%, and seasons 14+ at 30%.
             This prevents long-but-average careers from outscoring shorter dominant ones.
           </li>
           <li>
             <span className="text-slate-200 font-semibold">Cross-position normalisation</span>
-            {' '}— Career FDV is z-scored within each position group, then mapped to a common scale
+            {' '}- Career FDV is z-scored within each position group, then mapped to a common scale
             so that equal dominance at any position produces comparable final scores.
           </li>
           <li>
             <span className="text-slate-200 font-semibold">Positional value multiplier</span>
-            {' '}— A final multiplier (0.70–1.20) is derived from 55 years of NFL draft data
-            (1970–2025). Positions that historically command more draft capital — reflecting
-            the league's consensus on positional impact — receive a higher multiplier.
+            {' '}- A final multiplier (0.70–1.20) is derived from 55 years of NFL draft data
+            (1970–2025). Positions that historically command more draft capital - reflecting
+            the league's consensus on positional impact - receive a higher multiplier.
             This is computed automatically from our draft database, not manually assigned.
           </li>
         </ol>
@@ -201,7 +201,7 @@ export default function FdvPage() {
       <div className={card}>
         <p className={section}>Era Adjustment</p>
         <p className="text-slate-400 text-sm leading-relaxed">
-          The NFL has changed dramatically since 1970 — passing volumes are much higher today,
+          The NFL has changed dramatically since 1970 - passing volumes are much higher today,
           rule changes have affected scoring, and specialisation has increased. Without era
           adjustment, a 2022 QB who threw 5,000 yards in a pass-friendly era would score much
           higher than a 1978 QB who threw 3,200 yards in a run-first era, even if the 1978
@@ -256,7 +256,7 @@ export default function FdvPage() {
           ))}
         </div>
         <p className="text-slate-600 text-xs pt-2">
-          These multipliers are not hand-picked — they are derived automatically from how
+          These multipliers are not hand-picked - they are derived automatically from how
           NFL teams have historically allocated premium draft capital across positions.
         </p>
       </div>

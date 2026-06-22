@@ -38,7 +38,7 @@ export default function Portfolio() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    document.title = 'Fourth & Data - Portfolio'
+    document.title = 'Fourth & Data - Technical Portfolio'
     return () => { document.title = 'Fourth & Data' }
   }, [])
 

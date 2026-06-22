@@ -23,6 +23,6 @@ export function posGradient(pos) {
   return `linear-gradient(135deg, ${c.dark} 0%, #0f172a 60%)`
 }
 
-// Diagonal stripe overlay — gives the "trading card foil" texture
+// Diagonal stripe overlay - gives the "trading card foil" texture
 export const CARD_STRIPES =
   'repeating-linear-gradient(45deg, transparent, transparent 14px, rgba(255,255,255,0.03) 14px, rgba(255,255,255,0.03) 28px)'

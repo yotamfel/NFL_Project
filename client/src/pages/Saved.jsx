@@ -89,7 +89,7 @@ function ChartCard({ chart, overrides, onUpdate, onRemove }) {
       const png = await toPng(exportRef.current, { pixelRatio: 2, backgroundColor: '#0f172a' })
       const a = document.createElement('a')
       a.href = png
-      a.download = `${chart.title.replace(/[^a-z0-9 \-—]/gi, '').replace(/\s+/g, '_')}.png`
+      a.download = `${chart.title.replace(/[^a-z0-9 \--]/gi, '').replace(/\s+/g, '_')}.png`
       a.click()
     } finally { setExporting(false) }
   }
@@ -112,7 +112,7 @@ function ChartCard({ chart, overrides, onUpdate, onRemove }) {
           className="text-slate-600 hover:text-red-400 transition-colors text-lg leading-none shrink-0">×</button>
       </div>
 
-      {/* Chart — this div is captured for export */}
+      {/* Chart - this div is captured for export */}
       <div ref={exportRef} className="p-3" style={{ backgroundColor: '#0f172a' }}>
         {isCareerLine ? (
           <CareerLineChart
@@ -168,7 +168,7 @@ function TableCard({ table, config, onUpdate, onRemove }) {
       const png = await toPng(exportRef.current, { pixelRatio: 2 })
       const a = document.createElement('a')
       a.href = png
-      a.download = `${table.title.replace(/[^a-z0-9 \-—]/gi, '').replace(/\s+/g, '_')}.png`
+      a.download = `${table.title.replace(/[^a-z0-9 \--]/gi, '').replace(/\s+/g, '_')}.png`
       a.click()
     } finally { setExporting(false) }
   }
@@ -191,7 +191,7 @@ function TableCard({ table, config, onUpdate, onRemove }) {
           className="text-slate-600 hover:text-red-400 transition-colors text-lg leading-none shrink-0">×</button>
       </div>
 
-      {/* Table — scroll wrapper for UI, exportRef captures full content */}
+      {/* Table - scroll wrapper for UI, exportRef captures full content */}
       <div className="overflow-auto max-h-72">
         <div ref={exportRef}>
           <table className="min-w-full text-xs" style={{ borderCollapse: 'collapse' }}>
@@ -211,7 +211,7 @@ function TableCard({ table, config, onUpdate, onRemove }) {
                 <tr key={i} style={{ backgroundColor: i % 2 === 0 ? rowEven : rowOdd }}>
                   {(table.columns || []).map(col => (
                     <td key={col.key} className="px-3 py-2 text-slate-300 whitespace-nowrap border-t border-slate-800">
-                      {row[col.key] ?? '—'}
+                      {row[col.key] ?? '-'}
                     </td>
                   ))}
                 </tr>

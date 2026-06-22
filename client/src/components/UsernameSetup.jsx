@@ -50,7 +50,7 @@ export default function UsernameSetup() {
           </button>
 
           <p className="text-slate-700 text-xs mt-4">
-            No account needed — everything stays in your browser.
+            No account needed - everything stays in your browser.
           </p>
         </div>
       </div>

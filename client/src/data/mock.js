@@ -1,4 +1,4 @@
-// Placeholder data whose shapes match the real API responses exactly —
+// Placeholder data whose shapes match the real API responses exactly -
 // stage 8 replaces these with fetch() calls without changing anything else.
 
 export const MOCK_SEARCH_RESULTS = [

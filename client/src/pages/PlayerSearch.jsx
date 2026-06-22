@@ -25,7 +25,7 @@ const FEATURE_CARDS = [
   },
   {
     icon: '🤖', title: 'Smart Search',
-    desc: 'Ask anything in plain English — AI translates to stats',
+    desc: 'Ask anything in plain English - AI translates to stats',
     href: '/search',
     color: '#a78bfa', dark: '#2e1065',
   },
@@ -37,7 +37,7 @@ const FEATURE_CARDS = [
   },
   {
     icon: '★', title: 'Saved & Notes',
-    desc: 'Save players, charts and comparisons — add personal notes and export to PNG',
+    desc: 'Save players, charts and comparisons - add personal notes and export to PNG',
     href: '/saved',
     color: '#22d3ee', dark: '#083344',
   },

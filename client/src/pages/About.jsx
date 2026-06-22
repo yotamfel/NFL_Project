@@ -15,16 +15,16 @@ export default function About() {
 
       <div className="bg-slate-800/70 border border-slate-700/60 rounded-2xl p-8 space-y-6 text-slate-300 text-sm leading-relaxed">
         <p>Fourth & Data is a statistics explorer built for fans who want to go deeper than the box score.</p>
-        <p>Search and compare thousands of players across more than five decades of NFL football — from career totals to advanced metrics, draft history, combine measurements, and much more. Ask questions in plain English and get answers directly from the data.</p>
+        <p>Search and compare thousands of players across more than five decades of NFL football - from career totals to advanced metrics, draft history, combine measurements, and much more. Ask questions in plain English and get answers directly from the data.</p>
 
         <div>
           <h2 className="text-white font-bold mb-2">The data</h2>
-          <p>Statistics are sourced from multiple data providers and currently cover the 1970–2025 regular seasons, with new seasons added each year as they are completed. Different data types have different coverage windows — see the in-app Guide for full details.</p>
+          <p>Statistics are sourced from multiple data providers and currently cover the 1970–2025 regular seasons, with new seasons added each year as they are completed. Different data types have different coverage windows - see the in-app Guide for full details.</p>
         </div>
 
         <div>
           <h2 className="text-white font-bold mb-2">Built by</h2>
-          <p>Yotam — data analyst and NFL fan. Built as a personal project to make NFL statistics accessible to everyone.</p>
+          <p>Yotam - data analyst and NFL fan. Built as a personal project to make NFL statistics accessible to everyone.</p>
         </div>
       </div>
 
@@ -39,12 +39,12 @@ export default function About() {
             {
               icon: '🧠',
               title: 'Smart Search Pro',
-              desc: 'AI-powered insights, auto-generated charts, and deep analysis on top of every Smart Search query — going beyond the raw results.',
+              desc: 'AI-powered insights, auto-generated charts, and deep analysis on top of every Smart Search query - going beyond the raw results.',
             },
             {
               icon: '🔬',
               title: 'Player Similarity',
-              desc: 'Find players with similar statistical profiles — see who your favorite player compares to across eras, powered by machine learning.',
+              desc: 'Find players with similar statistical profiles - see who your favorite player compares to across eras, powered by machine learning.',
             },
             {
               icon: '📁',
@@ -67,7 +67,7 @@ export default function About() {
           ))}
         </div>
         <p className="text-slate-500 text-xs pt-2 border-t border-slate-700/40">
-          These features are in development and will be available soon. The core platform will always be free — down the road, some advanced tools may be offered as optional Pro features for power users.
+          These features are in development and will be available soon. The core platform will always be free - down the road, some advanced tools may be offered as optional Pro features for power users.
         </p>
       </div>
 

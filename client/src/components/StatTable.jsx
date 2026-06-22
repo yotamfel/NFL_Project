@@ -60,9 +60,9 @@ function TableExportModal({ columns, rows, title, onClose }) {
 
   // Resolve format fn to a plain value for PNG (ReactNodes fallback to raw)
   const cellVal = (col, row) => {
-    if (!col.format) return row[col.key] ?? '—'
+    if (!col.format) return row[col.key] ?? '-'
     const v = col.format(row[col.key], row)
-    return (typeof v === 'string' || typeof v === 'number') ? v : (row[col.key] ?? '—')
+    return (typeof v === 'string' || typeof v === 'number') ? v : (row[col.key] ?? '-')
   }
 
   return (
@@ -160,7 +160,7 @@ function TableExportModal({ columns, rows, title, onClose }) {
   )
 }
 
-// Combined CSV + PNG + Save buttons — place inside a parent with className="relative group"
+// Combined CSV + PNG + Save buttons - place inside a parent with className="relative group"
 export function TableExportButtons({ columns, rows, title }) {
   const [modal, setModal] = useState(false)
   const { saveTable, removeTable, isTableSaved } = useUser() || {}
@@ -276,7 +276,7 @@ export default function StatTable({ columns, rows, keyField = 'id', title }) {
                 >
                   {columns.map(col => (
                     <td key={col.key} className="px-3 py-2 text-slate-200 whitespace-nowrap">
-                      {col.format ? col.format(row[col.key], row) : (row[col.key] ?? '—')}
+                      {col.format ? col.format(row[col.key], row) : (row[col.key] ?? '-')}
                     </td>
                   ))}
                 </tr>

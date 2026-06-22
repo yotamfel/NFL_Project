@@ -107,16 +107,16 @@ function teamColor(team) { return TEAM_COLORS[team] ?? '#3b82f6' }
 const AGG_OPTIONS = [
   { key: 'sum',      label: 'Total (sum)',         hint: 'Sum across all players each season' },
   { key: 'avg',      label: 'Per-player avg',      hint: 'Average value per contributing player' },
-  { key: 'per_game', label: 'Per game (sum ÷ GP)', hint: 'Total divided by total games played — normalizes for season length' },
+  { key: 'per_game', label: 'Per game (sum ÷ GP)', hint: 'Total divided by total games played - normalizes for season length' },
 ]
 
 const NOTABLE = [
-  { season: 1970, label: 'AFL-NFL merger',       color: '#64748b', desc: 'AFL and NFL officially merged into one league — the data begins here.', noLine: true },
-  { season: 1978, label: '16 games + pass rules', color: '#22d3ee', desc: 'Schedule expanded from 14 to 16 games and the 5-yard contact rule was introduced — the biggest single-era jump in passing stats.' },
-  { season: 1982, label: 'Strike (9 games)',      color: '#ef4444', desc: 'Players\' strike shortened the season to just 9 games — all counting stats are roughly half a normal season.' },
-  { season: 1987, label: 'Strike (15 games)',     color: '#fb923c', desc: 'Players\' strike — 3 weeks played by replacement players, 15 games total instead of 16.' },
-  { season: 2004, label: 'Pass rule emphasis',    color: '#a78bfa', desc: 'NFL strictly enforced illegal contact rules — passing yards and TDs spiked league-wide before settling into the new normal.' },
-  { season: 2020, label: 'COVID',                 color: '#f59e0b', desc: 'COVID-19 pandemic — no fans in most stadiums, compressed offseason, modified protocols.' },
+  { season: 1970, label: 'AFL-NFL merger',       color: '#64748b', desc: 'AFL and NFL officially merged into one league - the data begins here.', noLine: true },
+  { season: 1978, label: '16 games + pass rules', color: '#22d3ee', desc: 'Schedule expanded from 14 to 16 games and the 5-yard contact rule was introduced - the biggest single-era jump in passing stats.' },
+  { season: 1982, label: 'Strike (9 games)',      color: '#ef4444', desc: 'Players\' strike shortened the season to just 9 games - all counting stats are roughly half a normal season.' },
+  { season: 1987, label: 'Strike (15 games)',     color: '#fb923c', desc: 'Players\' strike - 3 weeks played by replacement players, 15 games total instead of 16.' },
+  { season: 2004, label: 'Pass rule emphasis',    color: '#a78bfa', desc: 'NFL strictly enforced illegal contact rules - passing yards and TDs spiked league-wide before settling into the new normal.' },
+  { season: 2020, label: 'COVID',                 color: '#f59e0b', desc: 'COVID-19 pandemic - no fans in most stadiums, compressed offseason, modified protocols.' },
   { season: 2021, label: '17 games',              color: '#6366f1', desc: 'NFL expanded from 16 to 17 regular-season games per team.' },
 ]
 
@@ -124,7 +124,7 @@ const LINE_COLORS = ['#3b82f6', '#f97316']
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function fmtVal(v) {
-  if (v == null) return '—'
+  if (v == null) return '-'
   const n = Number(v)
   if (Math.abs(n) >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
   if (Math.abs(n) >= 1_000)     return `${(n / 1_000).toFixed(1)}k`
@@ -308,7 +308,7 @@ export default function LeagueTrends() {
         <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-0.5">NFL</p>
         <h1 className="text-3xl font-black text-white tracking-tight">League Trends</h1>
         <p className="text-slate-500 text-sm mt-1">
-          Aggregate statistics by season — identify how the league has evolved over time.
+          Aggregate statistics by season - identify how the league has evolved over time.
         </p>
       </div>
 
@@ -394,7 +394,7 @@ export default function LeagueTrends() {
             <div>
               <p className={labelCls}>
                 <span className="inline-block w-2 h-2 rounded-full mr-1.5" style={{ background: LINE_COLORS[1] }} />
-                Team 2 <span className="text-slate-600">(optional — for comparison)</span>
+                Team 2 <span className="text-slate-600">(optional - for comparison)</span>
               </p>
               <select value={team2} onChange={e => setTeam2(e.target.value)} className={inputCls}>
                 <option value="">None</option>
@@ -451,14 +451,14 @@ export default function LeagueTrends() {
           {/* Bar chart */}
           <div className="rounded-2xl border border-slate-700/60 bg-slate-900/60 p-5">
             <p className="text-sm font-semibold text-slate-300 mb-4">
-              {statInfo?.label ?? stat} by team — {aggInfo?.label}
+              {statInfo?.label ?? stat} by team - {aggInfo?.label}
               {(seasonFrom || seasonTo) && (
                 <span className="text-slate-500 font-normal ml-2">
                   {seasonFrom || metaRange.min}–{seasonTo || metaRange.max}
                 </span>
               )}
             </p>
-            <ExportableChart title={`${statInfo?.label ?? stat} by team — ${aggInfo?.label}`}>
+            <ExportableChart title={`${statInfo?.label ?? stat} by team - ${aggInfo?.label}`}>
               <ResponsiveContainer width="100%" height={Math.max(320, teamData.length * 22)}>
                 <BarChart data={teamData} layout="vertical"
                   margin={{ top: 0, right: 60, left: 40, bottom: 0 }}>
@@ -537,7 +537,7 @@ export default function LeagueTrends() {
 
       {hasData && !loading && viewMode === 'over_time' && (
         <>
-          {/* Summary tiles — primary line only */}
+          {/* Summary tiles - primary line only */}
           {summary && !comparing && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
@@ -566,7 +566,7 @@ export default function LeagueTrends() {
           {/* Chart */}
           <div className="rounded-2xl border border-slate-700/60 bg-slate-900/60 p-5">
             <p className="text-sm font-semibold text-slate-300 mb-1">
-              {statInfo?.label ?? stat} — {aggInfo?.label}
+              {statInfo?.label ?? stat} - {aggInfo?.label}
               {comparing && (
                 <span className="ml-2 text-slate-500 font-normal">
                   <span style={{ color: LINE_COLORS[0] }}>{team1Label}</span>
@@ -577,8 +577,8 @@ export default function LeagueTrends() {
             </p>
 
             <ExportableChart title={comparing
-              ? `${statInfo?.label ?? stat} — ${team1Label} vs ${team2Label}`
-              : `${statInfo?.label ?? stat} — ${aggInfo?.label}`}>
+              ? `${statInfo?.label ?? stat} - ${team1Label} vs ${team2Label}`
+              : `${statInfo?.label ?? stat} - ${aggInfo?.label}`}>
               <ResponsiveContainer width="100%" height={320}>
                 <LineChart data={chartData} margin={{ top: 5, right: 24, left: 10, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
@@ -628,7 +628,7 @@ export default function LeagueTrends() {
                             style={{ borderColor: n.color }} />
                       }
                       <p className="text-xs text-slate-400 leading-relaxed">
-                        <span className="font-semibold" style={{ color: n.color }}>{n.season} — {n.label}:</span>
+                        <span className="font-semibold" style={{ color: n.color }}>{n.season} - {n.label}:</span>
                         {' '}{n.desc}
                       </p>
                     </div>
@@ -685,7 +685,7 @@ export default function LeagueTrends() {
                         {!comparing && (
                           <td className="py-2 pr-6 text-right">
                             {chg == null
-                              ? <span className="text-slate-600">—</span>
+                              ? <span className="text-slate-600">-</span>
                               : <span className={chg >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
                                   {chg >= 0 ? '▲' : '▼'} {Math.abs(chg).toFixed(1)}%
                                 </span>
@@ -693,7 +693,7 @@ export default function LeagueTrends() {
                           </td>
                         )}
                         <td className="py-2 text-right text-slate-500 text-xs">
-                          {row.pc1 ?? '—'}{comparing && row.pc2 != null ? ` / ${row.pc2}` : ''}
+                          {row.pc1 ?? '-'}{comparing && row.pc2 != null ? ` / ${row.pc2}` : ''}
                         </td>
                       </tr>
                     )
@@ -708,7 +708,7 @@ export default function LeagueTrends() {
       {user?.is_admin && chartData?.length > 0 && (
         <SocialPostGenerator
           data={chartData}
-          context={`League Trends — ${category} ${stat} (${agg})`}
+          context={`League Trends - ${category} ${stat} (${agg})`}
         />
       )}
     </div>

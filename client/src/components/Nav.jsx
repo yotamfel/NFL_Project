@@ -103,7 +103,7 @@ export default function Nav() {
       */}
       <div className="px-4 flex items-center h-12">
 
-        {/* Logo — never shrinks */}
+        {/* Logo - never shrinks */}
         <NavLink to="/" className="flex items-center gap-1.5 shrink-0 mr-2">
           <img src="/logo.png" alt="" className="w-6 h-6" />
           <span className="font-black text-sm tracking-tight whitespace-nowrap">
@@ -112,7 +112,7 @@ export default function Nav() {
           </span>
         </NavLink>
 
-        {/* Scrollable links section — overflow only here, not on parent */}
+        {/* Scrollable links section - overflow only here, not on parent */}
         <div className="flex items-center gap-1 overflow-x-auto flex-1 mr-3" style={{ scrollbarWidth: 'none' }}>
           {LINKS.filter(({ adminOnly }) => !adminOnly || user?.is_admin).map(({ to, label, adminOnly }) => (
             <NavLink key={to} to={to} className={({ isActive }) =>

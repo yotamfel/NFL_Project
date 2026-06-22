@@ -5,33 +5,33 @@ const SECTIONS = [
     icon: '🔍',
     en: {
       title: 'Player Search',
-      body:  'Search any player by name. Use the Position, Year and Team filters to narrow results — you can filter without typing a name. Click any result to open the full profile.',
+      body:  'Search any player by name. Use the Position, Year and Team filters to narrow results - you can filter without typing a name. Click any result to open the full profile.',
     },
     he: {
       title: 'חיפוש שחקנים',
-      body:  'חפש כל שחקן לפי שם. השתמש בפילטרי עמדה, שנה וקבוצה לצמצום התוצאות — אפשר לסנן גם בלי להקליד שם. לחץ על תוצאה לפתיחת הפרופיל המלא.',
+      body:  'חפש כל שחקן לפי שם. השתמש בפילטרי עמדה, שנה וקבוצה לצמצום התוצאות - אפשר לסנן גם בלי להקליד שם. לחץ על תוצאה לפתיחת הפרופיל המלא.',
     },
   },
   {
     icon: '📊',
     en: {
       title: 'Player Profile',
-      body:  "Shows season-by-season stats with trend charts, combine measurements, and draft info. FDV (Fourth & Data Value) is our proprietary position-aware career quality metric — higher is better. See /methodology for the full formula.",
+      body:  "Shows season-by-season stats with trend charts, combine measurements, and draft info. FDV (Fourth & Data Value) is our proprietary position-aware career quality metric - higher is better. See /methodology for the full formula.",
     },
     he: {
       title: 'פרופיל שחקן',
-      body:  'מציג סטטיסטיקות עונה-עונה עם גרפי מגמה, מדדי קומביין ומידע על הדראפט. FDV (Fourth & Data Value) הוא מדד ערך קריירה קנייני שלנו — גבוה יותר = טוב יותר. ראה /methodology לנוסחה המלאה.',
+      body:  'מציג סטטיסטיקות עונה-עונה עם גרפי מגמה, מדדי קומביין ומידע על הדראפט. FDV (Fourth & Data Value) הוא מדד ערך קריירה קנייני שלנו - גבוה יותר = טוב יותר. ראה /methodology לנוסחה המלאה.',
     },
   },
   {
     icon: '⚖️',
     en: {
       title: 'Player Comparison',
-      body:  'Add up to 4 players using the search box. Switch between categories (Passing, Offense, Defense, Kicking, Punting, Returns) — the chart and table update instantly. Remove any player with ×.',
+      body:  'Add up to 4 players using the search box. Switch between categories (Passing, Offense, Defense, Kicking, Punting, Returns) - the chart and table update instantly. Remove any player with ×.',
     },
     he: {
       title: 'השוואת שחקנים',
-      body:  'הוסף עד 4 שחקנים באמצעות תיבת החיפוש. החלף בין קטגוריות (מסירה, התקפה, הגנה, בעיטות, פאנטינג, ריצות החזרה) — הגרף והטבלה מתעדכנים מיידית. הסר שחקן עם ×.',
+      body:  'הוסף עד 4 שחקנים באמצעות תיבת החיפוש. החלף בין קטגוריות (מסירה, התקפה, הגנה, בעיטות, פאנטינג, ריצות החזרה) - הגרף והטבלה מתעדכנים מיידית. הסר שחקן עם ×.',
     },
   },
   {
@@ -49,11 +49,11 @@ const SECTIONS = [
     icon: '🤖',
     en: {
       title: 'Smart Search',
-      body:  'Ask any question in plain English or Hebrew — the AI translates it to SQL and runs it live. Expand "Generated SQL" to see the exact query. Questions about data not in the database return an honest error.',
+      body:  'Ask any question in plain English or Hebrew - the AI translates it to SQL and runs it live. Expand "Generated SQL" to see the exact query. Questions about data not in the database return an honest error.',
     },
     he: {
       title: 'חיפוש חכם',
-      body:  'שאל כל שאלה בעברית או אנגלית — ה-AI מתרגם אותה ל-SQL ומריץ אותה ישירות על בסיס הנתונים. פתח את "Generated SQL" לצפייה בשאילתה. שאלות על נתונים שלא קיימים יחזירו הודעת שגיאה ברורה.',
+      body:  'שאל כל שאלה בעברית או אנגלית - ה-AI מתרגם אותה ל-SQL ומריץ אותה ישירות על בסיס הנתונים. פתח את "Generated SQL" לצפייה בשאילתה. שאלות על נתונים שלא קיימים יחזירו הודעת שגיאה ברורה.',
     },
   },
 ]
@@ -83,7 +83,7 @@ export default function HelpModal({ onClose }) {
         <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-slate-700/60 shrink-0">
           <h2 className="text-lg font-black text-white tracking-tight">
             {isHe
-              ? <><span className="bg-gradient-to-r from-amber-400 to-yellow-200 bg-clip-text text-transparent">NFL DATA</span> — מדריך שימוש</>
+              ? <><span className="bg-gradient-to-r from-amber-400 to-yellow-200 bg-clip-text text-transparent">NFL DATA</span> - מדריך שימוש</>
               : <>How to use <span className="bg-gradient-to-r from-amber-400 to-yellow-200 bg-clip-text text-transparent">NFL DATA</span></>
             }
           </h2>
