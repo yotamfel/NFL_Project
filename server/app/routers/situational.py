@@ -63,14 +63,22 @@ def _participation_seasons():
 def epa_rankings(
     position: str = Query("QB"),
     season: Optional[int] = None,
+    seasons: Optional[str] = None,
     season_type: str = Query("REG"),
     min_plays: Optional[int] = None,
+    team: Optional[str] = None,
     user: dict = Depends(require_admin),
 ):
-    yr = season or _latest_season()
+    if seasons:
+        yrs = [int(s) for s in seasons.split(",")]
+    else:
+        yrs = [season or _latest_season()]
+
     auto_min = _min_plays(position)
     if season_type == "POST":
         auto_min = max(auto_min // 5, 10)
+    if len(yrs) > 1:
+        auto_min = int(auto_min * len(yrs) * 0.6)
     mp = min_plays or auto_min
 
     pos_map = {
@@ -84,6 +92,7 @@ def epa_rankings(
 
     id_col, name_col, where = pos_map[position]
     st_filter = "" if season_type == "ALL" else f"AND season_type = '{season_type}'"
+    team_filter = "AND posteam = :team" if team else ""
 
     sql = text(f"""
         WITH player_epa AS (
@@ -95,8 +104,8 @@ def epa_rankings(
                    ROUND(SUM(wpa)::numeric, 3) as total_wpa,
                    ROUND(AVG(CASE WHEN success = 1 THEN 1.0 ELSE 0.0 END)::numeric * 100, 1) as success_rate
             FROM pbp
-            WHERE season = :season AND {where} AND {id_col} IS NOT NULL
-                  AND epa IS NOT NULL {st_filter}
+            WHERE season = ANY(:seasons) AND {where} AND {id_col} IS NOT NULL
+                  AND epa IS NOT NULL {st_filter} {team_filter}
             GROUP BY {id_col}, {name_col}, posteam
             HAVING COUNT(*) >= :min_plays
         )
@@ -110,9 +119,12 @@ def epa_rankings(
         LIMIT 50
     """)
 
+    params = {"seasons": yrs, "min_plays": mp}
+    if team:
+        params["team"] = team.upper()
     with engine.connect() as c:
-        rows = c.execute(sql, {"season": yr, "min_plays": mp}).fetchall()
-    return {"season": yr, "position": position, "data": [dict(r._mapping) for r in rows]}
+        rows = c.execute(sql, params).fetchall()
+    return {"seasons": yrs, "position": position, "data": [dict(r._mapping) for r in rows]}
 
 
 # ── Clutch Rankings (WPA in high-leverage) ────────────────────────────────────
@@ -121,9 +133,15 @@ def epa_rankings(
 def clutch_rankings(
     position: str = Query("QB"),
     season: Optional[int] = None,
+    seasons: Optional[str] = None,
+    team: Optional[str] = None,
     user: dict = Depends(require_admin),
 ):
-    yr = season or _latest_season()
+    if seasons:
+        yrs = [int(s) for s in seasons.split(",")]
+    else:
+        yrs = [season or _latest_season()]
+
     pos_map = {
         "QB": ("passer_player_id", "passer_player_name", "pass_attempt = 1"),
         "RB": ("rusher_player_id", "rusher_player_name", "rush_attempt = 1"),
@@ -133,6 +151,8 @@ def clutch_rankings(
         return []
 
     id_col, name_col, where = pos_map[position]
+    team_filter = "AND posteam = :team" if team else ""
+    min_clutch = max(8 * len(yrs), 10)
 
     sql = text(f"""
         SELECT {id_col} as player_id, {name_col} as player_name, posteam as team,
@@ -141,19 +161,23 @@ def clutch_rankings(
                ROUND(AVG(wpa)::numeric, 4) as clutch_wpa_per_play,
                ROUND(AVG(epa)::numeric, 3) as clutch_epa_per_play
         FROM pbp
-        WHERE season = :season AND {where} AND {id_col} IS NOT NULL
+        WHERE season = ANY(:seasons) AND {where} AND {id_col} IS NOT NULL
               AND wpa IS NOT NULL AND season_type = 'REG'
               AND game_seconds_remaining <= 300
               AND ABS(score_differential) <= 8
+              {team_filter}
         GROUP BY {id_col}, {name_col}, posteam
-        HAVING COUNT(*) >= 20
+        HAVING COUNT(*) >= :min_clutch
         ORDER BY clutch_wpa DESC
         LIMIT 30
     """)
 
+    params = {"seasons": yrs, "min_clutch": min_clutch}
+    if team:
+        params["team"] = team.upper()
     with engine.connect() as c:
-        rows = c.execute(sql, {"season": yr}).fetchall()
-    return {"season": yr, "position": position, "data": [dict(r._mapping) for r in rows]}
+        rows = c.execute(sql, params).fetchall()
+    return {"seasons": yrs, "position": position, "data": [dict(r._mapping) for r in rows]}
 
 
 # ── Situational Splits ────────────────────────────────────────────────────────

@@ -141,7 +141,7 @@ function SortHeader({ label, field, sort, setSort, tip, align = 'right' }) {
   )
 }
 
-function EpaRankingsSection({ season }) {
+function EpaRankingsSection({ seasons }) {
   const [pos, setPos] = useState('QB')
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -152,13 +152,13 @@ function EpaRankingsSection({ season }) {
 
   useEffect(() => {
     setLoading(true)
-    const params = { position: pos, season, season_type: seasonType }
+    const params = { position: pos, seasons, season_type: seasonType }
     if (minPlays) params.min_plays = minPlays
+    if (teamFilter) params.team = teamFilter
     api.getEpaRankings(params).then(setData).catch(() => setData(null)).finally(() => setLoading(false))
-  }, [pos, season, seasonType, minPlays])
+  }, [pos, seasons.join(','), seasonType, minPlays, teamFilter])
 
   const sorted = (data?.data || [])
-    .filter(r => !teamFilter || r.team === teamFilter)
     .sort((a, b) => {
       const va = a[sort.field] ?? -999, vb = b[sort.field] ?? -999
       return sort.dir === 'desc' ? vb - va : va - vb
@@ -237,44 +237,59 @@ function EpaRankingsSection({ season }) {
   )
 }
 
-function ClutchRankingsSection({ season }) {
+function ClutchRankingsSection({ seasons }) {
   const [pos, setPos] = useState('QB')
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [teamFilter, setTeamFilter] = useState('')
+  const [sort, setSort] = useState({ field: 'clutch_wpa', dir: 'desc' })
 
   useEffect(() => {
     setLoading(true)
-    api.getClutchRankings({ position: pos, season }).then(setData).catch(() => setData(null)).finally(() => setLoading(false))
-  }, [pos, season])
+    const params = { position: pos, seasons }
+    if (teamFilter) params.team = teamFilter
+    api.getClutchRankings(params).then(setData).catch(() => setData(null)).finally(() => setLoading(false))
+  }, [pos, seasons.join(','), teamFilter])
+
+  const sorted = (data?.data || []).sort((a, b) => {
+    const va = a[sort.field] ?? -999, vb = b[sort.field] ?? -999
+    return sort.dir === 'desc' ? vb - va : va - vb
+  })
 
   return (
     <div className="space-y-4">
       <p className="text-slate-400 text-xs">Last 5 minutes, score within 8 points</p>
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap items-center">
         {['QB', 'RB', 'WR'].map(p => (
           <button key={p} onClick={() => setPos(p)}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${pos === p ? 'bg-red-500/20 text-red-400 border border-red-500/40' : 'bg-slate-800 text-slate-400 border border-slate-700'}`}>
             {p}
           </button>
         ))}
+        <span className="text-slate-700">|</span>
+        <select value={teamFilter} onChange={e => setTeamFilter(e.target.value)}
+          className="bg-slate-800 border border-slate-700 text-slate-300 rounded px-2 py-1 text-xs">
+          <option value="">All teams</option>
+          {TEAMS.map(t => <option key={t} value={t}>{t}</option>)}
+        </select>
       </div>
       {loading && <Loading text="Loading clutch rankings..." />}
-      {data?.data && (
+      {sorted.length > 0 && (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-slate-500 text-xs border-b border-slate-800">
                 <th className="text-left py-2 pr-2">#</th>
-                <th className="text-left py-2 pr-2">Player</th>
+                <SortHeader label="Player" field="player_name" sort={sort} setSort={setSort} align="left" />
                 <th className="text-left py-2 pr-2">Team</th>
-                <th className="text-right py-2 px-2">Clutch WPA<Tip stat="clutch_wpa" /></th>
-                <th className="text-right py-2 px-2">WPA/play<Tip stat="clutch_wpa_per_play" /></th>
-                <th className="text-right py-2 px-2">EPA/play<Tip stat="clutch_epa_per_play" /></th>
-                <th className="text-right py-2 px-2">Plays</th>
+                <SortHeader label="Clutch WPA" field="clutch_wpa" sort={sort} setSort={setSort} tip="clutch_wpa" />
+                <SortHeader label="WPA/play" field="clutch_wpa_per_play" sort={sort} setSort={setSort} tip="clutch_wpa_per_play" />
+                <SortHeader label="EPA/play" field="clutch_epa_per_play" sort={sort} setSort={setSort} tip="clutch_epa_per_play" />
+                <SortHeader label="Plays" field="clutch_plays" sort={sort} setSort={setSort} />
               </tr>
             </thead>
             <tbody>
-              {data.data.map((r, i) => (
+              {sorted.map((r, i) => (
                 <tr key={r.player_id} className="border-b border-slate-800/40 hover:bg-slate-800/30">
                   <td className="py-2 pr-2 text-slate-600 text-xs">{i + 1}</td>
                   <td className="py-2 pr-2">
@@ -289,6 +304,7 @@ function ClutchRankingsSection({ season }) {
               ))}
             </tbody>
           </table>
+          <p className="text-xs text-slate-600 mt-2">{sorted.length} players | Click any column header to sort</p>
         </div>
       )}
     </div>
@@ -421,12 +437,14 @@ export default function SituationalStats() {
   const navigate = useNavigate()
   const [section, setSection] = useState('epa')
   const [season, setSeason] = useState(2025)
+  const [selectedSeasons, setSelectedSeasons] = useState([])
   const [players, setPlayers] = useState([])
   const [availableYears, setAvailableYears] = useState(FALLBACK_YEARS)
+  const multiSeasonSections = ['epa', 'clutch', 'explorer']
 
   useEffect(() => {
     api.getSituationalSeasons().then(years => {
-      if (years?.length) { setAvailableYears(years); setSeason(years[0]) }
+      if (years?.length) { setAvailableYears(years); setSeason(years[0]); setSelectedSeasons([years[0]]) }
     }).catch(() => {})
   }, [])
 
@@ -466,10 +484,23 @@ export default function SituationalStats() {
       <div className="flex-1 min-w-0 space-y-4">
         {/* Season + Player selectors */}
         <div className="flex items-center gap-3 flex-wrap">
-          <select value={season} onChange={e => setSeason(Number(e.target.value))}
-            className="bg-slate-800 border border-slate-700 text-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none">
-            {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
-          </select>
+          {multiSeasonSections.includes(section) ? (
+            <div className="flex items-center gap-1.5">
+              {availableYears.map(y => (
+                <button key={y} onClick={() => setSelectedSeasons(prev =>
+                  prev.includes(y) ? (prev.length > 1 ? prev.filter(s => s !== y) : prev) : [...prev, y]
+                )}
+                  className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${selectedSeasons.includes(y) ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40' : 'bg-slate-800 text-slate-500 border border-slate-700'}`}>
+                  {y}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <select value={season} onChange={e => setSeason(Number(e.target.value))}
+              className="bg-slate-800 border border-slate-700 text-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none">
+              {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
+          )}
 
           {needsPlayer && (
             <>
@@ -489,9 +520,9 @@ export default function SituationalStats() {
 
         {/* Content */}
         <div className="bg-slate-800/50 border border-slate-700/60 rounded-2xl p-5">
-          {section === 'epa' && <EpaRankingsSection season={season} />}
-          {section === 'clutch' && <ClutchRankingsSection season={season} />}
-          {section === 'explorer' && <ExplorerSection season={season} />}
+          {section === 'epa' && <EpaRankingsSection seasons={selectedSeasons} />}
+          {section === 'clutch' && <ClutchRankingsSection seasons={selectedSeasons} />}
+          {section === 'explorer' && <ExplorerSection seasons={selectedSeasons} />}
           {section === 'splits' && <SplitsSection players={players} season={season} />}
           {section === 'trend' && <WeeklyTrendSection players={players} season={season} />}
           {section === 'playaction' && (
@@ -694,7 +725,8 @@ const GROUP_OPTIONS = [
   { id: 'pass_depth', label: 'Pass Depth' },
 ]
 
-function ExplorerSection({ season }) {
+function ExplorerSection({ seasons }) {
+  const season = seasons[0]
   const [filters, setFilters] = useState([])
   const [groupBy, setGroupBy] = useState('team')
   const [team, setTeam] = useState('')
