@@ -1593,20 +1593,6 @@ function WeeklyTrendSection({ players, season }) {
         ))}
       </div>
 
-      {/* Legend */}
-      <div className="flex items-center gap-4 flex-wrap">
-        {players.map((p, i) => (
-          <span key={p.player_id} className="flex items-center gap-1.5 text-xs">
-            <span className="w-3 h-3 rounded-full" style={{ background: colors[i] }} />
-            <span className="text-white font-medium">{p.player_name}</span>
-          </span>
-        ))}
-        <span className="flex items-center gap-1 text-[10px] text-slate-600">
-          <span className="w-6 border-t-2 border-dashed" style={{ borderColor: '#f59e0b', opacity: 0.5 }} /> 3-week rolling avg
-        </span>
-        <span className="text-[10px] text-slate-600 ml-auto">Click a bar to see plays. <span className="text-emerald-500">W</span> = win, <span className="text-red-400">L</span> = loss.</span>
-      </div>
-
       {/* Chart */}
       <div className="overflow-x-auto">
         <div className="relative min-w-[600px]" style={{ height: barH + 55 }}>
@@ -1644,24 +1630,40 @@ function WeeklyTrendSection({ players, season }) {
             ))}
           </div>
           {/* Rolling average SVG overlay */}
-          <svg className="absolute inset-0 pointer-events-none" width="100%" height={barH} style={{ overflow: 'visible' }}>
+          <svg className="absolute inset-0 pointer-events-none" viewBox={`0 0 ${allWeeks.length * 100} ${barH}`} preserveAspectRatio="none" style={{ width: '100%', height: barH }}>
             {players.map((p, pi) => {
               const weeks = (data[p.player_id]?.data || []).sort((a, b) => a.week - b.week)
               if (weeks.length < 3) return null
+              const svgW = allWeeks.length * 100
               const rollingPts = []
               for (let j = 1; j < weeks.length - 1; j++) {
                 const avg3 = (weeks[j-1].epa_per_play + weeks[j].epa_per_play + weeks[j+1].epa_per_play) / 3
                 const wi = allWeeks.indexOf(weeks[j].week)
                 if (wi < 0) continue
-                const x = ((wi + 0.5) / allWeeks.length) * 100
+                const x = (wi + 0.5) / allWeeks.length * svgW
                 const y = barH / 2 - (avg3 / maxAbsEpa) * (barH / 2)
-                rollingPts.push(`${x}%,${y}`)
+                rollingPts.push(`${x},${y}`)
               }
               if (rollingPts.length < 2) return null
-              return <polyline key={pi} points={rollingPts.join(' ')} fill="none" stroke={colors[pi]} strokeWidth={2} strokeDasharray="4,3" opacity={0.6} />
+              return <polyline key={pi} points={rollingPts.join(' ')} fill="none" stroke={colors[pi]} strokeWidth={3} strokeDasharray="8,6" opacity={0.7} vectorEffect="non-scaling-stroke" />
             })}
           </svg>
         </div>
+      </div>
+
+      {/* Legend below chart */}
+      <div className="flex items-center gap-4 flex-wrap text-[10px] text-slate-600">
+        {players.map((p, i) => (
+          <span key={p.player_id} className="flex items-center gap-1 text-xs">
+            <span className="w-2.5 h-2.5 rounded-full" style={{ background: colors[i] }} />
+            <span className="text-slate-300 font-medium">{p.player_name}</span>
+          </span>
+        ))}
+        <span className="flex items-center gap-1">
+          <span className="w-5 border-t-2 border-dashed" style={{ borderColor: '#94a3b8' }} /> 3-wk avg
+        </span>
+        <span><span className="text-emerald-500 font-bold">W</span>/<span className="text-red-400 font-bold">L</span> = game result</span>
+        <span className="ml-auto">Click bar or row to see plays</span>
       </div>
 
       {/* Fixed tooltip */}
