@@ -120,6 +120,33 @@ def supplement_players():
     if extended:
         print(f"  last_season extended from weekly_stats: {len(extended)} players")
 
+    _backfill_gsis_ids()
+
+
+def _backfill_gsis_ids():
+    """Populate gsis_id on players table from nflverse ff_playerids crosswalk."""
+    try:
+        import nflreadpy as nfl
+        xwalk = nfl.load_ff_playerids().to_pandas()
+        mapping = (xwalk[["gsis_id", "pfr_id"]]
+                   .dropna(subset=["gsis_id", "pfr_id"])
+                   .query("gsis_id != '' and pfr_id != ''")
+                   .drop_duplicates(subset=["pfr_id"]))
+
+        engine = get_engine()
+        updated = 0
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE players ADD COLUMN IF NOT EXISTS gsis_id TEXT"))
+            for _, row in mapping.iterrows():
+                r = conn.execute(text(
+                    "UPDATE players SET gsis_id = :gsis WHERE player_id = :pfr AND (gsis_id IS NULL OR gsis_id != :gsis)"
+                ), {"gsis": row["gsis_id"], "pfr": row["pfr_id"]})
+                updated += r.rowcount
+        if updated:
+            print(f"  gsis_id: updated {updated} players")
+    except Exception as e:
+        print(f"  gsis_id backfill skipped: {e}")
+
 
 if __name__ == "__main__":
     supplement_players()

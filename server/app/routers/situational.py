@@ -21,6 +21,15 @@ def _latest_season():
         return c.execute(text("SELECT MAX(season) FROM pbp")).scalar() or 2025
 
 
+def _get_gsis_id(conn, player_id: str) -> Optional[str]:
+    """Convert PFR player_id to nflverse GSIS ID for PBP queries."""
+    row = conn.execute(
+        text("SELECT gsis_id FROM players WHERE player_id = :pid"),
+        {"pid": player_id},
+    ).fetchone()
+    return row.gsis_id if row and row.gsis_id else None
+
+
 @router.get("/available-seasons")
 def available_seasons(user: dict = Depends(require_admin)):
     with engine.connect() as c:
@@ -156,10 +165,14 @@ def situational_splits(
 
     with engine.connect() as c:
         player = c.execute(text(
-            "SELECT player_name, pos FROM players WHERE player_id = :pid"
+            "SELECT player_name, pos, gsis_id FROM players WHERE player_id = :pid"
         ), {"pid": player_id}).fetchone()
         if not player:
             return {"error": "Player not found"}
+
+        gsis = player.gsis_id
+        if not gsis:
+            return {"error": "No play-by-play ID mapping for this player", "player": player.player_name}
 
         pos = player.pos or ""
         is_qb = pos in ("QB",)
@@ -192,7 +205,7 @@ def situational_splits(
                        ROUND(AVG(yards_gained)::numeric, 1) as avg_yards
                 FROM pbp
                 WHERE {full_where}
-            """), {"pid": player_id, "season": yr}).fetchone()
+            """), {"pid": gsis, "season": yr}).fetchone()
 
             d = dict(row._mapping) if row else {}
             d["label"] = label
@@ -294,7 +307,8 @@ def play_action_analysis(
     ftn_years = _ftn_seasons()
 
     with engine.connect() as c:
-        player = c.execute(text("SELECT player_name FROM players WHERE player_id = :pid"), {"pid": player_id}).fetchone()
+        player = c.execute(text("SELECT player_name, gsis_id FROM players WHERE player_id = :pid"), {"pid": player_id}).fetchone()
+        gsis = player.gsis_id if player else None
 
         if yr not in ftn_years:
             return {
@@ -306,6 +320,9 @@ def play_action_analysis(
                 "no_data": True,
                 "available_seasons": ftn_years,
             }
+
+        if not gsis:
+            return {"player": player.player_name if player else player_id, "player_id": player_id, "season": yr, "data": {}, "error": "No PBP ID mapping"}
 
         rows = c.execute(text("""
             WITH pa AS (
@@ -331,7 +348,7 @@ def play_action_analysis(
                 ROUND(AVG(CASE WHEN success = 1 THEN 100.0 ELSE 0.0 END)::numeric, 1) as success_rate
             FROM pa
             GROUP BY is_play_action
-        """), {"pid": player_id, "season": yr}).fetchall()
+        """), {"pid": gsis, "season": yr}).fetchall()
 
     data = {}
     for r in rows:
@@ -406,24 +423,26 @@ def run_heatmap(
 ):
     yr = season or _latest_season()
 
-    sql = text("""
-        SELECT
-            run_location, run_gap,
-            COUNT(*) as plays,
-            ROUND(AVG(epa)::numeric, 3) as epa_per_play,
-            ROUND(AVG(rushing_yards)::numeric, 1) as avg_yards,
-            ROUND(AVG(CASE WHEN success = 1 THEN 100.0 ELSE 0.0 END)::numeric, 1) as success_rate
-        FROM pbp
-        WHERE rusher_player_id = :pid AND season = :season
-              AND rush_attempt = 1 AND epa IS NOT NULL
-              AND run_location IS NOT NULL
-        GROUP BY run_location, run_gap
-        ORDER BY run_location, run_gap
-    """)
-
     with engine.connect() as c:
-        player = c.execute(text("SELECT player_name FROM players WHERE player_id = :pid"), {"pid": player_id}).fetchone()
-        rows = c.execute(sql, {"pid": player_id, "season": yr}).fetchall()
+        player = c.execute(text("SELECT player_name, gsis_id FROM players WHERE player_id = :pid"), {"pid": player_id}).fetchone()
+        gsis = player.gsis_id if player else None
+        if not gsis:
+            return {"player": player.player_name if player else player_id, "player_id": player_id, "season": yr, "data": [], "error": "No PBP ID mapping"}
+
+        rows = c.execute(text("""
+            SELECT
+                run_location, run_gap,
+                COUNT(*) as plays,
+                ROUND(AVG(epa)::numeric, 3) as epa_per_play,
+                ROUND(AVG(rushing_yards)::numeric, 1) as avg_yards,
+                ROUND(AVG(CASE WHEN success = 1 THEN 100.0 ELSE 0.0 END)::numeric, 1) as success_rate
+            FROM pbp
+            WHERE rusher_player_id = :pid AND season = :season
+                  AND rush_attempt = 1 AND epa IS NOT NULL
+                  AND run_location IS NOT NULL
+            GROUP BY run_location, run_gap
+            ORDER BY run_location, run_gap
+        """), {"pid": gsis, "season": yr}).fetchall()
 
     return {
         "player": player.player_name if player else player_id,
@@ -445,25 +464,27 @@ def pass_heatmap(
     yr = season or _latest_season()
     id_col = "passer_player_id" if role == "passer" else "receiver_player_id"
 
-    sql = text(f"""
-        SELECT
-            pass_location, pass_length,
-            COUNT(*) as plays,
-            ROUND(AVG(epa)::numeric, 3) as epa_per_play,
-            ROUND(AVG(CASE WHEN complete_pass = 1 THEN 100.0 ELSE 0.0 END)::numeric, 1) as comp_pct,
-            ROUND(AVG(passing_yards)::numeric, 1) as avg_yards,
-            ROUND(AVG(air_yards)::numeric, 1) as avg_air_yards
-        FROM pbp
-        WHERE {id_col} = :pid AND season = :season
-              AND pass_attempt = 1 AND sack = 0 AND epa IS NOT NULL
-              AND pass_location IS NOT NULL
-        GROUP BY pass_location, pass_length
-        ORDER BY pass_location, pass_length
-    """)
-
     with engine.connect() as c:
-        player = c.execute(text("SELECT player_name FROM players WHERE player_id = :pid"), {"pid": player_id}).fetchone()
-        rows = c.execute(sql, {"pid": player_id, "season": yr}).fetchall()
+        player = c.execute(text("SELECT player_name, gsis_id FROM players WHERE player_id = :pid"), {"pid": player_id}).fetchone()
+        gsis = player.gsis_id if player else None
+        if not gsis:
+            return {"player": player.player_name if player else player_id, "player_id": player_id, "season": yr, "role": role, "data": [], "error": "No PBP ID mapping"}
+
+        rows = c.execute(text(f"""
+            SELECT
+                pass_location, pass_length,
+                COUNT(*) as plays,
+                ROUND(AVG(epa)::numeric, 3) as epa_per_play,
+                ROUND(AVG(CASE WHEN complete_pass = 1 THEN 100.0 ELSE 0.0 END)::numeric, 1) as comp_pct,
+                ROUND(AVG(passing_yards)::numeric, 1) as avg_yards,
+                ROUND(AVG(air_yards)::numeric, 1) as avg_air_yards
+            FROM pbp
+            WHERE {id_col} = :pid AND season = :season
+                  AND pass_attempt = 1 AND sack = 0 AND epa IS NOT NULL
+                  AND pass_location IS NOT NULL
+            GROUP BY pass_location, pass_length
+            ORDER BY pass_location, pass_length
+        """), {"pid": gsis, "season": yr}).fetchall()
 
     return {
         "player": player.player_name if player else player_id,
@@ -486,7 +507,8 @@ def pressure_analysis(
     part_years = _participation_seasons()
 
     with engine.connect() as c:
-        player = c.execute(text("SELECT player_name FROM players WHERE player_id = :pid"), {"pid": player_id}).fetchone()
+        player = c.execute(text("SELECT player_name, gsis_id FROM players WHERE player_id = :pid"), {"pid": player_id}).fetchone()
+        gsis = player.gsis_id if player else None
 
         if yr not in part_years:
             return {
@@ -498,6 +520,9 @@ def pressure_analysis(
                 "no_data": True,
                 "available_seasons": part_years,
             }
+
+        if not gsis:
+            return {"player": player.player_name if player else player_id, "player_id": player_id, "season": yr, "data": {}, "error": "No PBP ID mapping"}
 
         rows = c.execute(text("""
             SELECT
@@ -514,7 +539,7 @@ def pressure_analysis(
                   AND p.pass_attempt = 1 AND p.epa IS NOT NULL
                   AND pt.was_pressure IS NOT NULL
             GROUP BY pt.was_pressure
-        """), {"pid": player_id, "season": yr}).fetchall()
+        """), {"pid": gsis, "season": yr}).fetchall()
 
     data = {}
     for r in rows:
@@ -541,57 +566,56 @@ def qb_decisions(
     yr = season or _latest_season()
     ftn_years = _ftn_seasons()
 
-    if yr not in ftn_years:
-        with engine.connect() as c:
-            player = c.execute(text("SELECT player_name FROM players WHERE player_id = :pid"), {"pid": player_id}).fetchone()
-        return {
-            "player": player.player_name if player else player_id,
-            "player_id": player_id,
-            "season": yr,
-            "coverage": f"FTN Charting data available for: {', '.join(str(y) for y in ftn_years) if ftn_years else 'none loaded'}",
-            "decisions": {},
-            "read_distribution": [],
-            "no_data": True,
-            "available_seasons": ftn_years,
-        }
-
-    sql = text("""
-        SELECT
-            COUNT(*) as total_passes,
-            ROUND(AVG(CASE WHEN f.is_throw_away THEN 100.0 ELSE 0.0 END)::numeric, 1) as throwaway_pct,
-            ROUND(AVG(CASE WHEN f.is_interception_worthy THEN 100.0 ELSE 0.0 END)::numeric, 1) as int_worthy_pct,
-            ROUND(AVG(CASE WHEN f.is_catchable_ball THEN 100.0 ELSE 0.0 END)::numeric, 1) as catchable_pct,
-            ROUND(AVG(CASE WHEN f.is_drop THEN 100.0 ELSE 0.0 END)::numeric, 1) as drop_pct,
-            ROUND(AVG(CASE WHEN f.is_contested_ball THEN 100.0 ELSE 0.0 END)::numeric, 1) as contested_pct,
-            ROUND(AVG(CASE WHEN f.is_qb_out_of_pocket THEN 100.0 ELSE 0.0 END)::numeric, 1) as out_of_pocket_pct,
-            ROUND(AVG(CASE WHEN f.is_qb_fault_sack THEN 100.0 ELSE 0.0 END)::numeric, 1) as qb_fault_sack_pct,
-            ROUND(AVG(p.epa)::numeric, 3) as epa_per_play
-        FROM pbp p
-        JOIN ftn_charting f ON f.nflverse_game_id = p.game_id AND f.nflverse_play_id = p.play_id
-        WHERE p.passer_player_id = :pid AND p.season = :season
-              AND p.pass_attempt = 1 AND p.epa IS NOT NULL
-    """)
-
-    # Also get read_thrown distribution
-    read_sql = text("""
-        SELECT f.read_thrown, COUNT(*) as count
-        FROM pbp p
-        JOIN ftn_charting f ON f.nflverse_game_id = p.game_id AND f.nflverse_play_id = p.play_id
-        WHERE p.passer_player_id = :pid AND p.season = :season
-              AND p.pass_attempt = 1 AND f.read_thrown IS NOT NULL
-        GROUP BY f.read_thrown ORDER BY count DESC
-    """)
-
     with engine.connect() as c:
-        player = c.execute(text("SELECT player_name FROM players WHERE player_id = :pid"), {"pid": player_id}).fetchone()
-        row = c.execute(sql, {"pid": player_id, "season": yr}).fetchone()
-        reads = c.execute(read_sql, {"pid": player_id, "season": yr}).fetchall()
+        player = c.execute(text("SELECT player_name, gsis_id FROM players WHERE player_id = :pid"), {"pid": player_id}).fetchone()
+        gsis = player.gsis_id if player else None
+
+        if yr not in ftn_years:
+            return {
+                "player": player.player_name if player else player_id,
+                "player_id": player_id,
+                "season": yr,
+                "coverage": f"FTN Charting data available for: {', '.join(str(y) for y in ftn_years) if ftn_years else 'none loaded'}",
+                "decisions": {},
+                "read_distribution": [],
+                "no_data": True,
+                "available_seasons": ftn_years,
+            }
+
+        if not gsis:
+            return {"player": player.player_name if player else player_id, "player_id": player_id, "season": yr, "decisions": {}, "read_distribution": [], "error": "No PBP ID mapping"}
+
+        row = c.execute(text("""
+            SELECT
+                COUNT(*) as total_passes,
+                ROUND(AVG(CASE WHEN f.is_throw_away THEN 100.0 ELSE 0.0 END)::numeric, 1) as throwaway_pct,
+                ROUND(AVG(CASE WHEN f.is_interception_worthy THEN 100.0 ELSE 0.0 END)::numeric, 1) as int_worthy_pct,
+                ROUND(AVG(CASE WHEN f.is_catchable_ball THEN 100.0 ELSE 0.0 END)::numeric, 1) as catchable_pct,
+                ROUND(AVG(CASE WHEN f.is_drop THEN 100.0 ELSE 0.0 END)::numeric, 1) as drop_pct,
+                ROUND(AVG(CASE WHEN f.is_contested_ball THEN 100.0 ELSE 0.0 END)::numeric, 1) as contested_pct,
+                ROUND(AVG(CASE WHEN f.is_qb_out_of_pocket THEN 100.0 ELSE 0.0 END)::numeric, 1) as out_of_pocket_pct,
+                ROUND(AVG(CASE WHEN f.is_qb_fault_sack THEN 100.0 ELSE 0.0 END)::numeric, 1) as qb_fault_sack_pct,
+                ROUND(AVG(p.epa)::numeric, 3) as epa_per_play
+            FROM pbp p
+            JOIN ftn_charting f ON f.nflverse_game_id = p.game_id AND f.nflverse_play_id = p.play_id
+            WHERE p.passer_player_id = :pid AND p.season = :season
+                  AND p.pass_attempt = 1 AND p.epa IS NOT NULL
+        """), {"pid": gsis, "season": yr}).fetchone()
+
+        reads = c.execute(text("""
+            SELECT f.read_thrown, COUNT(*) as count
+            FROM pbp p
+            JOIN ftn_charting f ON f.nflverse_game_id = p.game_id AND f.nflverse_play_id = p.play_id
+            WHERE p.passer_player_id = :pid AND p.season = :season
+                  AND p.pass_attempt = 1 AND f.read_thrown IS NOT NULL
+            GROUP BY f.read_thrown ORDER BY count DESC
+        """), {"pid": gsis, "season": yr}).fetchall()
 
     return {
         "player": player.player_name if player else player_id,
         "player_id": player_id,
         "season": yr,
-        "coverage": "2022-2025 (FTN Charting)",
+        "coverage": f"FTN Charting: {', '.join(str(y) for y in ftn_years)}",
         "decisions": dict(row._mapping) if row else {},
         "read_distribution": [dict(r._mapping) for r in reads],
     }

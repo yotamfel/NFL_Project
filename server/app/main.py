@@ -149,6 +149,9 @@ def _run_migrations():
         conn.execute(text(
             "ALTER TABLE players ADD COLUMN IF NOT EXISTS fdv NUMERIC(6,1)"
         ))
+        conn.execute(text(
+            "ALTER TABLE players ADD COLUMN IF NOT EXISTS gsis_id TEXT"
+        ))
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS ai_query_log (
                 id           BIGSERIAL PRIMARY KEY,
