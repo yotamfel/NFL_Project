@@ -765,6 +765,7 @@ export default function Portfolio() {
                 { title: 'SQL injection prevention', desc: 'AI-generated queries pass through a regex safety filter that rejects all write operations, DDL, and multi-statement queries before execution. Only single SELECT/WITH statements reach the database.' },
                 { title: 'Rate limiting', desc: 'Login endpoint tracks failed attempts per username. After repeated failures, the account is temporarily locked to prevent brute-force attacks.' },
                 { title: 'Role-based access', desc: 'Admin features are gated behind a require_admin dependency - returning 403 for non-admin users. Frontend components are conditionally rendered based on the is_admin flag in the JWT payload.' },
+                { title: 'Guest mode', desc: '10-minute trial without registration. Dual-tracked via cookie + localStorage to prevent session reset. AI features, saves, and exports are blocked. Expired sessions persist across page refreshes.' },
               ].map(s => (
                 <div key={s.title} className="bg-slate-800/60 rounded-xl p-4">
                   <p className="text-white text-sm font-semibold mb-1">{s.title}</p>

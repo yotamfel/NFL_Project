@@ -749,6 +749,7 @@ export default function Comparison() {
       {data && (
         <>
           {/* Save */}
+          {!user?.isGuest && (
           <div className="flex justify-end items-center">
             <button onClick={handleSave} disabled={saved}
               className={`text-sm font-medium px-4 py-1.5 rounded-lg transition-colors border ${
@@ -764,9 +765,10 @@ export default function Comparison() {
               data={{ playerIds, playerNames: data.players.map(p => p.player_name), category }}
             />
           </div>
+          )}
 
           {/* AI Narrative */}
-          {narState === 'idle' && (
+          {!user?.isGuest && narState === 'idle' && (
             <div className="bg-slate-800/70 border border-slate-700/60 rounded-2xl p-5 flex items-center justify-between gap-3 flex-wrap">
               <div>
                 <p className="text-white font-bold">AI Comparison Narrative</p>

@@ -997,7 +997,7 @@ export default function PlayerProfile() {
 
       {user?.is_admin && <SimilarPlayersSection playerId={player.player_id} playerName={player.player_name} accentColor={c.hex} />}
 
-      <InsightsSection playerId={player.player_id} accentColor={c.hex} />
+      {!user?.isGuest && <InsightsSection playerId={player.player_id} accentColor={c.hex} />}
 
       {/* Scope toggle: Regular Season / Playoffs / All Games */}
       <div className="flex items-center gap-3 flex-wrap">

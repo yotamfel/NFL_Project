@@ -9,8 +9,11 @@ const BASE = '/api'
 let _accessToken = null
 let _onUnauthorized = null   // callback set by AuthContext to trigger logout
 
+let _isGuest = false
+
 export function setAccessToken(token) { _accessToken = token }
 export function setUnauthorizedHandler(fn) { _onUnauthorized = fn }
+export function setGuestMode(v) { _isGuest = v }
 
 async function request(method, path, body, { skipAuth = false } = {}) {
   const headers = { 'Content-Type': 'application/json' }
@@ -28,7 +31,7 @@ async function request(method, path, body, { skipAuth = false } = {}) {
   }
 
   if (res.status === 401 && !skipAuth) {
-    // Try to refresh the access token once, then retry
+    if (_isGuest) throw new Error('Sign up to access this feature')
     const refreshed = await _tryRefresh()
     if (refreshed) {
       const retryHeaders = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_accessToken}` }

@@ -10,7 +10,7 @@ export default function Auth() {
   const [error,    setError]    = useState('')
   const [loading,  setLoading]  = useState(false)
   const [agreed,   setAgreed]   = useState(false)
-  const { login, register } = useAuth()
+  const { login, register, loginAsGuest, guestExpired } = useAuth()
   const navigate = useNavigate()
 
   const submit = async e => {
@@ -116,6 +116,17 @@ export default function Auth() {
               {loading ? 'Please wait…' : tab === 'login' ? 'Sign In' : 'Create Account'}
             </button>
           </form>
+
+          <div className="mt-4 pt-4 border-t border-slate-800">
+            {guestExpired ? (
+              <p className="text-center text-slate-600 text-xs">Guest session already used. Sign up to continue.</p>
+            ) : (
+              <button onClick={() => { if (loginAsGuest()) navigate('/', { replace: true }) }}
+                className="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 py-2.5 rounded-lg text-sm transition-colors">
+                Try as guest <span className="text-slate-500">(10 min)</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

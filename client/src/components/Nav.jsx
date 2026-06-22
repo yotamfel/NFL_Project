@@ -7,12 +7,12 @@ const LINKS = [
   { to: '/players',    label: 'Players' },
   { to: '/comparison', label: 'Compare' },
   { to: '/draft',      label: 'Draft' },
-  { to: '/search',     label: 'Search' },
+  { to: '/search',     label: 'Search', guestHidden: true },
   { to: '/trends',     label: 'Trends' },
   { to: '/anomalies',  label: 'Anomalies' },
-  { to: '/saved',      label: 'Saved' },
+  { to: '/saved',      label: 'Saved', guestHidden: true },
   { to: '/guide',      label: 'Guide' },
-  { to: '/feedback',   label: 'Feedback' },
+  { to: '/feedback',   label: 'Feedback', guestHidden: true },
   { to: '/situational', label: 'Situational', adminOnly: true },
   { to: '/content-history', label: 'Content', adminOnly: true },
   { to: '/admin',      label: 'Admin', adminOnly: true },
@@ -115,7 +115,7 @@ export default function Nav() {
 
         {/* Scrollable links section - overflow only here, not on parent */}
         <div className="flex items-center gap-1 overflow-x-auto flex-1 mr-3" style={{ scrollbarWidth: 'none' }}>
-          {LINKS.filter(({ adminOnly }) => !adminOnly || user?.is_admin).map(({ to, label, adminOnly }) => (
+          {LINKS.filter(({ adminOnly, guestHidden }) => (!adminOnly || user?.is_admin) && (!guestHidden || !user?.isGuest)).map(({ to, label, adminOnly }) => (
             <NavLink key={to} to={to} className={({ isActive }) =>
               `relative text-xs font-medium px-2.5 py-1.5 rounded-lg transition-colors whitespace-nowrap shrink-0 ${
                 isActive
@@ -134,7 +134,7 @@ export default function Nav() {
         </div>
 
         {/* Notification bell */}
-        <div ref={bellRef} className="relative shrink-0">
+        {!user?.isGuest && <div ref={bellRef} className="relative shrink-0">
           <button onClick={openBell}
             className="relative w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
             title="Notifications">
@@ -174,7 +174,7 @@ export default function Nav() {
               </div>
             </div>
           )}
-        </div>
+        </div>}
 
         {/* Settings gear */}
         <div ref={settingsRef} className="relative shrink-0">

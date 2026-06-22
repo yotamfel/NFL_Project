@@ -166,7 +166,7 @@ export function TableExportButtons({ columns, rows, title }) {
   const { saveTable, removeTable, isTableSaved } = useUser() || {}
   const { user: tblUser } = useAuth() || {}
 
-  if (!rows?.length) return null
+  if (!rows?.length || tblUser?.isGuest) return null
 
   const csvCols = columns.map(({ key, label }) => ({ key, label }))
   const isSaved = title ? (isTableSaved?.(title) ?? false) : false

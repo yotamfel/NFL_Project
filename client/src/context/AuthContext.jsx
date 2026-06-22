@@ -1,14 +1,40 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
-import { api, setAccessToken, setUnauthorizedHandler } from '../api'
+import { api, setAccessToken, setUnauthorizedHandler, setGuestMode } from '../api'
 
 const AuthCtx = createContext(null)
+const GUEST_DURATION = 10 * 60 * 1000
+const GUEST_LS_KEY = 'nfl_guest_start'
+const GUEST_COOKIE = 'nfl_guest_start'
+
+function getGuestStart() {
+  const ls = localStorage.getItem(GUEST_LS_KEY)
+  const cookie = document.cookie.split('; ').find(c => c.startsWith(GUEST_COOKIE + '='))?.split('=')[1]
+  return parseInt(ls || cookie || '0') || 0
+}
+
+function setGuestStart(ts) {
+  localStorage.setItem(GUEST_LS_KEY, String(ts))
+  document.cookie = `${GUEST_COOKIE}=${ts}; path=/; max-age=86400; SameSite=Lax`
+}
+
+function isGuestExpiredCheck() {
+  const start = getGuestStart()
+  return start > 0 && Date.now() - start > GUEST_DURATION
+}
 
 export function AuthProvider({ children }) {
   const [user,      setUser]      = useState(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [guestExpired, setGuestExpired] = useState(isGuestExpiredCheck())
   const logoutRef = useRef(null)
+  const guestTimerRef = useRef(null)
 
   const logout = useCallback(async () => {
+    if (user?.isGuest) {
+      setUser(null)
+      setGuestMode(false)
+      return
+    }
     const rt = localStorage.getItem('nfl_refresh_token')
     if (rt) {
       try { await api.logout(rt) } catch { /* ignore */ }
@@ -16,7 +42,7 @@ export function AuthProvider({ children }) {
     }
     setAccessToken(null)
     setUser(null)
-  }, [])
+  }, [user?.isGuest])
 
   // Store logout in a ref so setUnauthorizedHandler can close over it
   useEffect(() => { logoutRef.current = logout }, [logout])
@@ -78,13 +104,44 @@ export function AuthProvider({ children }) {
 
   // Poll every 10s while logged in to keep counts live
   useEffect(() => {
-    if (!user) return
+    if (!user || user.isGuest) return
     const id = setInterval(refreshUnread, 10_000)
     return () => clearInterval(id)
-  }, [user?.id, refreshUnread])
+  }, [user?.id, user?.isGuest, refreshUnread])
+
+  const loginAsGuest = useCallback(() => {
+    if (isGuestExpiredCheck()) { setGuestExpired(true); return false }
+    const start = getGuestStart() || Date.now()
+    setGuestStart(start)
+    setGuestMode(true)
+    setUser({ id: null, username: 'Guest', email: null, is_admin: false, isGuest: true, theme: 'dark' })
+    return true
+  }, [])
+
+  // Guest timer
+  useEffect(() => {
+    if (!user?.isGuest) return
+    const start = getGuestStart()
+    const remaining = GUEST_DURATION - (Date.now() - start)
+    if (remaining <= 0) {
+      setUser(null); setGuestExpired(true); setGuestMode(false)
+      return
+    }
+    guestTimerRef.current = setTimeout(() => {
+      setUser(null); setGuestExpired(true); setGuestMode(false)
+    }, remaining)
+    // Also check on focus (setTimeout pauses in background tabs)
+    const onFocus = () => {
+      if (Date.now() - start > GUEST_DURATION) {
+        setUser(null); setGuestExpired(true); setGuestMode(false)
+      }
+    }
+    window.addEventListener('focus', onFocus)
+    return () => { clearTimeout(guestTimerRef.current); window.removeEventListener('focus', onFocus) }
+  }, [user?.isGuest])
 
   return (
-    <AuthCtx.Provider value={{ user, isLoading, login, register, logout, updatePreferences, refreshUnread }}>
+    <AuthCtx.Provider value={{ user, isLoading, login, register, logout, loginAsGuest, guestExpired, updatePreferences, refreshUnread }}>
       {children}
     </AuthCtx.Provider>
   )
