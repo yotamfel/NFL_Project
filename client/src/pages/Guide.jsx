@@ -22,10 +22,6 @@ const CONTENT = {
             title: 'Filters',
             body: 'Below the search box you can filter by Position, Season active, and Team without typing a name at all. Combine filters freely - e.g., "all WRs who played for the Cowboys in 2022".',
           },
-          {
-            title: 'Quick search (nav bar)',
-            body: 'The search box in the top navigation bar is always available and takes you directly to a player\'s profile from any page.',
-          },
         ],
       },
       {
@@ -477,10 +473,6 @@ const CONTENT = {
           {
             title: 'פילטרים',
             body: 'מתחת לתיבת החיפוש ניתן לסנן לפי Position (עמדה), Season (שנה שהשחקן היה פעיל בה) ו-Team (קבוצה) - ללא צורך להקליד שם בכלל. שלב פילטרים בחופשיות, למשל: "כל WRs שיחקו ב-Cowboys ב-2022".',
-          },
-          {
-            title: 'Quick Search (סרגל ניווט)',
-            body: 'תיבת החיפוש בסרגל הניווט העליון זמינה בכל עמוד ומפנה ישירות לפרופיל השחקן.',
           },
         ],
       },
