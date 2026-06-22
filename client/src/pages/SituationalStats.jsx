@@ -39,16 +39,30 @@ const STAT_TIPS = {
   read_thrown: 'Which read the QB threw to - 1st, 2nd, 3rd, or checkdown read.',
 }
 
+let _setColTip = null
+
 function Tip({ stat }) {
   const text = STAT_TIPS[stat]
   if (!text) return null
+  const show = (e) => {
+    const r = e.currentTarget.getBoundingClientRect()
+    _setColTip?.({ text, x: Math.min(r.left, window.innerWidth - 236 - 12), y: r.bottom + 6 })
+  }
   return (
-    <span className="relative group cursor-help">
-      <span className="text-slate-600 text-xs ml-0.5">i</span>
-      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 bg-slate-700 text-slate-200 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-30 max-w-xs text-center" style={{whiteSpace: 'normal', width: '200px'}}>
-        {text}
-      </span>
-    </span>
+    <span className="text-slate-600 text-xs select-none cursor-help ml-1"
+      onMouseEnter={show} onMouseLeave={() => _setColTip?.(null)}>ⓘ</span>
+  )
+}
+
+function ColTipPortal() {
+  const [colTip, setColTip] = useState(null)
+  useEffect(() => { _setColTip = setColTip; return () => { _setColTip = null } }, [])
+  if (!colTip) return null
+  return (
+    <div style={{ position: 'fixed', top: colTip.y, left: colTip.x, zIndex: 9999 }}
+      className="pointer-events-none w-56 rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-xs text-slate-300 shadow-xl whitespace-normal leading-relaxed">
+      {colTip.text}
+    </div>
   )
 }
 
@@ -588,6 +602,7 @@ export default function SituationalStats() {
           />
         )}
       </div>
+      <ColTipPortal />
     </div>
   )
 }
