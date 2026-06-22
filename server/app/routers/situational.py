@@ -86,16 +86,17 @@ def browse_players(
         positions = [(p, *v) for p, v in pos_cols.items()]
 
     teams_list = [t.strip().upper() for t in team.split(",")] if team else []
-    team_filter = ""
-    if teams_list:
-        team_filter = f"AND posteam = ANY(ARRAY{teams_list})" if len(teams_list) > 1 else f"AND posteam = '{teams_list[0]}'"
+    team_filter = "AND posteam = ANY(:teams)" if teams_list else ""
 
     results = []
     seen = set()
     with engine.connect() as c:
         for p, id_col, name_col, where in positions:
+            params = {"seasons": yrs}
+            if teams_list:
+                params["teams"] = teams_list
             rows = c.execute(text(f"""
-                SELECT DISTINCT {id_col} as gsis_id, {name_col} as name, posteam as team,
+                SELECT {id_col} as gsis_id, {name_col} as name, posteam as team,
                        COUNT(*) as plays
                 FROM pbp
                 WHERE {where} AND {id_col} IS NOT NULL AND season = ANY(:seasons)
@@ -104,7 +105,7 @@ def browse_players(
                 HAVING COUNT(*) >= 20
                 ORDER BY plays DESC
                 LIMIT 40
-            """), {"seasons": yrs}).fetchall()
+            """), params).fetchall()
             for r in rows:
                 if r.gsis_id not in seen:
                     seen.add(r.gsis_id)
