@@ -514,7 +514,7 @@ def play_action_analysis(
         if not gsis:
             return {"player": player.player_name if player else player_id, "player_id": player_id, "season": yr, "data": {}, "error": "No PBP ID mapping"}
 
-        rows = c.execute(text("""
+        rows = c.execute(text(f"""
             WITH pa AS (
                 SELECT
                     f.is_play_action,
@@ -723,7 +723,7 @@ def pressure_analysis(
         if not gsis:
             return {"player": player.player_name if player else player_id, "player_id": player_id, "season": yr, "data": {}, "error": "No PBP ID mapping"}
 
-        rows = c.execute(text("""
+        rows = c.execute(text(f"""
             SELECT
                 pt.was_pressure,
                 COUNT(*) as plays,
@@ -787,7 +787,7 @@ def qb_decisions(
         if not gsis:
             return {"player": player.player_name if player else player_id, "player_id": player_id, "season": yr, "decisions": {}, "read_distribution": [], "error": "No PBP ID mapping"}
 
-        row = c.execute(text("""
+        row = c.execute(text(f"""
             SELECT
                 COUNT(*) as total_passes,
                 ROUND(AVG(CASE WHEN f.is_throw_away THEN 100.0 ELSE 0.0 END)::numeric, 1) as throwaway_pct,
