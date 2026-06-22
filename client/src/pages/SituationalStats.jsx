@@ -38,7 +38,7 @@ const STAT_TIPS = {
   pass_location: 'Where the pass was targeted - left, middle, or right of the field.',
   pass_length: 'Short (under 15 air yards) or deep (15+ air yards) pass.',
   read_thrown: 'Which read the QB threw to - 1st, 2nd, 3rd, or checkdown read.',
-  epa_dist: 'EPA distribution - each bar is an EPA bucket. Green = positive, red = negative. Tall bars = many plays at that EPA. Shows if performance is consistent or driven by outlier plays.',
+  epa_dist: 'Percentage of plays with positive EPA. The bar shows the green/red split - more green = more successful plays. A high EPA+% means consistent performance, not just a few big plays.',
   play_down: 'Current down (1st, 2nd, 3rd, or 4th).',
   play_dist: 'Yards to go for a first down.',
   play_ydln: 'Yards from the end zone (1 = goal line, 99 = own 1-yard line).',
@@ -723,15 +723,20 @@ const GROUP_OPTIONS = [
   { id: 'pass_depth', label: 'Pass Depth' },
 ]
 
-function MiniHist({ buckets }) {
+function EpaSplitBar({ buckets }) {
   if (!buckets?.length) return null
-  const max = Math.max(...buckets.map(b => b.count))
+  let pos = 0, neg = 0
+  buckets.forEach(b => { if (b.epa >= 0) pos += b.count; else neg += b.count })
+  const total = pos + neg
+  if (!total) return null
+  const pct = Math.round(pos / total * 100)
   return (
-    <div className="flex items-end gap-px h-4 w-16 inline-flex align-middle ml-1">
-      {buckets.slice(0, 12).map((b, i) => (
-        <div key={i} className={`flex-1 rounded-sm ${b.epa >= 0 ? 'bg-emerald-500/60' : 'bg-red-500/60'}`}
-          style={{ height: `${Math.max((b.count / max) * 100, 8)}%` }} />
-      ))}
+    <div className="inline-flex items-center gap-1.5 align-middle">
+      <div className="w-14 h-2 rounded-full overflow-hidden flex bg-slate-800">
+        <div className="bg-emerald-500 h-full" style={{ width: `${pct}%` }} />
+        <div className="bg-red-500 h-full flex-1" />
+      </div>
+      <span className={`text-[10px] font-medium ${pct >= 50 ? 'text-emerald-400' : 'text-red-400'}`}>{pct}%</span>
     </div>
   )
 }
@@ -1090,7 +1095,7 @@ function ExplorerSection({ seasons }) {
               <tr className="text-slate-500 text-xs border-b border-slate-800">
                 <th className="w-6 py-2"></th>
                 <SortHeader label={GROUP_OPTIONS.find(g => g.id === activeGroupBy)?.label || activeGroupBy} field={activeGroupBy} sort={sort} setSort={setSort} align="left" />
-                <th className="py-2 px-1 text-right text-[10px]">EPA Dist<Tip stat="epa_dist" /></th>
+                <th className="py-2 px-1 text-right text-[10px]">EPA+%<Tip stat="epa_dist" /></th>
                 <SortHeader label="EPA/play" field="epa_per_play" sort={sort} setSort={setSort} tip="epa_per_play" />
                 <SortHeader label="Total EPA" field="total_epa" sort={sort} setSort={setSort} tip="total_epa" />
                 <SortHeader label="Success%" field="success_rate" sort={sort} setSort={setSort} tip="success_rate" />
@@ -1116,7 +1121,7 @@ function ExplorerSection({ seasons }) {
                       <td className="py-2 pr-2 text-white font-medium cursor-pointer hover:text-amber-400" onClick={() => drillDown(activeGroupBy, gKey)}>
                         {gKey} <span className="text-slate-600 text-[10px] ml-0.5">drill</span>
                       </td>
-                      <td className="py-2 px-1 text-right"><MiniHist buckets={data?.histograms?.[String(gKey)]} /></td>
+                      <td className="py-2 px-1 text-right"><EpaSplitBar buckets={data?.histograms?.[String(gKey)]} /></td>
                       <td className="py-2 px-2 text-right"><EpaColorCell val={r.epa_per_play} /><EpaBar val={r.epa_per_play} max={maxEpa} /></td>
                       <td className="py-2 px-2 text-right"><EpaColorCell val={r.total_epa} /></td>
                       <td className="py-2 px-2 text-right text-slate-300">{r.success_rate}%</td>
