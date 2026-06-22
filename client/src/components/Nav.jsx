@@ -133,28 +133,6 @@ export default function Nav() {
           ))}
         </div>
 
-        {/* Player search */}
-        <div ref={searchRef} className="relative shrink-0">
-          <div className="flex items-center gap-1.5 bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 focus-within:border-slate-500 transition-colors">
-            <span className="text-slate-500 text-xs">🔍</span>
-            <input value={searchQ} onChange={e => setSearchQ(e.target.value)}
-              onFocus={() => setSearchFocused(true)}
-              placeholder="Player search…"
-              className="bg-transparent text-xs text-slate-200 placeholder-slate-600 focus:outline-none w-32" />
-          </div>
-          {showDropdown && (
-            <ul className="absolute top-full right-0 mt-1 w-64 bg-slate-800 border border-slate-700 rounded-xl overflow-hidden shadow-xl z-50 max-h-72 overflow-y-auto">
-              {searchResults.map(p => (
-                <li key={p.player_id} onMouseDown={() => selectPlayer(p.player_id)}
-                  className="px-4 py-2.5 hover:bg-slate-700 cursor-pointer flex items-center justify-between text-sm border-b border-slate-700/60 last:border-0">
-                  <span className="text-white">{p.player_name}</span>
-                  <span className="text-slate-500 text-xs ml-2">{p.pos} · {p.last_season}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
         {/* Notification bell */}
         <div ref={bellRef} className="relative shrink-0">
           <button onClick={openBell}
