@@ -290,4 +290,4 @@ if _DIST.is_dir():
         file = _DIST / full_path
         if file.is_file():
             return FileResponse(file)
-        return FileResponse(_DIST / "index.html")
+        return FileResponse(_DIST / "index.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
