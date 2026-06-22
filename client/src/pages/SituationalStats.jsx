@@ -1,5 +1,5 @@
 import { useState, useEffect, Fragment } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { api } from '../api'
 import { useAuth } from '../context/AuthContext'
 import { Loading, ErrorMsg } from '../components/Status'
@@ -623,18 +623,83 @@ function SimpleSection({ title, fetchFn, players, season, renderData, ctxParams 
 export default function SituationalStats() {
   const { user } = useAuth()
   const navigate = useNavigate()
-  const [section, setSection] = useState('epa')
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  const initSection = searchParams.get('tab') || 'epa'
+  const initSeasons = searchParams.get('seasons')?.split(',').map(Number).filter(Boolean) || []
+  const initST = searchParams.get('st') || 'REG'
+  const initOpp = searchParams.get('opp')?.split(',').filter(Boolean) || []
+  const initLoc = searchParams.get('loc') || ''
+  const initWF = searchParams.get('wf') || ''
+  const initWT = searchParams.get('wt') || ''
+
+  const [section, setSection] = useState(initSection)
   const [season, setSeason] = useState(2025)
-  const [selectedSeasons, setSelectedSeasons] = useState([])
+  const [selectedSeasons, setSelectedSeasons] = useState(initSeasons)
   const [players, setPlayers] = useState([])
   const [availableYears, setAvailableYears] = useState(FALLBACK_YEARS)
   const multiSeasonSections = ['epa', 'clutch', 'explorer', 'splits', 'trend', 'playaction', 'pressure', 'decisions', 'runheatmap', 'passheatmap', 'formation']
+  const [urlInited, setUrlInited] = useState(false)
 
   useEffect(() => {
     api.getSituationalSeasons().then(years => {
-      if (years?.length) { setAvailableYears(years); setSeason(years[0]); setSelectedSeasons([years[0]]) }
-    }).catch(() => {})
+      if (years?.length) {
+        setAvailableYears(years)
+        if (!initSeasons.length) { setSelectedSeasons([years[0]]) }
+        setSeason(years[0])
+      }
+      // Restore players from URL
+      const pids = searchParams.get('p')?.split(',').filter(Boolean) || []
+      if (pids.length) {
+        Promise.all(pids.map(pid => api.getPlayer(pid).catch(() => null)))
+          .then(results => setPlayers(results.filter(Boolean).map(r => ({ player_id: r.player_id, player_name: r.player_name, pos: r.pos }))))
+      }
+      setUrlInited(true)
+    }).catch(() => { setUrlInited(true) })
   }, [])
+
+  // Sync state to URL
+  useEffect(() => {
+    if (!urlInited) return
+    const p = new URLSearchParams()
+    if (section !== 'epa') p.set('tab', section)
+    if (selectedSeasons.length) p.set('seasons', selectedSeasons.join(','))
+    if (players.length) p.set('p', players.map(pl => pl.player_id).join(','))
+    if (ctxSeasonType !== 'REG') p.set('st', ctxSeasonType)
+    if (ctxOpponent.length) p.set('opp', ctxOpponent.join(','))
+    if (ctxLocation) p.set('loc', ctxLocation)
+    if (ctxWeekFrom) p.set('wf', ctxWeekFrom)
+    if (ctxWeekTo) p.set('wt', ctxWeekTo)
+    setSearchParams(p, { replace: true })
+  }, [section, selectedSeasons.join(','), players.map(p => p.player_id).join(','), ctxSeasonType, ctxOpponent.join(','), ctxLocation, ctxWeekFrom, ctxWeekTo, urlInited])
+
+  // Context filters for player-based sections
+  const [ctxOpponent, setCtxOpponent] = useState(initOpp)
+  const [ctxSeasonType, setCtxSeasonType] = useState(initST)
+  const [ctxWeekFrom, setCtxWeekFrom] = useState(initWF)
+  const [ctxWeekTo, setCtxWeekTo] = useState(initWT)
+  const [ctxLocation, setCtxLocation] = useState(initLoc)
+  const [ctxApplied, setCtxApplied] = useState(0)
+
+  // Player finder filters
+  const [finderPos, setFinderPos] = useState('')
+  const [finderTeam, setFinderTeam] = useState([])
+  const [finderResults, setFinderResults] = useState([])
+  const [finderLoading, setFinderLoading] = useState(false)
+
+  const finderKey = `${finderPos}|${finderTeam.join(',')}|${selectedSeasons.join(',')}`
+  useEffect(() => {
+    if (!finderPos && !finderTeam.length) { setFinderResults([]); return }
+    setFinderLoading(true); setFinderResults([])
+    const key = finderKey
+    api.browseSituationalPlayers({
+      pos: finderPos || undefined,
+      team: finderTeam.length ? finderTeam.join(',') : undefined,
+      seasons: selectedSeasons,
+    }).then(r => { if (finderKey === key) setFinderResults(r) })
+      .catch(() => { if (finderKey === key) setFinderResults([]) })
+      .finally(() => { if (finderKey === key) setFinderLoading(false) })
+  }, [finderKey])
 
   useEffect(() => {
     if (user && !user.is_admin) navigate('/', { replace: true })
@@ -643,19 +708,6 @@ export default function SituationalStats() {
   useEffect(() => { api.trackPage('situational') }, [])
 
   if (!user?.is_admin) return null
-
-  // Context filters for player-based sections
-  const [ctxOpponent, setCtxOpponent] = useState([])
-  const [ctxSeasonType, setCtxSeasonType] = useState('REG')
-  const [ctxWeekFrom, setCtxWeekFrom] = useState('')
-  const [ctxWeekTo, setCtxWeekTo] = useState('')
-  const [ctxLocation, setCtxLocation] = useState('')
-  const [ctxApplied, setCtxApplied] = useState(0)
-  // Player finder filters
-  const [finderPos, setFinderPos] = useState('')
-  const [finderTeam, setFinderTeam] = useState([])
-  const [finderResults, setFinderResults] = useState([])
-  const [finderLoading, setFinderLoading] = useState(false)
 
   const ctxParams = {
     seasons: selectedSeasons,
@@ -675,20 +727,6 @@ export default function SituationalStats() {
     }
   }
   const removePlayer = (id) => setPlayers(prev => prev.filter(p => p.player_id !== id))
-
-  const finderKey = `${finderPos}|${finderTeam.join(',')}|${selectedSeasons.join(',')}`
-  useEffect(() => {
-    if (!finderPos && !finderTeam.length) { setFinderResults([]); return }
-    setFinderLoading(true); setFinderResults([])
-    const key = finderKey
-    api.browseSituationalPlayers({
-      pos: finderPos || undefined,
-      team: finderTeam.length ? finderTeam.join(',') : undefined,
-      seasons: selectedSeasons,
-    }).then(r => { if (finderKey === key) setFinderResults(r) })
-      .catch(() => { if (finderKey === key) setFinderResults([]) })
-      .finally(() => { if (finderKey === key) setFinderLoading(false) })
-  }, [finderKey])
 
   const needsPlayer = !['epa', 'clutch', 'formation', 'explorer'].includes(section)
 
