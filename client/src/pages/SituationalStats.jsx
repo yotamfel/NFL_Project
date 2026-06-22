@@ -1527,6 +1527,7 @@ function ExplorerSection({ seasons }) {
 function WeeklyTrendSection({ players, season }) {
   const [data, setData] = useState({})
   const [loading, setLoading] = useState(false)
+  const [hoverBar, setHoverBar] = useState(null)
 
   useEffect(() => {
     if (players.length === 0) { setData({}); return }
@@ -1549,19 +1550,60 @@ function WeeklyTrendSection({ players, season }) {
   if (allWeeks.length === 0) return <p className="text-slate-500 text-sm">No weekly data found</p>
 
   const maxAbsEpa = Math.max(...Object.values(data).flatMap(d => (d.data || []).map(w => Math.abs(w.epa_per_play || 0))), 0.1)
-  const barH = 120
+  const barH = 160
+
+  // Season averages
+  const avgs = players.map(p => {
+    const weeks = data[p.player_id]?.data || []
+    const totalEpa = weeks.reduce((s, w) => s + (w.epa_per_play || 0), 0)
+    return weeks.length ? (totalEpa / weeks.length) : 0
+  })
+
+  // Best/worst weeks
+  const extremes = players.map(p => {
+    const weeks = data[p.player_id]?.data || []
+    if (!weeks.length) return null
+    const sorted = [...weeks].sort((a, b) => (b.epa_per_play || 0) - (a.epa_per_play || 0))
+    return { best: sorted[0], worst: sorted[sorted.length - 1] }
+  })
+
+  const showBar = (e, pi, wd, week) => {
+    const r = e.currentTarget.getBoundingClientRect()
+    setHoverBar({ x: Math.min(r.left, window.innerWidth - 200), y: r.top - 60, pi, wd, week })
+  }
 
   return (
     <div className="space-y-4">
       <p className="text-slate-400 text-xs">EPA per play by week - track performance consistency through the season</p>
-      <div className="flex items-center gap-4 mb-2">
+
+      {/* Summary cards */}
+      <div className="flex gap-3 flex-wrap">
+        {players.map((p, pi) => (
+          <div key={p.player_id} className="bg-slate-900/60 rounded-xl p-3 flex-1 min-w-[200px] space-y-1.5">
+            <p className="text-xs font-semibold" style={{ color: colors[pi] }}>{p.player_name}</p>
+            <div className="flex gap-3 text-xs">
+              <span className="text-slate-400">Avg EPA: <span className={avgs[pi] >= 0 ? 'text-emerald-400' : 'text-red-400'}>{avgs[pi].toFixed(3)}</span></span>
+              {extremes[pi] && <>
+                <span className="text-slate-400">Best: <span className="text-emerald-400">W{extremes[pi].best.week} ({extremes[pi].best.epa_per_play})</span></span>
+                <span className="text-slate-400">Worst: <span className="text-red-400">W{extremes[pi].worst.week} ({extremes[pi].worst.epa_per_play})</span></span>
+              </>}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Legend */}
+      <div className="flex items-center gap-4">
         {players.map((p, i) => (
           <span key={p.player_id} className="flex items-center gap-1.5 text-xs">
             <span className="w-3 h-3 rounded-full" style={{ background: colors[i] }} />
             <span className="text-white font-medium">{p.player_name}</span>
           </span>
         ))}
+        <span className="text-[10px] text-slate-600 ml-auto">Bars up = positive EPA, bars down = negative. Hover for details.</span>
       </div>
+
+      {/* Chart */}
       <div className="overflow-x-auto">
         <div className="flex items-end gap-1 min-w-[600px]" style={{ height: barH + 40 }}>
           {allWeeks.map(week => (
@@ -1569,20 +1611,20 @@ function WeeklyTrendSection({ players, season }) {
               <div className="relative w-full flex justify-center gap-0.5" style={{ height: barH }}>
                 {players.map((p, pi) => {
                   const wd = (data[p.player_id]?.data || []).find(w => w.week === week)
-                  if (!wd) return <div key={pi} className="w-3" />
+                  if (!wd) return <div key={pi} className="w-4" />
                   const epa = wd.epa_per_play || 0
                   const h = Math.max(Math.abs(epa) / maxAbsEpa * (barH / 2), 2)
                   const isPos = epa >= 0
                   return (
-                    <div key={pi} className="relative w-3 group" style={{ height: barH }}>
-                      <div className={`absolute ${isPos ? 'bottom-1/2' : 'top-1/2'} left-0 right-0 rounded-sm transition-all`}
+                    <div key={pi} className="relative w-4 cursor-pointer" style={{ height: barH }}
+                      onMouseEnter={e => showBar(e, pi, wd, week)} onMouseLeave={() => setHoverBar(null)}>
+                      <div className={`absolute ${isPos ? 'bottom-1/2' : 'top-1/2'} left-0 right-0 rounded-sm transition-all hover:opacity-100`}
                         style={{ height: h, background: colors[pi], opacity: 0.8 }} />
-                      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 pointer-events-none z-10">
-                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs whitespace-nowrap">
-                          <span className="text-white font-bold">{epa}</span>
-                          <span className="text-slate-400 ml-1">EPA | {wd.plays}p | {wd.avg_yards}y</span>
-                        </div>
-                      </div>
+                      {/* avg line marker */}
+                      {(() => {
+                        const avgH = (barH / 2) * (avgs[pi] / maxAbsEpa)
+                        return <div className="absolute left-0 right-0 border-t border-dashed" style={{ bottom: `${50 + (avgH / barH * 100)}%`, borderColor: colors[pi], opacity: 0.3 }} />
+                      })()}
                     </div>
                   )
                 })}
@@ -1593,6 +1635,19 @@ function WeeklyTrendSection({ players, season }) {
           ))}
         </div>
       </div>
+
+      {/* Fixed tooltip */}
+      {hoverBar && (
+        <div style={{ position: 'fixed', top: hoverBar.y, left: hoverBar.x, zIndex: 9999 }}
+          className="pointer-events-none bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 shadow-xl text-xs whitespace-nowrap">
+          <p className="font-bold" style={{ color: colors[hoverBar.pi] }}>Week {hoverBar.week} - {players[hoverBar.pi]?.player_name}</p>
+          <p className="text-slate-300">
+            EPA/play: <span className={hoverBar.wd.epa_per_play >= 0 ? 'text-emerald-400' : 'text-red-400'}>{hoverBar.wd.epa_per_play}</span>
+            {' '}| Total: {hoverBar.wd.total_epa} | Success: {hoverBar.wd.success_rate}% | {hoverBar.wd.plays} plays | {hoverBar.wd.avg_yards} yds
+          </p>
+        </div>
+      )}
+
       {/* Weekly table */}
       {players.map((p, pi) => {
         const weeks = data[p.player_id]?.data || []
