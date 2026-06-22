@@ -279,6 +279,29 @@ if __name__ == "__main__":
         now = datetime.utcnow()
         cur = now.year if now.month >= 9 else now.year - 1
         years = sorted({cur - 1, cur})
-    # PBP covers 2020-2025 max (DB size constraint: ~45MB/year, 512MB limit)
-    years = [y for y in years if y >= 2020]
-    load_pbp_seasons(years)
+    # PBP covers max 4 years (DB size constraint: ~45MB/year, 512MB limit)
+    # Delete oldest seasons to keep only the 4 most recent
+    MAX_PBP_YEARS = 4
+    all_years = sorted(years)
+    if len(all_years) > MAX_PBP_YEARS:
+        all_years = all_years[-MAX_PBP_YEARS:]
+
+    eng = get_engine()
+    with eng.begin() as conn:
+        existing = [r[0] for r in conn.execute(text("SELECT DISTINCT season FROM pbp ORDER BY season")).fetchall()]
+        combined = sorted(set(existing + all_years))
+        if len(combined) > MAX_PBP_YEARS:
+            to_delete = combined[:len(combined) - MAX_PBP_YEARS]
+            for old_yr in to_delete:
+                conn.execute(text("DELETE FROM pbp WHERE season = :yr"), {"yr": old_yr})
+                print(f"Deleted PBP {old_yr} (keeping only {MAX_PBP_YEARS} most recent)")
+    # Also trim FTN and Participation to same range
+    with eng.begin() as conn:
+        try:
+            conn.execute(text("DELETE FROM ftn_charting WHERE season < :min_yr"), {"min_yr": all_years[0]})
+        except: pass
+        try:
+            conn.execute(text("DELETE FROM participation WHERE LEFT(nflverse_game_id, 4)::int < :min_yr"), {"min_yr": all_years[0]})
+        except: pass
+
+    load_pbp_seasons(all_years)
