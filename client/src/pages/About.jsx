@@ -56,6 +56,11 @@ export default function About() {
               title: 'Content Creator Mode',
               desc: 'Turn any comparison or analysis into a ready-to-post tweet, Reddit discussion, or YouTube script with one click.',
             },
+            {
+              icon: '📊',
+              title: 'Situational Stats Explorer',
+              desc: 'Explore play-by-play EPA analytics with custom filters, weekly trends, clutch rankings, pressure splits, and more - slice the data any way you want.',
+            },
           ].map(f => (
             <div key={f.title} className="flex gap-3">
               <span className="text-xl mt-0.5 shrink-0">{f.icon}</span>
