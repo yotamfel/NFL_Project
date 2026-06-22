@@ -325,6 +325,7 @@ function PercentileBar({ pct }) {
 
 function RadarChart({ players, data, splitKeys }) {
   const radarKeys = splitKeys.filter(k => !['overall'].includes(k)).slice(0, 10)
+  const [hover, setHover] = useState(null)
   if (radarKeys.length < 3) return null
   const colors = ['#f59e0b', '#3b82f6']
   const cx = 150, cy = 140, R = 110
@@ -367,11 +368,30 @@ function RadarChart({ players, data, splitKeys }) {
           <polygon key={pi} points={polygon(pi)} fill={colors[pi]} fillOpacity={0.15} stroke={colors[pi]} strokeWidth={1.5} />
         ))}
         {players.map((p, pi) => radarKeys.map((k, i) => {
-          const epa = data[p.player_id]?.splits?.[k]?.epa_per_play ?? 0
+          const split = data[p.player_id]?.splits?.[k] || {}
+          const epa = split.epa_per_play ?? 0
           const r = Math.max((epa + maxAbs) / (2 * maxAbs), 0.05) * R
           const dx = cx + r * Math.cos(angle(i)), dy = cy + r * Math.sin(angle(i))
-          return <circle key={`${pi}-${i}`} cx={dx} cy={dy} r={2.5} fill={colors[pi]} opacity={0.8} />
+          const isHovered = hover?.pi === pi && hover?.i === i
+          return <g key={`${pi}-${i}`}>
+            <circle cx={dx} cy={dy} r={isHovered ? 5 : 3} fill={colors[pi]} opacity={isHovered ? 1 : 0.8}
+              className="cursor-pointer transition-all"
+              onMouseEnter={() => setHover({ pi, i, x: dx, y: dy, epa, label: split.label || k, player: p.player_name, sr: split.success_rate, plays: split.plays })}
+              onMouseLeave={() => setHover(null)} />
+            {/* invisible larger hit area */}
+            <circle cx={dx} cy={dy} r={10} fill="transparent"
+              onMouseEnter={() => setHover({ pi, i, x: dx, y: dy, epa, label: split.label || k, player: p.player_name, sr: split.success_rate, plays: split.plays })}
+              onMouseLeave={() => setHover(null)} />
+          </g>
         }))}
+        {hover && (
+          <foreignObject x={hover.x + 8} y={hover.y - 40} width={160} height={50} className="pointer-events-none overflow-visible">
+            <div className="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 shadow-xl text-[10px] whitespace-nowrap">
+              <p className="font-bold" style={{ color: colors[hover.pi] }}>{hover.player}</p>
+              <p className="text-slate-300">{hover.label}: <span className={hover.epa >= 0 ? 'text-emerald-400' : 'text-red-400'}>{hover.epa} EPA</span> | {hover.sr}% | {hover.plays}p</p>
+            </div>
+          </foreignObject>
+        )}
       </svg>
     </div>
   )
