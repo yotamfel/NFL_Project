@@ -206,7 +206,8 @@ export const api = {
   },
   getSituationalSplits: (playerId, params = {}) => {
     const p = new URLSearchParams()
-    if (params.season) p.set('season', params.season)
+    if (params.seasons?.length) p.set('seasons', params.seasons.join(','))
+    else if (params.season) p.set('season', params.season)
     if (params.opponent) p.set('opponent', params.opponent)
     if (params.season_type) p.set('season_type', params.season_type)
     if (params.week_from) p.set('week_from', params.week_from)

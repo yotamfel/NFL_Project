@@ -340,13 +340,21 @@ function RadarChart({ players, data, splitKeys }) {
     return `${cx + r * Math.cos(angle(i))},${cy + r * Math.sin(angle(i))}`
   }).join(' ')
 
+  const scaleValues = [-maxAbs, -maxAbs / 2, 0, maxAbs / 2, maxAbs].map(v => Math.round(v * 100) / 100)
+
   return (
     <div className="flex justify-center">
       <svg width={300} height={290} className="overflow-visible">
-        {[0.25, 0.5, 0.75, 1].map(s => (
-          <polygon key={s} points={radarKeys.map((_, i) => `${cx + R * s * Math.cos(angle(i))},${cy + R * s * Math.sin(angle(i))}`).join(' ')}
-            fill="none" stroke="#334155" strokeWidth={0.5} />
+        {[0.25, 0.5, 0.75, 1].map((s, si) => (
+          <g key={s}>
+            <polygon points={radarKeys.map((_, i) => `${cx + R * s * Math.cos(angle(i))},${cy + R * s * Math.sin(angle(i))}`).join(' ')}
+              fill="none" stroke="#334155" strokeWidth={0.5} />
+            {si === 1 && <text x={cx + 2} y={cy - R * s - 2} className="fill-slate-600 text-[7px]">{scaleValues[3]}</text>}
+          </g>
         ))}
+        <text x={cx + 2} y={cy + 2} className="fill-slate-600 text-[7px]">{scaleValues[2]}</text>
+        <text x={cx + 2} y={cy - R - 2} className="fill-slate-600 text-[7px]">{scaleValues[4]}</text>
+        <line x1={cx - 4} y1={cy} x2={cx + R + 4} y2={cy} stroke="#475569" strokeWidth={0.3} strokeDasharray="2,2" />
         {radarKeys.map((k, i) => {
           const lbl = data[players[0]?.player_id]?.splits?.[k]?.label || k
           const lx = cx + (R + 18) * Math.cos(angle(i)), ly = cy + (R + 18) * Math.sin(angle(i))
@@ -358,6 +366,12 @@ function RadarChart({ players, data, splitKeys }) {
         {players.map((p, pi) => (
           <polygon key={pi} points={polygon(pi)} fill={colors[pi]} fillOpacity={0.15} stroke={colors[pi]} strokeWidth={1.5} />
         ))}
+        {players.map((p, pi) => radarKeys.map((k, i) => {
+          const epa = data[p.player_id]?.splits?.[k]?.epa_per_play ?? 0
+          const r = Math.max((epa + maxAbs) / (2 * maxAbs), 0.05) * R
+          const dx = cx + r * Math.cos(angle(i)), dy = cy + r * Math.sin(angle(i))
+          return <circle key={`${pi}-${i}`} cx={dx} cy={dy} r={2.5} fill={colors[pi]} opacity={0.8} />
+        }))}
       </svg>
     </div>
   )
@@ -593,7 +607,7 @@ export default function SituationalStats() {
   const [selectedSeasons, setSelectedSeasons] = useState([])
   const [players, setPlayers] = useState([])
   const [availableYears, setAvailableYears] = useState(FALLBACK_YEARS)
-  const multiSeasonSections = ['epa', 'clutch', 'explorer']
+  const multiSeasonSections = ['epa', 'clutch', 'explorer', 'splits', 'trend', 'playaction', 'pressure', 'decisions', 'runheatmap', 'passheatmap', 'formation']
 
   useEffect(() => {
     api.getSituationalSeasons().then(years => {
@@ -622,7 +636,7 @@ export default function SituationalStats() {
   const [finderLoading, setFinderLoading] = useState(false)
 
   const ctxParams = {
-    season,
+    seasons: selectedSeasons,
     opponent: ctxOpponent.length ? ctxOpponent.join(',') : undefined,
     season_type: ctxSeasonType,
     week_from: ctxWeekFrom || undefined,
@@ -667,23 +681,16 @@ export default function SituationalStats() {
       <div className="flex-1 min-w-0 space-y-4">
         {/* Season + Player selectors */}
         <div className="flex items-center gap-3 flex-wrap">
-          {multiSeasonSections.includes(section) ? (
-            <div className="flex items-center gap-1.5">
-              {availableYears.map(y => (
-                <button key={y} onClick={() => setSelectedSeasons(prev =>
-                  prev.includes(y) ? (prev.length > 1 ? prev.filter(s => s !== y) : prev) : [...prev, y]
-                )}
-                  className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${selectedSeasons.includes(y) ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40' : 'bg-slate-800 text-slate-500 border border-slate-700'}`}>
-                  {y}
-                </button>
-              ))}
-            </div>
-          ) : (
-            <select value={season} onChange={e => setSeason(Number(e.target.value))}
-              className="bg-slate-800 border border-slate-700 text-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none">
-              {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
-            </select>
-          )}
+          <div className="flex items-center gap-1.5">
+            {availableYears.map(y => (
+              <button key={y} onClick={() => setSelectedSeasons(prev =>
+                prev.includes(y) ? (prev.length > 1 ? prev.filter(s => s !== y) : prev) : [...prev, y]
+              )}
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${selectedSeasons.includes(y) ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40' : 'bg-slate-800 text-slate-500 border border-slate-700'}`}>
+                {y}
+              </button>
+            ))}
+          </div>
 
           {needsPlayer && (
             <div className="flex-1 min-w-[200px]">
@@ -761,10 +768,10 @@ export default function SituationalStats() {
           {section === 'epa' && <EpaRankingsSection seasons={selectedSeasons} />}
           {section === 'clutch' && <ClutchRankingsSection seasons={selectedSeasons} />}
           {section === 'explorer' && <ExplorerSection seasons={selectedSeasons} />}
-          {section === 'splits' && <SplitsSection players={players} season={season} ctxParams={ctxParams} />}
-          {section === 'trend' && <WeeklyTrendSection players={players} season={season} />}
+          {section === 'splits' && <SplitsSection players={players} ctxParams={ctxParams} />}
+          {section === 'trend' && <WeeklyTrendSection players={players} season={selectedSeasons[0]} />}
           {section === 'playaction' && (
-            <SimpleSection title="Play-Action" fetchFn={api.getPlayAction} players={players} season={season}
+            <SimpleSection title="Play-Action" fetchFn={api.getPlayAction} players={players} season={selectedSeasons[0]}
               renderData={(d, p) => (
                 <div key={p.player_id} className="space-y-2">
                   <p className="text-white font-semibold">{d.player}</p>
@@ -788,7 +795,7 @@ export default function SituationalStats() {
             />
           )}
           {section === 'pressure' && (
-            <SimpleSection title="Pressure" fetchFn={api.getPressureAnalysis} players={players} season={season}
+            <SimpleSection title="Pressure" fetchFn={api.getPressureAnalysis} players={players} season={selectedSeasons[0]}
               renderData={(d, p) => (
                 <div key={p.player_id} className="space-y-2">
                   <p className="text-white font-semibold">{d.player}</p>
@@ -814,7 +821,7 @@ export default function SituationalStats() {
             />
           )}
           {section === 'decisions' && (
-            <SimpleSection title="Decisions" fetchFn={api.getQbDecisions} players={players} season={season}
+            <SimpleSection title="Decisions" fetchFn={api.getQbDecisions} players={players} season={selectedSeasons[0]}
               renderData={(d, p) => (
                 <div key={p.player_id} className="space-y-3">
                   <p className="text-white font-semibold">{d.player}</p>
@@ -857,7 +864,7 @@ export default function SituationalStats() {
             />
           )}
           {section === 'runheatmap' && (
-            <SimpleSection title="Run Heatmap" fetchFn={api.getRunHeatmap} players={players} season={season}
+            <SimpleSection title="Run Heatmap" fetchFn={api.getRunHeatmap} players={players} season={selectedSeasons[0]}
               renderData={(d, p) => (
                 <div key={p.player_id} className="space-y-3">
                   <p className="text-white font-semibold">{d.player}</p>
@@ -888,7 +895,7 @@ export default function SituationalStats() {
             />
           )}
           {section === 'passheatmap' && (
-            <SimpleSection title="Pass Heatmap" fetchFn={(pid, s) => api.getPassHeatmap(pid, s)} players={players} season={season}
+            <SimpleSection title="Pass Heatmap" fetchFn={(pid, s) => api.getPassHeatmap(pid, s)} players={players} season={selectedSeasons[0]}
               renderData={(d, p) => (
                 <div key={p.player_id} className="space-y-3">
                   <p className="text-white font-semibold">{d.player}</p>
@@ -918,7 +925,7 @@ export default function SituationalStats() {
               )}
             />
           )}
-          {section === 'formation' && <FormationSection season={season} />}
+          {section === 'formation' && <FormationSection season={selectedSeasons[0]} />}
         </div>
 
         {/* Content Creator */}

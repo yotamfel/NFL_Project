@@ -189,6 +189,7 @@ def clutch_rankings(
 def situational_splits(
     player_id: str,
     season: Optional[int] = None,
+    seasons: Optional[str] = None,
     opponent: Optional[str] = None,
     season_type: str = Query("REG"),
     week_from: Optional[int] = None,
@@ -196,9 +197,17 @@ def situational_splits(
     location: Optional[str] = None,
     user: dict = Depends(require_admin),
 ):
-    yr = season or _latest_season()
+    if seasons:
+        yrs = [int(s) for s in seasons.split(",")]
+    else:
+        yrs = [season or _latest_season()]
+    yr = yrs[0]
 
     ctx_filters = []
+    if len(yrs) == 1:
+        ctx_filters.append(f"season = {yrs[0]}")
+    else:
+        ctx_filters.append(f"season IN ({','.join(str(y) for y in yrs)})")
     if season_type != "ALL":
         ctx_filters.append(f"season_type = '{season_type}'")
     if opponent:
@@ -246,7 +255,7 @@ def situational_splits(
             return {"player": player.player_name, "pos": pos, "splits": {}, "note": "Position not supported for splits"}
 
         def _split(label, extra_where="", source="pbp"):
-            full_where = f"{base_filter} AND {id_col} = :pid AND season = :season AND epa IS NOT NULL{ctx_sql}"
+            full_where = f"{base_filter} AND {id_col} = :pid AND epa IS NOT NULL AND {' AND '.join(ctx_filters)}"
             if extra_where:
                 full_where += f" AND {extra_where}"
 
@@ -259,7 +268,7 @@ def situational_splits(
                        ROUND(AVG(yards_gained)::numeric, 1) as avg_yards
                 FROM pbp
                 WHERE {full_where}
-            """), {"pid": gsis, "season": yr}).fetchone()
+            """), {"pid": gsis}).fetchone()
 
             d = dict(row._mapping) if row else {}
             d["label"] = label
@@ -356,15 +365,16 @@ def situational_splits(
             key_splits["short_yardage"] = "AND ydstogo <= 2"
         min_p = 20
 
+        season_filter = f"season = {yrs[0]}" if len(yrs) == 1 else f"season IN ({','.join(str(y) for y in yrs)})"
         for skey, extra in key_splits.items():
             league_rows = c.execute(text(f"""
                 SELECT {id_col} as pid, ROUND(AVG(epa)::numeric, 3) as epa
                 FROM pbp
                 WHERE {base_filter} AND {id_col} IS NOT NULL
-                      AND season = :season AND epa IS NOT NULL {extra}
+                      AND {season_filter} AND epa IS NOT NULL {extra}
                 GROUP BY {id_col} HAVING COUNT(*) >= :minp
                 ORDER BY epa
-            """), {"season": yr, "minp": min_p}).fetchall()
+            """), {"minp": min_p}).fetchall()
             if league_rows:
                 vals = [float(r.epa) for r in league_rows]
                 player_epa = splits.get(skey, {}).get("epa_per_play")
@@ -377,6 +387,7 @@ def situational_splits(
         "player_id": player_id,
         "pos": pos,
         "season": yr,
+        "seasons": yrs,
         "splits": splits,
         "enrichment": enrichment,
         "percentiles": percentiles,
