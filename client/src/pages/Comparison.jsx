@@ -317,6 +317,7 @@ export default function Comparison() {
   })
   const [searchQuery,   setSearchQuery]   = useState('')
   const [searchResults, setSearchResults] = useState([])
+  const [searchFocused, setSearchFocused] = useState(false)
   const [data,          setData]          = useState(null)
   const [loading,       setLoading]       = useState(false)
   const [error,         setError]         = useState(null)
@@ -662,12 +663,14 @@ export default function Comparison() {
           )}
 
           {/* Name search */}
-          <div className="relative">
+          <div className="relative"
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setTimeout(() => setSearchFocused(false), 200)}>
             <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
               placeholder={filterCat && filterStat ? 'Filter by name…' : 'Search player name…'}
               className="w-full bg-slate-900/60 border border-dashed border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-300 placeholder-slate-600 focus:outline-none focus:border-slate-500 transition-colors" />
 
-            {searchResults.length > 0 && (
+            {searchFocused && searchResults.length > 0 && (
               <ul className="absolute top-full mt-1 w-full bg-slate-800 border border-slate-700 rounded-xl overflow-hidden shadow-xl z-10 max-h-72 overflow-y-auto">
                 {searchResults.map((p, i) => (
                   <li key={p.player_id} onClick={() => addPlayer(p.player_id, p.pos)}
