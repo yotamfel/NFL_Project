@@ -302,15 +302,23 @@ def save_anecdote(
     user: dict = Depends(require_admin),
 ):
     uid = int(user["sub"])
-    with engine.begin() as conn:
-        conn.execute(text("""
-            INSERT INTO saved_items (user_id, type, label, data, note)
-            VALUES (:uid, 'anecdote', :label, :data::jsonb, '')
-        """), {
-            "uid": uid,
-            "label": body.query[:80],
-            "data": json.dumps({"query": body.query, "text": body.text, "level": body.level, "language": body.language, "scheduled_date": body.scheduled_date, "original_text": body.original_text}),
-        })
+    data_obj = {
+        "query": body.query,
+        "text": body.text,
+        "level": body.level,
+        "language": body.language,
+        "scheduled_date": body.scheduled_date,
+    }
+    if body.original_text:
+        data_obj["original_text"] = body.original_text
+    try:
+        data_str = json.dumps(data_obj, ensure_ascii=False)
+        with engine.begin() as conn:
+            conn.execute(text(
+                "INSERT INTO saved_items (user_id, type, label, data, note) VALUES (:uid, 'anecdote', :label, CAST(:data AS jsonb), '')"
+            ), {"uid": uid, "label": body.query[:80], "data": data_str})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Save failed: {str(e)[:200]}")
     return {"ok": True}
 
 
