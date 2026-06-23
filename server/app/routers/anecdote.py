@@ -235,6 +235,55 @@ def _gather_context(query: str) -> str:
             except Exception:
                 pass
 
+        # Single-game records for found players (PBP)
+        for pid in list(player_ids_found)[:3]:
+            try:
+                gsis = c.execute(text("SELECT gsis_id FROM players WHERE player_id = :pid"), {"pid": pid}).scalar()
+                if not gsis:
+                    continue
+                # Best/worst single-game EPA
+                game_records = c.execute(text("""
+                    SELECT season, week, posteam, defteam, COUNT(*) as plays,
+                           ROUND(SUM(epa)::numeric, 1) as game_epa,
+                           SUM(CASE WHEN touchdown=1 THEN 1 ELSE 0 END) as tds,
+                           ROUND(AVG(yards_gained)::numeric, 1) as avg_yards
+                    FROM pbp WHERE passer_player_id = :gsis AND epa IS NOT NULL AND pass_attempt = 1
+                    GROUP BY season, week, posteam, defteam HAVING COUNT(*) >= 15
+                    ORDER BY game_epa DESC LIMIT 3
+                """), {"gsis": gsis}).fetchall()
+                if game_records:
+                    ctx_parts.append(f"  Best games (by total EPA):")
+                    for g in game_records:
+                        ctx_parts.append(f"    {g.season} W{g.week} vs {g.defteam}: {g.game_epa} EPA, {g.tds} TDs, {g.plays} plays")
+            except Exception:
+                pass
+
+        # Age context for found players
+        for pid in list(player_ids_found)[:3]:
+            try:
+                p_info = c.execute(text("SELECT player_name, first_season FROM players WHERE player_id = :pid"), {"pid": pid}).fetchone()
+                if p_info and p_info.first_season:
+                    draft_yr = c.execute(text("SELECT draft_year FROM draft WHERE player_id = :pid"), {"pid": pid}).scalar()
+                    if draft_yr:
+                        ctx_parts.append(f"  Age context: {p_info.player_name} drafted {draft_yr}, first season {p_info.first_season}")
+            except Exception:
+                pass
+
+        # Snap count trends for found players
+        for pid in list(player_ids_found)[:3]:
+            try:
+                snaps = c.execute(text("""
+                    SELECT season, ROUND(AVG(offense_pct)::numeric * 100, 1) as avg_snap_pct,
+                           COUNT(*) as games
+                    FROM snap_counts WHERE player_id = :pid AND game_type = 'REG'
+                    GROUP BY season ORDER BY season DESC LIMIT 4
+                """), {"pid": pid}).fetchall()
+                for s in snaps:
+                    if s.avg_snap_pct:
+                        ctx_parts.append(f"  Snaps {s.season}: {s.avg_snap_pct}% avg ({s.games} games)")
+            except Exception:
+                pass
+
         # League averages
         league = c.execute(text("""
             SELECT season, COUNT(*) as plays, ROUND(AVG(epa)::numeric, 3) as league_epa
@@ -282,7 +331,7 @@ RULES:
 - Each anecdote must be factually based on the data provided - never invent stats
 - Twitter-ready: engaging, concise, shareable
 - Include 1-2 relevant emoji (not excessive)
-- Include 1-2 hashtags at the end
+- Always end with #NFL #FourthAndData
 - If the text exceeds 280 characters, split it into numbered parts (1/N, 2/N...) each under 280 chars
 - Write in English
 - Each option should take a DIFFERENT angle on the data (one could be a comparison, one a record, one a surprising fact)
