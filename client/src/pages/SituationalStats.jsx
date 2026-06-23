@@ -2700,10 +2700,7 @@ function PassHeatmapSection({ players, season, ctxParams }) {
                   {expanded === key && (
                     <tr><td colSpan={10} className="px-2 pb-2">
                       <div className="bg-slate-900/60 border border-slate-700/30 rounded-lg p-3 space-y-2 text-[10px]">
-                        <div className="flex gap-4">
-                          <span className="text-slate-400">YAC (yards after catch): <span className="text-white font-bold">{cell.avg_yac ?? '-'}</span></span>
-                          <span className="text-slate-400">Air/YAC split: <span className="text-white font-bold">{cell.avg_air_yards ?? '-'}</span> air + <span className="text-white font-bold">{cell.avg_yac ?? '-'}</span> YAC = <span className="text-white font-bold">{cell.avg_yards}</span> total</span>
-                        </div>
+                        {cell.avg_yac != null && <span className="text-slate-400">YAC (yards after catch): <span className="text-white font-bold">{cell.avg_yac}</span></span>}
                         {(() => {
                           const recs = (data.top_receivers || []).filter(r => r.pass_location === cell.pass_location && r.pass_length === cell.pass_length).slice(0, 4)
                           if (!recs.length) return null
