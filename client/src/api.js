@@ -126,6 +126,7 @@ export const api = {
   getAdminAi: ()                    => get('/admin/ai'),
   getFeatureUsage: ()               => get('/admin/feature-usage'),
   trackPage: (page)                 => (_isGuest ? post('/track/guest', { page }, { skipAuth: true }) : post('/track', { page })).catch(() => {}),
+  trackGuestSession: ()             => post('/track/guest-session', {}, { skipAuth: true }).catch(() => {}),
   getAdminUsers: ()                 => get('/admin/users'),
   deleteAdminUser: (id)             => del(`/admin/users/${id}`),
 

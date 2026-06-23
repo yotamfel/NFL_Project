@@ -64,13 +64,33 @@ function OverviewTab() {
     { label: 'Unresolved Feedback', value: stats.unresolved_feedback },
   ]
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-      {cards.map(c => (
-        <div key={c.label} className={`rounded-xl p-5 border ${c.highlight ? 'bg-amber-500/10 border-amber-500/30' : 'bg-slate-900 border-slate-800'}`}>
-          <p className={`text-xs font-medium mb-1 ${c.highlight ? 'text-amber-400' : 'text-slate-400'}`}>{c.label}</p>
-          <p className={`text-3xl font-bold ${c.highlight ? 'text-amber-300' : 'text-white'}`}>{c.value.toLocaleString()}</p>
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+        {cards.map(c => (
+          <div key={c.label} className={`rounded-xl p-5 border ${c.highlight ? 'bg-amber-500/10 border-amber-500/30' : 'bg-slate-900 border-slate-800'}`}>
+            <p className={`text-xs font-medium mb-1 ${c.highlight ? 'text-amber-400' : 'text-slate-400'}`}>{c.label}</p>
+            <p className={`text-3xl font-bold ${c.highlight ? 'text-amber-300' : 'text-white'}`}>{c.value.toLocaleString()}</p>
+          </div>
+        ))}
+      </div>
+      <div className="rounded-xl p-5 border border-cyan-800/40 bg-cyan-900/10">
+        <p className="text-xs font-bold text-cyan-400 mb-3">Guest Sessions</p>
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <p className="text-2xl font-bold text-cyan-300">{stats.guest_sessions_total ?? 0}</p>
+            <p className="text-xs text-slate-500">Total sessions</p>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-cyan-300">{stats.guest_sessions_today ?? 0}</p>
+            <p className="text-xs text-slate-500">Today</p>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-cyan-300">{stats.guest_sessions_7d ?? 0}</p>
+            <p className="text-xs text-slate-500">Last 7 days</p>
+          </div>
         </div>
-      ))}
+        <p className="text-xs text-slate-600 mt-2">{stats.guest_page_views ?? 0} guest page views total</p>
+      </div>
     </div>
   )
 }
@@ -438,15 +458,10 @@ function UsageTab() {
   return (
     <div className="space-y-6">
       {/* Top-level totals */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div className="rounded-xl p-5 border bg-amber-500/10 border-amber-500/30">
           <p className="text-xs font-medium mb-1 text-amber-400">Page Views</p>
           <p className="text-3xl font-bold text-amber-300">{(totals.total_page_views ?? 0).toLocaleString()}</p>
-        </div>
-        <div className="rounded-xl p-5 border bg-slate-700/30 border-slate-600/40">
-          <p className="text-xs font-medium mb-1 text-slate-400">Guest Views</p>
-          <p className="text-3xl font-bold text-slate-300">{(totals.guest_page_views ?? 0).toLocaleString()}</p>
-          <p className="text-[10px] text-slate-600 mt-0.5">{totals.guest_sessions ?? 0} sessions</p>
         </div>
         <div className="rounded-xl p-5 border bg-violet-500/10 border-violet-500/30">
           <p className="text-xs font-medium mb-1 text-violet-400">AI Calls</p>

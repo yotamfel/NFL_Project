@@ -111,10 +111,12 @@ export function AuthProvider({ children }) {
 
   const loginAsGuest = useCallback(() => {
     if (isGuestExpiredCheck()) { setGuestExpired(true); return false }
-    const start = getGuestStart() || Date.now()
+    const existing = getGuestStart()
+    const start = existing || Date.now()
     setGuestStart(start)
     setGuestMode(true)
     setUser({ id: null, username: 'Guest', email: null, is_admin: false, isGuest: true, theme: 'dark' })
+    if (!existing) api.trackGuestSession()
     return true
   }, [])
 

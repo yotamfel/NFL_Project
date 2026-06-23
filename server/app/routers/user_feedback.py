@@ -144,6 +144,12 @@ def track_guest_page(body: TrackBody):
         ), {"page": body.page})
 
 
+@router.post("/track/guest-session", status_code=204)
+def track_guest_session():
+    with engine.begin() as conn:
+        conn.execute(text("INSERT INTO guest_sessions DEFAULT VALUES"))
+
+
 # ── Admin endpoints ────────────────────────────────────────────────────────────
 @router.get("/admin/feedback")
 def admin_list_feedback(admin: dict = Depends(_require_admin)):
@@ -249,6 +255,10 @@ def admin_stats(admin: dict = Depends(_require_admin)):
         unread_notifs = conn.execute(text(
             "SELECT COUNT(*) FROM notifications WHERE user_id = :uid AND is_read = FALSE"
         ), {"uid": int(admin["sub"])}).scalar() or 0
+        guest_total = conn.execute(text("SELECT COUNT(*) FROM guest_sessions")).scalar() or 0
+        guest_today = conn.execute(text("SELECT COUNT(*) FROM guest_sessions WHERE created_at >= CURRENT_DATE")).scalar() or 0
+        guest_7d = conn.execute(text("SELECT COUNT(*) FROM guest_sessions WHERE created_at > now() - INTERVAL '7 days'")).scalar() or 0
+        guest_views = conn.execute(text("SELECT COUNT(*) FROM page_views WHERE is_guest = TRUE")).scalar() or 0
     return {
         "total_users":         total_users,
         "total_visits":        total_visits,
@@ -258,6 +268,10 @@ def admin_stats(admin: dict = Depends(_require_admin)):
         "total_feedback":      total_fb,
         "unresolved_feedback": unresolved_fb,
         "unread_notifications": unread_notifs,
+        "guest_sessions_total": guest_total,
+        "guest_sessions_today": guest_today,
+        "guest_sessions_7d":    guest_7d,
+        "guest_page_views":     guest_views,
     }
 
 
@@ -312,11 +326,6 @@ def admin_feature_usage(admin: dict = Depends(_require_admin)):
         thumbs_up = conn.execute(text("SELECT COUNT(*) FROM ai_query_log WHERE thumbs = 1")).scalar() or 0
         thumbs_down = conn.execute(text("SELECT COUNT(*) FROM ai_query_log WHERE thumbs = -1")).scalar() or 0
         total_page_views = conn.execute(text("SELECT COUNT(*) FROM page_views")).scalar() or 0
-        guest_views = conn.execute(text("SELECT COUNT(*) FROM page_views WHERE is_guest = TRUE")).scalar() or 0
-        guest_sessions = conn.execute(text("""
-            SELECT COUNT(DISTINCT DATE_TRUNC('hour', created_at))
-            FROM page_views WHERE is_guest = TRUE
-        """)).scalar() or 0
         feedback_raw = conn.execute(text("""
             SELECT category, COUNT(*) as count,
                    COUNT(*) FILTER (WHERE resolved = FALSE) as open
@@ -338,8 +347,6 @@ def admin_feature_usage(admin: dict = Depends(_require_admin)):
         "feedback_by_category": feedback_by_cat,
         "totals": {
             "total_page_views": total_page_views,
-            "guest_page_views": guest_views,
-            "guest_sessions": guest_sessions,
             "total_ai_calls": total_ai,
             "thumbs_up": thumbs_up,
             "thumbs_down": thumbs_down,

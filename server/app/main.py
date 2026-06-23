@@ -216,6 +216,12 @@ def _run_migrations():
             CREATE INDEX IF NOT EXISTS idx_page_views_page_date ON page_views (page, created_at DESC)
         """))
         conn.execute(text("ALTER TABLE page_views ADD COLUMN IF NOT EXISTS is_guest BOOLEAN DEFAULT FALSE"))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS guest_sessions (
+                id         BIGSERIAL PRIMARY KEY,
+                created_at TIMESTAMPTZ DEFAULT now()
+            )
+        """))
 
 
 _run_migrations()
