@@ -2215,18 +2215,19 @@ function MatchupSection({ players, season }) {
               const airDelta = t.avg_air_yards && data.overall_air_yards ? (t.avg_air_yards - data.overall_air_yards).toFixed(1) : null
               return (
                 <div key={t.team}>
-                  <button onClick={() => setExpandedTeam(isExp ? null : t.team)}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs transition-colors ${isExp ? 'bg-slate-800 border border-slate-700' : 'bg-slate-900/40 hover:bg-slate-800/60'}`}>
+                  <button onClick={() => !t.no_matchup && setExpandedTeam(isExp ? null : t.team)}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs transition-colors ${t.no_matchup ? 'bg-slate-900/20 opacity-50' : isExp ? 'bg-slate-800 border border-slate-700' : 'bg-slate-900/40 hover:bg-slate-800/60'}`}>
                     <div className="flex items-center gap-2">
                       <span className="text-white font-semibold">{t.team}</span>
                       {t.def_rank && <span className="text-slate-600">#{t.def_rank} DEF</span>}
                       {t.result && <span className={`font-bold ${t.result === 'W' ? 'text-emerald-400' : 'text-red-400'}`}>{t.result}</span>}
                       {t.score && <span className="text-slate-600">{t.score}</span>}
+                      {t.no_matchup && <span className="text-slate-600 italic">No matchup this season</span>}
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="font-bold"><EpaColorCell val={t.epa_per_play} /></span>
+                      {!t.no_matchup && <><span className="font-bold"><EpaColorCell val={t.epa_per_play} /></span>
                       <span className="text-slate-500">{t.plays}p</span>
-                      <span className="text-slate-600">{isExp ? '▲' : '▼'}</span>
+                      <span className="text-slate-600">{isExp ? '▲' : '▼'}</span></>}
                     </div>
                   </button>
                   {isExp && (

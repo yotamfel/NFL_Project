@@ -1471,6 +1471,14 @@ def matchup_finder(
                 league_rank = i + 1
                 break
 
+        # Fill in teams with no matchup data
+        played_teams = {t["team"] for t in per_team}
+        for tm in target_teams:
+            if tm not in played_teams:
+                per_team.append({"team": tm, "plays": 0, "no_matchup": True,
+                                 "def_rank": def_rank_map.get(tm)})
+        per_team.sort(key=lambda t: (0 if t.get("plays", 0) > 0 else 1, -(t.get("epa_per_play") or -99)))
+
     return {
         "player": player.player_name,
         "player_id": player_id,
