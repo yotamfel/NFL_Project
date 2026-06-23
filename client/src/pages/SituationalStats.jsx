@@ -2480,28 +2480,64 @@ function RunHeatmapSection({ players, season, ctxParams }) {
         </div>
       </div>
 
-      {/* OL visualization */}
-      <div className="flex justify-center gap-1">
-        {['left', 'middle', 'right'].map(loc => {
-          const locCells = cells.filter(c => c.run_location === loc).sort((a, b) => (gapMap[a.run_gap] ?? 3) - (gapMap[b.run_gap] ?? 3))
-          return locCells.map(cell => {
-            const epa = cell.epa_per_play || 0
-            const w = Math.max(Math.round(cell.plays / maxPlays * 80), 30)
-            const bg = epa > 0 ? `rgba(74,222,128,${Math.min(Math.abs(epa) * 2.5, 0.7)})` : `rgba(248,113,113,${Math.min(Math.abs(epa) * 2.5, 0.7)})`
-            const key = `${cell.run_location}-${cell.run_gap || 'none'}`
-            return (
-              <button key={key} onClick={() => setExpanded(expanded === key ? null : key)}
-                className={`rounded-lg p-2 text-center transition-all ${expanded === key ? 'ring-1 ring-amber-500' : ''}`}
-                style={{ background: bg, width: w, minWidth: 50 }}>
-                <p className="text-white font-bold text-sm">{cell.avg_yards}y</p>
-                <p className="text-[9px] text-slate-200">{cell.run_gap || loc}</p>
-                <p className="text-[8px] text-slate-300">{cell.plays}p</p>
-              </button>
-            )
-          })
-        })}
+      {/* Run direction table */}
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="text-slate-600 border-b border-slate-800">
+              <th className="text-left py-2 px-2">Direction</th>
+              <th className="text-right py-2 px-2">EPA<Tip stat="epa_per_play" /></th>
+              <th className="py-2 px-2 w-28"></th>
+              <th className="text-right py-2 px-2">Yards</th>
+              <th className="text-right py-2 px-2">Success%</th>
+              <th className="text-right py-2 px-2">Carries</th>
+              <th className="text-center py-2 px-2">TD</th>
+              <th className="text-center py-2 px-2">Fum</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sorted.map(cell => {
+              const epa = cell.epa_per_play || 0
+              const barW = Math.abs(epa) / Math.max(...cells.map(c => Math.abs(c.epa_per_play || 0)), 0.01) * 100
+              const key = `${cell.run_location}-${cell.run_gap || 'none'}`
+              const isBest = cell === best, isWorst = cell === worst
+              return (
+                <Fragment key={key}>
+                  <tr className={`border-b border-slate-800/30 hover:bg-slate-800/30 cursor-pointer ${expanded === key ? 'bg-slate-800/40' : ''}`}
+                    onClick={() => setExpanded(expanded === key ? null : key)}>
+                    <td className="py-2 px-2">
+                      <span className="text-white font-medium capitalize">{cell.run_location}</span>
+                      {cell.run_gap && <span className="text-slate-500 ml-1">{cell.run_gap}</span>}
+                      {isBest && <span className="ml-1 text-emerald-400 text-[9px]">best</span>}
+                      {isWorst && <span className="ml-1 text-red-400 text-[9px]">worst</span>}
+                    </td>
+                    <td className="py-2 px-2 text-right font-bold"><EpaColorCell val={epa} /></td>
+                    <td className="py-2 px-2">
+                      <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+                        <div className={`h-full rounded-full ${epa >= 0 ? 'bg-emerald-500' : 'bg-red-500'}`} style={{ width: `${barW}%`, opacity: 0.7 }} />
+                      </div>
+                    </td>
+                    <td className="py-2 px-2 text-right text-slate-300">{cell.avg_yards}</td>
+                    <td className="py-2 px-2 text-right text-slate-300">{cell.success_rate}%</td>
+                    <td className="py-2 px-2 text-right text-slate-400">{cell.plays}</td>
+                    <td className="py-2 px-2 text-center">{cell.tds > 0 ? <span className="text-emerald-400">{cell.tds}</span> : <span className="text-slate-700">-</span>}</td>
+                    <td className="py-2 px-2 text-center">{cell.fumbles > 0 ? <span className="text-red-400">{cell.fumbles}</span> : <span className="text-slate-700">-</span>}</td>
+                  </tr>
+                  {expanded === key && (
+                    <tr><td colSpan={8} className="px-2 pb-2">
+                      <div className="bg-slate-900/60 border border-slate-700/30 rounded-lg p-3 flex gap-3 text-[10px]">
+                        <span className="bg-emerald-500/10 text-emerald-400 rounded px-2 py-1">10+ yards: <span className="font-bold">{cell.big_runs ?? 0}</span></span>
+                        <span className="bg-slate-800 text-slate-300 rounded px-2 py-1">4-9 yards: <span className="font-bold">{cell.medium_runs ?? 0}</span></span>
+                        <span className="bg-slate-800 text-slate-500 rounded px-2 py-1">1-3 yards: <span className="font-bold">{cell.short_runs ?? 0}</span></span>
+                      </div>
+                    </td></tr>
+                  )}
+                </Fragment>
+              )
+            })}
+          </tbody>
+        </table>
       </div>
-      <p className="text-center text-[9px] text-slate-600">LE - LT - LG - C - RG - RT - RE | Width = volume, color = EPA (green = positive)</p>
 
       {/* Expanded detail */}
       {expanded && (() => {
@@ -2574,60 +2610,66 @@ function PassHeatmapSection({ players, season, ctxParams }) {
         </div>
       </div>
 
-      {/* Field grid: 3 cols x 2 rows (short/deep) */}
-      <div className="grid grid-cols-3 gap-2 max-w-lg mx-auto">
-        <p className="text-[9px] text-slate-600 text-center col-span-3">Deep (15+ air yards)</p>
-        {['left', 'middle', 'right'].map(loc => {
-          const cell = cells.find(c => c.pass_location === loc && c.pass_length === 'deep')
-          if (!cell) return <div key={loc} className="rounded-lg p-3 bg-slate-800/40 text-center text-slate-700 text-[10px]">-</div>
-          const epa = cell.epa_per_play || 0
-          const bg = epa > 0 ? `rgba(74,222,128,${Math.min(Math.abs(epa) * 2.5, 0.7)})` : `rgba(248,113,113,${Math.min(Math.abs(epa) * 2.5, 0.7)})`
-          const key = `${loc}-deep`
-          return (
-            <button key={key} onClick={() => setExpanded(expanded === key ? null : key)}
-              className={`rounded-lg p-3 text-center transition-all ${expanded === key ? 'ring-1 ring-amber-500' : ''}`} style={{ background: bg }}>
-              <p className="text-white font-bold text-sm">{cell.comp_pct}%</p>
-              <p className="text-[10px] text-slate-200"><EpaColorCell val={epa} /> | {cell.plays}p</p>
-            </button>
-          )
-        })}
-        {['left', 'middle', 'right'].map(loc => {
-          const cell = cells.find(c => c.pass_location === loc && c.pass_length === 'short')
-          if (!cell) return <div key={loc} className="rounded-lg p-3 bg-slate-800/40 text-center text-slate-700 text-[10px]">-</div>
-          const epa = cell.epa_per_play || 0
-          const bg = epa > 0 ? `rgba(74,222,128,${Math.min(Math.abs(epa) * 2.5, 0.7)})` : `rgba(248,113,113,${Math.min(Math.abs(epa) * 2.5, 0.7)})`
-          const key = `${loc}-short`
-          return (
-            <button key={key} onClick={() => setExpanded(expanded === key ? null : key)}
-              className={`rounded-lg p-3 text-center transition-all ${expanded === key ? 'ring-1 ring-amber-500' : ''}`} style={{ background: bg }}>
-              <p className="text-white font-bold text-sm">{cell.comp_pct}%</p>
-              <p className="text-[10px] text-slate-200"><EpaColorCell val={epa} /> | {cell.plays}p</p>
-            </button>
-          )
-        })}
-        <p className="text-[9px] text-slate-600 text-center col-span-3">Short (under 15 air yards)</p>
-        <p className="text-[9px] text-slate-600 text-center col-span-3 -mt-1">Left - Middle - Right | Click zone for detail</p>
+      {/* Pass zone table */}
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="text-slate-600 border-b border-slate-800">
+              <th className="text-left py-2 px-2">Zone</th>
+              <th className="text-right py-2 px-2">EPA<Tip stat="epa_per_play" /></th>
+              <th className="py-2 px-2 w-24"></th>
+              <th className="text-right py-2 px-2">Comp%</th>
+              <th className="text-right py-2 px-2">Yards</th>
+              <th className="text-right py-2 px-2">Air Yds</th>
+              <th className="text-right py-2 px-2">Targets</th>
+              <th className="text-center py-2 px-2">TD</th>
+              <th className="text-center py-2 px-2">INT</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sorted.map(cell => {
+              const epa = cell.epa_per_play || 0
+              const barW = Math.abs(epa) / Math.max(...cells.map(c => Math.abs(c.epa_per_play || 0)), 0.01) * 100
+              const key = `${cell.pass_location}-${cell.pass_length || 'none'}`
+              const isBest = cell === best, isWorst = cell === worst
+              return (
+                <Fragment key={key}>
+                  <tr className={`border-b border-slate-800/30 hover:bg-slate-800/30 cursor-pointer ${expanded === key ? 'bg-slate-800/40' : ''}`}
+                    onClick={() => setExpanded(expanded === key ? null : key)}>
+                    <td className="py-2 px-2">
+                      <span className="text-white font-medium capitalize">{cell.pass_location}</span>
+                      {cell.pass_length && <span className="text-slate-500 ml-1">{cell.pass_length}</span>}
+                      {isBest && <span className="ml-1 text-emerald-400 text-[9px]">best</span>}
+                      {isWorst && <span className="ml-1 text-red-400 text-[9px]">worst</span>}
+                    </td>
+                    <td className="py-2 px-2 text-right font-bold"><EpaColorCell val={epa} /></td>
+                    <td className="py-2 px-2">
+                      <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+                        <div className={`h-full rounded-full ${epa >= 0 ? 'bg-emerald-500' : 'bg-red-500'}`} style={{ width: `${barW}%`, opacity: 0.7 }} />
+                      </div>
+                    </td>
+                    <td className="py-2 px-2 text-right text-slate-300">{cell.comp_pct}%</td>
+                    <td className="py-2 px-2 text-right text-slate-300">{cell.avg_yards}</td>
+                    <td className="py-2 px-2 text-right text-slate-400">{cell.avg_air_yards}</td>
+                    <td className="py-2 px-2 text-right text-slate-400">{cell.plays}</td>
+                    <td className="py-2 px-2 text-center">{cell.tds > 0 ? <span className="text-emerald-400">{cell.tds}</span> : <span className="text-slate-700">-</span>}</td>
+                    <td className="py-2 px-2 text-center">{cell.ints > 0 ? <span className="text-red-400">{cell.ints}</span> : <span className="text-slate-700">-</span>}</td>
+                  </tr>
+                  {expanded === key && (
+                    <tr><td colSpan={9} className="px-2 pb-2">
+                      <div className="bg-slate-900/60 border border-slate-700/30 rounded-lg p-3 flex gap-4 text-[10px]">
+                        <span className="text-slate-400">YAC: <span className="text-white font-bold">{cell.avg_yac ?? '-'}</span></span>
+                        <span className="text-slate-400">Air Yards: <span className="text-white font-bold">{cell.avg_air_yards}</span></span>
+                        <span className="text-slate-400">Total Yards: <span className="text-white font-bold">{cell.avg_yards}</span></span>
+                      </div>
+                    </td></tr>
+                  )}
+                </Fragment>
+              )
+            })}
+          </tbody>
+        </table>
       </div>
-
-      {/* Expanded detail */}
-      {expanded && (() => {
-        const [loc, depth] = expanded.split('-')
-        const cell = cells.find(c => c.pass_location === loc && c.pass_length === depth)
-        if (!cell) return null
-        return (
-          <div className="bg-slate-900/60 border border-slate-700/30 rounded-lg p-4 space-y-2">
-            <p className="text-xs font-semibold text-white">{cell.pass_location} {cell.pass_length} - Detail</p>
-            <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 text-xs">
-              <div><p className="text-[10px] text-slate-500">EPA/play</p><p className="font-bold"><EpaColorCell val={cell.epa_per_play} /></p></div>
-              <div><p className="text-[10px] text-slate-500">Comp%</p><p className="text-white">{cell.comp_pct}%</p></div>
-              <div><p className="text-[10px] text-slate-500">Avg Yards</p><p className="text-white">{cell.avg_yards}</p></div>
-              <div><p className="text-[10px] text-slate-500">Air Yards</p><p className="text-white">{cell.avg_air_yards}</p></div>
-              <div><p className="text-[10px] text-slate-500">YAC</p><p className="text-white">{cell.avg_yac ?? '-'}</p></div>
-              <div><p className="text-[10px] text-slate-500">TDs / INTs</p><p className="text-white">{cell.tds ?? 0} / {cell.ints ?? 0}</p></div>
-            </div>
-          </div>
-        )
-      })()}
     </div>
   )
 }
