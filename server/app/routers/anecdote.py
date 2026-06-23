@@ -40,39 +40,55 @@ def _gather_context(query: str) -> str:
     q_lower = query.lower()
 
     with engine.connect() as c:
-        # Search players by name
-        players = c.execute(text("""
-            SELECT player_id, player_name, pos, first_season, last_season, n_seasons, fdv
-            FROM players
-            WHERE LOWER(player_name) LIKE :q
-            ORDER BY fdv DESC NULLS LAST LIMIT 5
-        """), {"q": f"%{q_lower}%"}).fetchall()
+        # Search players by name (try multiple words)
+        words = [w for w in q_lower.split() if len(w) > 2]
+        player_ids_found = set()
+        for word in words:
+            players = c.execute(text("""
+                SELECT player_id, player_name, pos, first_season, last_season, n_seasons, fdv
+                FROM players
+                WHERE LOWER(player_name) LIKE :q
+                ORDER BY fdv DESC NULLS LAST LIMIT 3
+            """), {"q": f"%{word}%"}).fetchall()
 
-        if players:
             for p in players:
-                ctx_parts.append(f"Player: {p.player_name} ({p.pos}), seasons {p.first_season}-{p.last_season} ({p.n_seasons} seasons), FDV: {p.fdv or 'N/A'}")
+                if p.player_id in player_ids_found:
+                    continue
+                player_ids_found.add(p.player_id)
+                ctx_parts.append(f"\nPlayer: {p.player_name} ({p.pos}), seasons {p.first_season}-{p.last_season} ({p.n_seasons} seasons), FDV: {p.fdv or 'N/A'}")
 
-                # Career stats
-                for table in ["passing_seasons", "offense_seasons", "defense_seasons", "kicking_seasons"]:
+                # All season tables
+                for table in ["passing_seasons", "offense_seasons", "defense_seasons", "kicking_seasons", "punting_seasons", "returns_seasons"]:
                     try:
-                        stats = c.execute(text(f"""
-                            SELECT * FROM {table} WHERE player_id = :pid ORDER BY season DESC LIMIT 5
-                        """), {"pid": p.player_id}).fetchall()
+                        stats = c.execute(text(f"SELECT * FROM {table} WHERE player_id = :pid ORDER BY season DESC LIMIT 5"),
+                                          {"pid": p.player_id}).fetchall()
                         if stats:
-                            cols = stats[0]._mapping.keys()
                             for s in stats:
                                 vals = {k: v for k, v in s._mapping.items() if v is not None and k not in ('player_id',)}
-                                ctx_parts.append(f"  {table} {vals.get('season', '?')}: {json.dumps({k: str(v) for k, v in vals.items()}, default=str)[:500]}")
+                                ctx_parts.append(f"  {table} {vals.get('season', '?')}: {json.dumps({k: str(v) for k, v in vals.items()}, default=str)[:400]}")
                     except Exception:
                         pass
 
-                # Draft info
+                # Draft
                 draft = c.execute(text("SELECT * FROM draft WHERE player_id = :pid"), {"pid": p.player_id}).fetchone()
                 if draft:
                     d = dict(draft._mapping)
                     ctx_parts.append(f"  Draft: Round {d.get('round')}, Pick {d.get('pick')}, {d.get('draft_year')}, {d.get('team')}")
 
-                # PBP summary if available
+                # Injuries
+                try:
+                    inj = c.execute(text("""
+                        SELECT season, COUNT(*) as weeks_listed,
+                               COUNT(*) FILTER (WHERE report_status = 'Out') as games_out
+                        FROM injuries WHERE player_id = :pid
+                        GROUP BY season ORDER BY season DESC LIMIT 3
+                    """), {"pid": p.player_id}).fetchall()
+                    for r in inj:
+                        ctx_parts.append(f"  Injuries {r.season}: listed {r.weeks_listed} weeks, out {r.games_out} games")
+                except Exception:
+                    pass
+
+                # PBP (EPA-based stats)
                 try:
                     gsis = c.execute(text("SELECT gsis_id FROM players WHERE player_id = :pid"), {"pid": p.player_id}).scalar()
                     if gsis:
@@ -80,31 +96,81 @@ def _gather_context(query: str) -> str:
                             pbp = c.execute(text(f"""
                                 SELECT season, COUNT(*) as plays, ROUND(AVG(epa)::numeric, 3) as epa,
                                        ROUND(AVG(yards_gained)::numeric, 1) as avg_yards,
-                                       SUM(CASE WHEN touchdown=1 THEN 1 ELSE 0 END) as tds
+                                       SUM(CASE WHEN touchdown=1 THEN 1 ELSE 0 END) as tds,
+                                       SUM(CASE WHEN interception=1 THEN 1 ELSE 0 END) as ints,
+                                       ROUND(AVG(CASE WHEN success=1 THEN 100.0 ELSE 0 END)::numeric, 1) as success_rate
                                 FROM pbp WHERE {id_col} = :gsis AND epa IS NOT NULL
                                 GROUP BY season ORDER BY season DESC LIMIT 4
                             """), {"gsis": gsis}).fetchall()
                             if pbp:
                                 for r in pbp:
-                                    ctx_parts.append(f"  PBP {label} {r.season}: {r.plays} plays, EPA {r.epa}, avg {r.avg_yards}y, {r.tds} TDs")
+                                    ctx_parts.append(f"  PBP {label} {r.season}: {r.plays}p, EPA {r.epa}, {r.avg_yards}y/play, {r.tds}TD, {r.ints}INT, {r.success_rate}% success")
+
+                        # Clutch stats
+                        clutch = c.execute(text("""
+                            SELECT season, COUNT(*) as plays, ROUND(SUM(wpa)::numeric, 3) as clutch_wpa
+                            FROM pbp WHERE passer_player_id = :gsis AND wpa IS NOT NULL
+                                  AND game_seconds_remaining <= 300 AND ABS(score_differential) <= 8
+                            GROUP BY season ORDER BY season DESC LIMIT 3
+                        """), {"gsis": gsis}).fetchall()
+                        for r in clutch:
+                            if r.plays >= 5:
+                                ctx_parts.append(f"  Clutch {r.season}: {r.plays} plays, WPA {r.clutch_wpa}")
                 except Exception:
                     pass
 
         # Search for team-related data
-        teams = c.execute(text("""
-            SELECT DISTINCT posteam FROM pbp WHERE LOWER(posteam) LIKE :q LIMIT 3
-        """), {"q": f"%{q_lower}%"}).fetchall()
-        if teams:
-            for t in teams:
-                team_stats = c.execute(text("""
-                    SELECT season, COUNT(*) as plays, ROUND(AVG(epa)::numeric, 3) as epa
-                    FROM pbp WHERE posteam = :team AND epa IS NOT NULL AND play_type IN ('pass','run')
-                    GROUP BY season ORDER BY season DESC LIMIT 4
-                """), {"team": t.posteam}).fetchall()
-                for s in team_stats:
-                    ctx_parts.append(f"Team {t.posteam} {s.season}: {s.plays} plays, EPA {s.epa}")
+        team_abbrevs = ["ARI","ATL","BAL","BUF","CAR","CHI","CIN","CLE","DAL","DEN","DET","GB","HOU","IND","JAX","KC","LAC","LAR","LV","MIA","MIN","NE","NO","NYG","NYJ","PHI","PIT","SEA","SF","TB","TEN","WAS"]
+        found_teams = [t for t in team_abbrevs if t.lower() in q_lower]
+        for team in found_teams[:2]:
+            team_stats = c.execute(text("""
+                SELECT season, COUNT(*) as plays, ROUND(AVG(epa)::numeric, 3) as epa,
+                       ROUND(AVG(CASE WHEN pass_attempt=1 THEN epa END)::numeric, 3) as pass_epa,
+                       ROUND(AVG(CASE WHEN rush_attempt=1 THEN epa END)::numeric, 3) as rush_epa
+                FROM pbp WHERE posteam = :team AND epa IS NOT NULL AND play_type IN ('pass','run') AND season_type='REG'
+                GROUP BY season ORDER BY season DESC LIMIT 4
+            """), {"team": team}).fetchall()
+            for s in team_stats:
+                ctx_parts.append(f"Team {team} {s.season}: {s.plays}p, EPA {s.epa}, pass EPA {s.pass_epa}, rush EPA {s.rush_epa}")
 
-        # General league stats for context
+        # Top records for concepts like "best", "most", "record"
+        if any(w in q_lower for w in ["best", "most", "record", "top", "leader", "highest", "worst", "lowest"]):
+            ctx_parts.append("\n--- LEAGUE LEADERS (career) ---")
+            for table, stat, label in [
+                ("passing_seasons", "td", "career passing TDs"),
+                ("passing_seasons", "yds", "career passing yards"),
+                ("offense_seasons", "td", "career rushing/receiving TDs"),
+                ("offense_seasons", "yds", "career rushing/receiving yards"),
+            ]:
+                try:
+                    top = c.execute(text(f"""
+                        SELECT p.player_name, SUM(s.{stat}) as total
+                        FROM {table} s JOIN players p ON p.player_id = s.player_id
+                        WHERE s.{stat} IS NOT NULL
+                        GROUP BY p.player_name ORDER BY total DESC LIMIT 5
+                    """)).fetchall()
+                    ctx_parts.append(f"  Top {label}: " + ", ".join(f"{r.player_name} ({r.total})" for r in top))
+                except Exception:
+                    pass
+
+        # Season-specific mentions
+        import re
+        year_match = re.findall(r'\b(19[7-9]\d|20[0-2]\d)\b', query)
+        for yr in year_match[:2]:
+            yr = int(yr)
+            # Top EPA that season
+            try:
+                top_epa = c.execute(text("""
+                    SELECT passer_player_name as name, ROUND(AVG(epa)::numeric, 3) as epa, COUNT(*) as plays
+                    FROM pbp WHERE season = :yr AND pass_attempt = 1 AND passer_player_id IS NOT NULL AND epa IS NOT NULL AND season_type='REG'
+                    GROUP BY passer_player_name HAVING COUNT(*) >= 200 ORDER BY epa DESC LIMIT 5
+                """), {"yr": yr}).fetchall()
+                if top_epa:
+                    ctx_parts.append(f"\nTop QBs by EPA {yr}: " + ", ".join(f"{r.name} ({r.epa})" for r in top_epa))
+            except Exception:
+                pass
+
+        # League averages
         league = c.execute(text("""
             SELECT season, COUNT(*) as plays, ROUND(AVG(epa)::numeric, 3) as league_epa
             FROM pbp WHERE epa IS NOT NULL AND play_type IN ('pass','run') AND season_type = 'REG'
@@ -113,7 +179,7 @@ def _gather_context(query: str) -> str:
         for r in league:
             ctx_parts.append(f"League avg {r.season}: EPA {r.league_epa} ({r.plays} plays)")
 
-    return "\n".join(ctx_parts) if ctx_parts else "No specific data found for this query."
+    return "\n".join(ctx_parts[:150]) if ctx_parts else "No specific data found for this query."
 
 
 @router.post("/generate")
