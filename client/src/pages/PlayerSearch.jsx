@@ -87,10 +87,10 @@ export default function PlayerSearch() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
         {FEATURE_CARDS.map(card => (
           <button key={card.href} onClick={() => navigate(card.href)}
-            className="rounded-2xl text-left hover:scale-[1.02] transition-transform"
+            className="rounded-2xl text-left hover:scale-[1.02] transition-transform relative"
             style={{ background: `linear-gradient(160deg, ${card.dark} 0%, #1e293b 100%)`, border: `1px solid ${card.color}22` }}>
-            <div className="p-5">
-              <div className="h-1 w-full rounded-full mb-4" style={{ background: `linear-gradient(90deg, ${card.color}, transparent)` }} />
+            <div className="absolute top-3 left-5 right-5 h-1 rounded-full" style={{ background: `linear-gradient(90deg, ${card.color}, transparent)` }} />
+            <div className="p-5 pt-7">
               <div className="text-2xl mb-3">{card.icon}</div>
               <h3 className="text-white font-bold mb-1">{card.title}</h3>
               <p className="text-slate-400 text-sm leading-relaxed">{card.desc}</p>
