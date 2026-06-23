@@ -1,9 +1,9 @@
-"""Research Projects — admin-only folders for organising saved items."""
+"""Research Projects — folders for organising saved items."""
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import text
 
-from app.auth import require_admin
+from app.auth import get_current_user
 from app.db import engine
 
 router = APIRouter(prefix="/projects", tags=["projects"])
@@ -23,7 +23,7 @@ class AssignBody(BaseModel):
 
 
 @router.get("")
-def list_projects(user: dict = Depends(require_admin)):
+def list_projects(user: dict = Depends(get_current_user)):
     uid = int(user["sub"])
     with engine.connect() as conn:
         rows = conn.execute(text("""
@@ -38,7 +38,7 @@ def list_projects(user: dict = Depends(require_admin)):
 
 
 @router.post("", status_code=201)
-def create_project(body: ProjectBody, user: dict = Depends(require_admin)):
+def create_project(body: ProjectBody, user: dict = Depends(get_current_user)):
     uid = int(user["sub"])
     name = body.name.strip()
     if not name or len(name) > 100:
@@ -51,7 +51,7 @@ def create_project(body: ProjectBody, user: dict = Depends(require_admin)):
 
 
 @router.patch("/{project_id}")
-def rename_project(project_id: int, body: ProjectBody, user: dict = Depends(require_admin)):
+def rename_project(project_id: int, body: ProjectBody, user: dict = Depends(get_current_user)):
     uid = int(user["sub"])
     name = body.name.strip()
     if not name or len(name) > 100:
@@ -66,7 +66,7 @@ def rename_project(project_id: int, body: ProjectBody, user: dict = Depends(requ
 
 
 @router.delete("/{project_id}")
-def delete_project(project_id: int, user: dict = Depends(require_admin)):
+def delete_project(project_id: int, user: dict = Depends(get_current_user)):
     uid = int(user["sub"])
     with engine.begin() as conn:
         result = conn.execute(text(
@@ -78,7 +78,7 @@ def delete_project(project_id: int, user: dict = Depends(require_admin)):
 
 
 @router.post("/assign")
-def assign_to_projects(body: AssignBody, user: dict = Depends(require_admin)):
+def assign_to_projects(body: AssignBody, user: dict = Depends(get_current_user)):
     uid = int(user["sub"])
     with engine.begin() as conn:
         item = conn.execute(text(
@@ -104,7 +104,7 @@ def assign_to_projects(body: AssignBody, user: dict = Depends(require_admin)):
 
 
 @router.get("/{project_id}/items")
-def project_items(project_id: int, user: dict = Depends(require_admin)):
+def project_items(project_id: int, user: dict = Depends(get_current_user)):
     uid = int(user["sub"])
     with engine.connect() as conn:
         proj = conn.execute(text(

@@ -12,12 +12,12 @@ export default function ProjectPicker({ type, label, data, onDone }) {
   const [note, setNote] = useState('')
 
   useEffect(() => {
-    if (open && user?.is_admin) {
+    if (open && user && !user.isGuest) {
       api.getProjects().then(setProjects).catch(() => {})
     }
-  }, [open, user?.is_admin])
+  }, [open, user?.id])
 
-  if (!user?.is_admin) return null
+  if (!user || user.isGuest) return null
 
   const toggle = (id) => {
     setSelected(prev => {

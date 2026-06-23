@@ -47,11 +47,6 @@ export default function About() {
               desc: 'Find players with similar statistical profiles - see who your favorite player compares to across eras, powered by machine learning.',
             },
             {
-              icon: '📁',
-              title: 'Research Projects',
-              desc: 'Organise your saved players, comparisons, and searches into project folders for focused research.',
-            },
-            {
               icon: '📱',
               title: 'Content Creator Mode',
               desc: 'Turn any comparison or analysis into a ready-to-post tweet, Reddit discussion, or YouTube script with one click.',
