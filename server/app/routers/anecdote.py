@@ -159,7 +159,7 @@ def generate_anecdotes(
     context = _gather_context(body.query)
 
     level_instruction = {
-        "casual": "Write for a casual NFL fan. Keep it simple, fun, and surprising. Use one key stat that makes people go 'wow'. No jargon.",
+        "casual": "Write for a casual NFL fan. Keep it clear and surprising, but professional - like a sports journalist, not a fanboy. Use one or two key stats.",
         "deep": "Write for an analytics-savvy NFL audience. Use EPA, advanced metrics, historical comparisons. Show something non-obvious that rewards knowledge.",
     }.get(body.level, "casual")
 
@@ -178,14 +178,17 @@ IMPORTANT:
 - Think creatively about connections: birthdays, draft classes, team history, career milestones, before/after events, rookie vs veteran comparisons, era comparisons.
 - The data provided covers multiple seasons - use cross-season insights, not just the mentioned year.
 
-RULES:
+STYLE RULES:
+- Professional sports journalism tone - informative, not hype
+- ALWAYS include the team name in parentheses after the player name, e.g. "Patrick Mahomes (Chiefs)"
+- ALWAYS add historical context: where does this stat rank? Is it a record? Who else has done it? What record did it break or approach?
+- Never end with generic hype phrases like "he dominated", "built different", "not human", etc. End with a fact, a comparison, or a question to the audience
 - Each anecdote must be factually based on the data provided - never invent stats
-- Twitter-ready: engaging, concise, shareable
 - Include 1-2 relevant emoji (not excessive)
 - Always end with #NFL #FourthAndData
 - If the text exceeds 280 characters, split it into numbered parts (1/N, 2/N...) each under 280 chars
 - Write in English
-- Each option should take a DIFFERENT angle on the data (one could be a comparison, one a record, one a surprising fact)
+- Each option should take a DIFFERENT angle (comparison, record/ranking, surprising context)
 
 Return a JSON array of 3 objects:
 [
