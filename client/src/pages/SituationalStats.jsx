@@ -2590,13 +2590,15 @@ function PassHeatmapSection({ players, season, ctxParams }) {
   useEffect(() => {
     if (!players.length) { setData(null); return }
     setLoading(true)
-    api.getPassHeatmap(players[0].player_id, season, ctxParams)
+    const role = ['WR', 'TE'].includes(players[0].pos) ? 'receiver' : 'passer'
+    api.getPassHeatmap(players[0].player_id, season, { ...ctxParams, role })
       .then(setData).catch(() => setData(null)).finally(() => setLoading(false))
   }, [players[0]?.player_id, ctxKey])
 
   if (!players.length) return <p className="text-slate-500 text-sm">Search for a player above</p>
   if (loading) return <Loading text="Loading pass heatmap..." />
-  if (!data?.data?.length) return <p className="text-slate-500 text-sm">No passing data for this player/season</p>
+  if (data?.error) return <p className="text-red-400 text-sm">{data.error}</p>
+  if (!data?.data?.length) return <p className="text-slate-500 text-sm">No passing data for {players[0].player_name} ({players[0].pos}) in {season}. {['RB','FB','HB'].includes(players[0].pos) ? 'Try selecting a QB or WR.' : ''}</p>
 
   const cells = data.data
   const sorted = [...cells].sort((a, b) => (b.epa_per_play || 0) - (a.epa_per_play || 0))
