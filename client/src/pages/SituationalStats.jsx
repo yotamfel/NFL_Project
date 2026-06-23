@@ -2705,11 +2705,11 @@ function PassHeatmapSection({ players, season, ctxParams }) {
                           const recs = (data.top_receivers || []).filter(r => r.pass_location === cell.pass_location && r.pass_length === cell.pass_length).slice(0, 4)
                           if (!recs.length) return null
                           return <div>
-                            <span className="text-slate-500">Top targets in this zone:</span>
+                            <span className="text-slate-500">Top receivers targeted in this zone:</span>
                             <div className="flex gap-2 mt-1 flex-wrap">
                               {recs.map((r, i) => (
                                 <span key={i} className="bg-slate-800 rounded px-2 py-0.5 text-slate-300">
-                                  {r.receiver} <span className="text-slate-500">{r.targets}t</span> <EpaColorCell val={r.epa} />
+                                  {r.receiver} <span className="text-slate-600">|</span> <span className="text-slate-400">{r.targets} targets</span> <span className="text-slate-600">|</span> EPA: <EpaColorCell val={r.epa} />
                                 </span>
                               ))}
                             </div>
