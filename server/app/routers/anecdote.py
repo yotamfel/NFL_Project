@@ -164,7 +164,13 @@ def generate_anecdotes(
         "deep": "Write for an analytics-savvy NFL audience. Use EPA, advanced metrics, historical comparisons. Show something non-obvious that rewards knowledge.",
     }.get(body.level, "casual")
 
+    from datetime import date
+    today = date.today()
+    today_str = today.strftime("%B %d, %Y")
+    today_md = today.strftime("%m-%d")
+
     prompt = f"""You are an NFL stats expert creating Twitter/X content.
+TODAY'S DATE: {today_str}
 
 INPUT: "{body.query}"
 
@@ -175,7 +181,9 @@ TASK: Generate exactly 3 different anecdote options based on the input and data 
 {level_instruction}
 
 IMPORTANT:
-- The input may mention a specific year, event, or era, but you should draw connections ACROSS seasons and history. For example, if someone mentions "Mahomes 2023", compare it to other great seasons in history. If someone mentions "Super Bowl", find related stats from any relevant year.
+- Today is {today_str}. If the input mentions "born", "birthday", a birth year, or any date-related event, START the anecdote with a date hook like "On this day in [year]..." or "X years ago today..." or "Today marks..." and calculate the correct age/anniversary from today's date.
+- If the input says "born 1995", that means the person was born on TODAY'S DATE (month and day) in that year. Calculate age as {today.year} minus the birth year.
+- The input may mention a specific year, event, or era, but you should draw connections ACROSS seasons and history.
 - Think creatively about connections: birthdays, draft classes, team history, career milestones, before/after events, rookie vs veteran comparisons, era comparisons.
 - The data provided covers multiple seasons - use cross-season insights, not just the mentioned year.
 
