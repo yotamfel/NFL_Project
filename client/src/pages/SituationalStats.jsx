@@ -2511,7 +2511,7 @@ function RunHeatmapSection({ players, season, ctxParams }) {
               <th className="text-right py-2 px-2">EPA<Tip stat="epa_per_play" /></th>
               <th className="text-right py-2 px-2 text-[9px]">vs Avg<Tip stat="vs_avg" /></th>
               <th className="py-2 px-2 w-24"></th>
-              <th className="text-right py-2 px-2">Yards<Tip stat="run_yards" /></th>
+              <th className="text-right py-2 px-2">Avg Yds<Tip stat="run_yards" /></th>
               <th className="text-right py-2 px-2">Success%<Tip stat="run_success" /></th>
               <th className="text-right py-2 px-2">Carries<Tip stat="carries" /></th>
               <th className="text-center py-2 px-2">TD<Tip stat="run_td" /></th>
@@ -2664,9 +2664,9 @@ function PassHeatmapSection({ players, season, ctxParams }) {
               <th className="text-right py-2 px-2 text-[9px]">vs Avg<Tip stat="vs_avg" /></th>
               <th className="py-2 px-2 w-24"></th>
               <th className="text-right py-2 px-2">Comp%<Tip stat="comp_pct" /></th>
-              <th className="text-right py-2 px-2">Yards<Tip stat="avg_yards" /></th>
-              <th className="text-right py-2 px-2">Air Yds<Tip stat="air_yds" /></th>
-              <th className="text-right py-2 px-2">YAC<Tip stat="yac" /></th>
+              <th className="text-right py-2 px-2">Avg Yds<Tip stat="avg_yards" /></th>
+              <th className="text-right py-2 px-2">Avg Air<Tip stat="air_yds" /></th>
+              <th className="text-right py-2 px-2">Avg YAC<Tip stat="yac" /></th>
               <th className="text-right py-2 px-2">Targets<Tip stat="targets" /></th>
               <th className="text-center py-2 px-2">TD</th>
               <th className="text-center py-2 px-2">INT</th>
