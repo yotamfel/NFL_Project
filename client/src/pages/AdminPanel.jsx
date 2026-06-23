@@ -885,9 +885,9 @@ function AnecdoteTab() {
                       {isEditing ? (
                         <button onClick={async () => {
                           try {
-                            await api.patchContent(h.id, { note: '', data: { ...d, text: editingText } })
+                            await api.updateAnecdote(h.id, { ...d, text: editingText })
                             setEditingHistory(null); loadHistory()
-                          } catch {}
+                          } catch (e) { alert('Save failed: ' + (e.message || '')) }
                         }} className="px-2.5 py-1 bg-emerald-500/15 text-emerald-400 rounded text-[10px] hover:bg-emerald-500/25 transition-colors">Save edit</button>
                       ) : (
                         <button onClick={() => { setEditingHistory(h.id); setEditingText(d.text) }}

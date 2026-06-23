@@ -322,6 +322,28 @@ def save_anecdote(
     return {"ok": True}
 
 
+@router.patch("/update/{item_id}")
+def update_anecdote(
+    item_id: int,
+    body: dict,
+    user: dict = Depends(require_admin),
+):
+    uid = int(user["sub"])
+    try:
+        data_str = json.dumps(body.get("data", {}), ensure_ascii=False)
+        with engine.begin() as conn:
+            result = conn.execute(text(
+                "UPDATE saved_items SET data = CAST(:data AS jsonb) WHERE id = :id AND user_id = :uid AND type = 'anecdote'"
+            ), {"data": data_str, "id": item_id, "uid": uid})
+            if result.rowcount == 0:
+                raise HTTPException(status_code=404, detail="Not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Update failed: {str(e)[:200]}")
+    return {"ok": True}
+
+
 @router.get("/history")
 def anecdote_history(
     month: Optional[str] = None,

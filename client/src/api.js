@@ -185,6 +185,7 @@ export const api = {
   generateAnecdotes: (query, level) => post('/anecdote/generate', { query, level }),
   translateAnecdote: (text) => post('/anecdote/translate', { text }),
   saveAnecdote: (query, text, level, language, scheduled_date, original_text) => post('/anecdote/save', { query, text, level, language, scheduled_date, original_text }),
+  updateAnecdote: (id, data) => patch(`/anecdote/update/${id}`, { data }),
   getAnecdoteHistory: () => get('/anecdote/history'),
   patchContent: (id, body) => patch(`/content/${id}`, body),
   deleteContent: (id) => del(`/content/${id}`),
