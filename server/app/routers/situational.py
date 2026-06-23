@@ -634,6 +634,25 @@ def formation_analysis(
             "available_seasons": part_years,
         }
 
+    import re
+
+    def _parse_personnel(raw):
+        """Convert '1 C, 2 G, 1 QB, 1 RB, 2 T, 1 TE, 3 WR' to '11 (1 RB, 1 TE, 3 WR)'."""
+        counts = {}
+        for part in raw.split(","):
+            m = re.match(r'\s*(\d+)\s+(\w+)', part.strip())
+            if m:
+                counts[m.group(2)] = int(m.group(1))
+        rb = counts.get("RB", 0) + counts.get("FB", 0)
+        te = counts.get("TE", 0)
+        wr = counts.get("WR", 0)
+        code = f"{rb}{te}"
+        skill = []
+        if rb: skill.append(f"{rb} RB")
+        if te: skill.append(f"{te} TE")
+        if wr: skill.append(f"{wr} WR")
+        return f"{code} ({', '.join(skill)})" if skill else raw
+
     with engine.connect() as c:
         rows = c.execute(text("""
             SELECT
@@ -642,7 +661,10 @@ def formation_analysis(
                 ROUND(100.0 * COUNT(*) / SUM(COUNT(*)) OVER(), 1) as usage_pct,
                 ROUND(AVG(p.epa)::numeric, 3) as epa_per_play,
                 ROUND(AVG(CASE WHEN p.success = 1 THEN 100.0 ELSE 0.0 END)::numeric, 1) as success_rate,
-                ROUND(AVG(p.yards_gained)::numeric, 1) as avg_yards
+                ROUND(AVG(p.yards_gained)::numeric, 1) as avg_yards,
+                ROUND(AVG(CASE WHEN p.pass_attempt=1 THEN 100.0 ELSE 0 END)::numeric, 1) as pass_pct,
+                ROUND(AVG(CASE WHEN p.pass_attempt=1 THEN p.epa END)::numeric, 3) as pass_epa,
+                ROUND(AVG(CASE WHEN p.rush_attempt=1 THEN p.epa END)::numeric, 3) as rush_epa
             FROM participation pt
             JOIN pbp p ON p.game_id = pt.nflverse_game_id AND p.play_id = pt.play_id
             WHERE p.posteam = :team AND p.season = :season
@@ -651,14 +673,19 @@ def formation_analysis(
             GROUP BY pt.offense_personnel
             HAVING COUNT(*) >= 10
             ORDER BY plays DESC
-            LIMIT 20
+            LIMIT 15
         """), {"team": team.upper(), "season": yr}).fetchall()
+
+        data = []
+        for r in rows:
+            d = dict(r._mapping)
+            d["label"] = _parse_personnel(d["personnel"])
+            data.append(d)
 
     return {
         "team": team.upper(),
         "season": yr,
-        "coverage": f"Participation data: {', '.join(str(y) for y in part_years)}",
-        "data": [dict(r._mapping) for r in rows],
+        "data": data,
     }
 
 

@@ -2733,38 +2733,53 @@ function FormationSection({ season }) {
     <div className="space-y-4">
       <TeamPicker selected={teamSel} setSelected={setTeamSel} />
       {loading && <Loading text="Loading formations..." />}
-      {data?.no_data && data.coverage && (
+      {data?.no_data && (
         <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-3 text-sm">
-          <p className="text-amber-400">{data.coverage}</p>
-          {data.available_seasons?.length > 0 && (
-            <p className="text-slate-400 text-xs mt-1">Try switching to one of the available seasons above.</p>
-          )}
+          <p className="text-amber-400">{data.coverage || 'Participation data available for 2025 only.'}</p>
+          <p className="text-slate-400 text-xs mt-1">Switch to 2025 above to see formation data.</p>
         </div>
       )}
       {data?.data?.length > 0 && (
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-xs">
             <thead>
-              <tr className="text-slate-500 text-xs border-b border-slate-800">
-                <th className="text-left py-2 pr-2">Personnel</th>
+              <tr className="text-slate-600 border-b border-slate-800">
+                <th className="text-left py-2 px-2">Formation</th>
                 <th className="text-right py-2 px-2">Usage%<Tip stat="usage_pct" /></th>
-                <th className="text-right py-2 px-2">EPA/play<Tip stat="epa_per_play" /></th>
+                <th className="py-2 px-2 w-20"></th>
+                <th className="text-right py-2 px-2">EPA<Tip stat="epa_per_play" /></th>
+                <th className="text-right py-2 px-2">Pass%</th>
+                <th className="text-right py-2 px-2">Pass EPA</th>
+                <th className="text-right py-2 px-2">Rush EPA</th>
                 <th className="text-right py-2 px-2">Success%<Tip stat="success_rate" /></th>
-                <th className="text-right py-2 px-2">Avg Yards</th>
+                <th className="text-right py-2 px-2">Avg Yds</th>
                 <th className="text-right py-2 px-2">Plays</th>
               </tr>
             </thead>
             <tbody>
-              {data.data.map(r => (
-                <tr key={r.personnel} className="border-b border-slate-800/40">
-                  <td className="py-2 pr-2 text-white font-medium">{r.personnel}</td>
+              {data.data.map((r, i) => {
+                const best = i === 0, worst = i === data.data.length - 1 && data.data.length > 1
+                return (
+                <tr key={r.personnel} className="border-b border-slate-800/30 hover:bg-slate-800/20">
+                  <td className="py-2 px-2">
+                    <span className="text-white font-medium">{r.label || r.personnel}</span>
+                  </td>
                   <td className="py-2 px-2 text-right text-slate-300">{r.usage_pct}%</td>
-                  <td className="py-2 px-2 text-right"><EpaColorCell val={r.epa_per_play} /></td>
+                  <td className="py-2 px-2">
+                    <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+                      <div className="h-full bg-amber-500 rounded-full" style={{ width: `${r.usage_pct}%`, opacity: 0.6 }} />
+                    </div>
+                  </td>
+                  <td className="py-2 px-2 text-right font-bold"><EpaColorCell val={r.epa_per_play} /></td>
+                  <td className="py-2 px-2 text-right text-slate-400">{r.pass_pct}%</td>
+                  <td className="py-2 px-2 text-right"><EpaColorCell val={r.pass_epa} /></td>
+                  <td className="py-2 px-2 text-right"><EpaColorCell val={r.rush_epa} /></td>
                   <td className="py-2 px-2 text-right text-slate-300">{r.success_rate}%</td>
                   <td className="py-2 px-2 text-right text-slate-300">{r.avg_yards}</td>
                   <td className="py-2 px-2 text-right text-slate-500">{r.plays}</td>
                 </tr>
-              ))}
+                )
+              })}
             </tbody>
           </table>
         </div>
