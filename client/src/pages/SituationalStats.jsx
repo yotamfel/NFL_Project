@@ -922,9 +922,9 @@ export default function SituationalStats() {
           {section === 'epa' && <EpaRankingsSection seasons={selectedSeasons} />}
           {section === 'clutch' && <ClutchRankingsSection seasons={selectedSeasons} />}
           {section === 'explorer' && <ExplorerSection seasons={selectedSeasons} />}
-          {section === 'matchup' && <MatchupSection players={players} season={selectedSeasons[0]} />}
-          {section === 'splits' && <SplitsSection players={players} ctxParams={ctxParams} />}
-          {section === 'trend' && <WeeklyTrendSection players={players} season={selectedSeasons[0]} ctxParams={ctxParams} />}
+          {section === 'matchup' && <><p className="text-slate-600 text-[10px] mb-2">How a player performs against top and bottom defenses - reveals if stats are inflated by weak opponents.</p><MatchupSection players={players} season={selectedSeasons[0]} /></>}
+          {section === 'splits' && <><p className="text-slate-600 text-[10px] mb-2">EPA breakdown by game situation - red zone, 3rd down, clutch moments, weather, formation and more.</p><SplitsSection players={players} ctxParams={ctxParams} /></>}
+          {section === 'trend' && <><p className="text-slate-600 text-[10px] mb-2">Week-by-week EPA consistency - spot hot streaks, slumps, and late-season improvement or decline.</p><WeeklyTrendSection players={players} season={selectedSeasons[0]} ctxParams={ctxParams} /></>}
           {section === 'playaction' && (<>
             <p className="text-slate-600 text-[10px]">Play-action: QB fakes a handoff before passing, freezing defenders to create open receivers.</p>
             <SimpleSection title="Play-Action" fetchFn={api.getPlayAction} players={players} season={selectedSeasons[0]} ctxParams={ctxParams}
@@ -1047,7 +1047,7 @@ export default function SituationalStats() {
             <p className="text-slate-600 text-[10px] mb-2">FTN Charting data on throw quality, decision-making, and read progression.</p>
             <DecisionsSection players={players} season={selectedSeasons[0]} ctxParams={ctxParams} />
           </>)}
-          {section === 'runheatmap' && (
+          {section === 'runheatmap' && (<><p className="text-slate-600 text-[10px] mb-2">Run direction and gap tendencies - where the runner goes and how effective each direction is by EPA.</p>
             <SimpleSection title="Run Heatmap" fetchFn={api.getRunHeatmap} players={players} season={selectedSeasons[0]} ctxParams={ctxParams}
               renderData={(d, p) => (
                 <div key={p.player_id} className="space-y-3">
@@ -1077,8 +1077,8 @@ export default function SituationalStats() {
                 </div>
               )}
             />
-          )}
-          {section === 'passheatmap' && (
+          </>)}
+          {section === 'passheatmap' && (<><p className="text-slate-600 text-[10px] mb-2">Pass location and depth tendencies - where the QB targets and completion rates by field area.</p>
             <SimpleSection title="Pass Heatmap" fetchFn={(pid, s, ctx) => api.getPassHeatmap(pid, s, ctx)} players={players} season={selectedSeasons[0]} ctxParams={ctxParams}
               renderData={(d, p) => (
                 <div key={p.player_id} className="space-y-3">
@@ -1108,8 +1108,8 @@ export default function SituationalStats() {
                 </div>
               )}
             />
-          )}
-          {section === 'formation' && <FormationSection season={selectedSeasons[0]} />}
+          </>)}
+          {section === 'formation' && <><p className="text-slate-600 text-[10px] mb-2">Personnel groupings and their effectiveness - which formations the team uses most and how they perform.</p><FormationSection season={selectedSeasons[0]} /></>}
         </div>
 
         {/* Content Creator */}
@@ -2303,7 +2303,13 @@ function DecisionsSection({ players, season, ctxParams }) {
           </button>
           {showReads && (
             <div className="bg-slate-900/40 rounded-lg p-4 mt-2 space-y-3">
-              <p className="text-[10px] text-slate-600">Which receiver read the QB threw to on each play. "1st read" means the primary target - fewer 1st reads may indicate the QB is under pressure or the play design is breaking down.</p>
+              <p className="text-[10px] text-slate-600 mb-1">Which receiver in the progression the QB threw to on each play.</p>
+              <div className="flex gap-3 flex-wrap text-[9px] text-slate-500 mb-2">
+                <span><span className="text-slate-300 font-medium">1st read</span> - primary target, the designed receiver</span>
+                <span><span className="text-slate-300 font-medium">2nd read</span> - secondary option, 1st wasn't open</span>
+                <span><span className="text-slate-300 font-medium">3rd+ read</span> - play broke down, scrambling through progressions</span>
+                <span><span className="text-slate-300 font-medium">Checkdown</span> - safe short throw, usually RB or TE</span>
+              </div>
               <div className={`grid ${isCompare ? 'grid-cols-2' : 'grid-cols-1'} gap-4`}>
                 {allData.map((d, i) => {
                   const reads = d.read_distribution || []
