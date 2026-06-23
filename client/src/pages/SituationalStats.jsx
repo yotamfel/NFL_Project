@@ -1058,68 +1058,8 @@ export default function SituationalStats() {
           </>)}
           {section === 'pressure' && <PressureSection players={players} season={selectedSeasons[0]} ctxParams={ctxParams} />}
           {section === 'decisions' && <DecisionsSection players={players} season={selectedSeasons[0]} ctxParams={ctxParams} />}
-          {section === 'runheatmap' && (
-            <SimpleSection title="Run Heatmap" fetchFn={api.getRunHeatmap} players={players} season={selectedSeasons[0]} ctxParams={ctxParams}
-              renderData={(d, p) => (
-                <div key={p.player_id} className="space-y-3">
-                  <p className="text-white font-semibold">{d.player}</p>
-                  {(!d.data || d.data.length === 0) && <p className="text-slate-500 text-sm">No rushing data for this player in {d.season}</p>}
-                  <div className="grid grid-cols-3 gap-2 max-w-md">
-                    {['left', 'middle', 'right'].map(loc => {
-                      const cells = (d.data || []).filter(r => r.run_location === loc)
-                      return (
-                        <div key={loc} className="space-y-1">
-                          <p className="text-xs text-slate-500 text-center capitalize">{loc}</p>
-                          {cells.length > 0 ? cells.map(cell => {
-                            const epa = cell.epa_per_play || 0
-                            const bg = epa > 0 ? `rgba(74,222,128,${Math.min(Math.abs(epa) * 3, 0.6)})` : `rgba(248,113,113,${Math.min(Math.abs(epa) * 3, 0.6)})`
-                            return (
-                              <div key={cell.run_gap || 'none'} className="rounded-lg p-3 text-center" style={{ background: bg }}>
-                                <p className="text-white font-bold text-sm">{cell.avg_yards} yds</p>
-                                <p className="text-xs text-slate-200">{cell.plays} plays | EPA: {cell.epa_per_play}</p>
-                                {cell.run_gap && <p className="text-xs text-slate-300">{cell.run_gap}</p>}
-                              </div>
-                            )
-                          }) : <div className="rounded-lg p-3 bg-slate-800 text-center text-slate-600 text-xs">No data</div>}
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
-            />
-          )}
-          {section === 'passheatmap' && (
-            <SimpleSection title="Pass Heatmap" fetchFn={(pid, s, ctx) => api.getPassHeatmap(pid, s, ctx)} players={players} season={selectedSeasons[0]} ctxParams={ctxParams}
-              renderData={(d, p) => (
-                <div key={p.player_id} className="space-y-3">
-                  <p className="text-white font-semibold">{d.player}</p>
-                  {(!d.data || d.data.length === 0) && <p className="text-slate-500 text-sm">No passing data for this player in {d.season}</p>}
-                  <div className="grid grid-cols-3 gap-2 max-w-lg">
-                    {['left', 'middle', 'right'].map(loc => {
-                      const cells = (d.data || []).filter(r => r.pass_location === loc)
-                      return (
-                        <div key={loc} className="space-y-1">
-                          <p className="text-xs text-slate-500 text-center capitalize">{loc}</p>
-                          {cells.length > 0 ? cells.map(cell => {
-                            const epa = cell.epa_per_play || 0
-                            const bg = epa > 0 ? `rgba(74,222,128,${Math.min(Math.abs(epa) * 3, 0.6)})` : `rgba(248,113,113,${Math.min(Math.abs(epa) * 3, 0.6)})`
-                            return (
-                              <div key={cell.pass_length || 'none'} className="rounded-lg p-3 text-center" style={{ background: bg }}>
-                                <p className="text-white font-bold text-sm">{cell.comp_pct}%</p>
-                                <p className="text-xs text-slate-200">{cell.avg_yards} yds | {cell.plays} plays | EPA: {cell.epa_per_play}</p>
-                                {cell.pass_length && <p className="text-xs text-slate-300">{cell.pass_length}</p>}
-                              </div>
-                            )
-                          }) : <div className="rounded-lg p-3 bg-slate-800 text-center text-slate-600 text-xs">No data</div>}
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
-            />
-          )}
+          {section === 'runheatmap' && <RunHeatmapSection players={players} season={selectedSeasons[0]} ctxParams={ctxParams} />}
+          {section === 'passheatmap' && <PassHeatmapSection players={players} season={selectedSeasons[0]} ctxParams={ctxParams} />}
           {section === 'formation' && <FormationSection season={selectedSeasons[0]} />}
         </div>
 
@@ -2483,6 +2423,211 @@ function PressureSection({ players, season, ctxParams }) {
           )}
         </div>
       )}
+    </div>
+  )
+}
+
+
+function RunHeatmapSection({ players, season, ctxParams }) {
+  const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [expanded, setExpanded] = useState(null)
+  const ctxKey = ctxParams ? JSON.stringify(ctxParams) : season
+
+  useEffect(() => {
+    if (!players.length) { setData(null); return }
+    setLoading(true)
+    api.getRunHeatmap(players[0].player_id, season, ctxParams)
+      .then(setData).catch(() => setData(null)).finally(() => setLoading(false))
+  }, [players[0]?.player_id, ctxKey])
+
+  if (!players.length) return <p className="text-slate-500 text-sm">Search for a player above</p>
+  if (loading) return <Loading text="Loading run heatmap..." />
+  if (!data?.data?.length) return <p className="text-slate-500 text-sm">No rushing data for this player/season</p>
+
+  const cells = data.data
+  const allByDir = {}
+  cells.forEach(c => {
+    const key = `${c.run_location}-${c.run_gap || 'none'}`
+    allByDir[key] = c
+  })
+  const sorted = [...cells].sort((a, b) => (b.epa_per_play || 0) - (a.epa_per_play || 0))
+  const best = sorted[0], worst = sorted[sorted.length - 1]
+  const maxPlays = Math.max(...cells.map(c => c.plays), 1)
+  const overall = data.overall || {}
+
+  const gapOrder = ['end', 'tackle', 'guard', null]
+  const OL_LABELS = { left: ['LE', 'LT', 'LG'], middle: ['C'], right: ['RG', 'RT', 'RE'] }
+  const gapMap = { end: 0, tackle: 1, guard: 2 }
+
+  return (
+    <div className="space-y-4">
+      <p className="text-white font-semibold text-sm">{data.player || players[0].player_name} <span className="text-slate-600 text-xs font-normal">{data.season}</span></p>
+
+      {/* Best/Worst */}
+      <div className="flex gap-3">
+        {best && <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-2 flex-1">
+          <p className="text-[10px] text-emerald-400">Best direction</p>
+          <p className="text-sm text-white font-bold">{best.run_location} {best.run_gap || ''} <EpaColorCell val={best.epa_per_play} /> <span className="text-slate-500 font-normal text-xs">{best.avg_yards}y | {best.plays}p</span></p>
+        </div>}
+        {worst && <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 flex-1">
+          <p className="text-[10px] text-red-400">Worst direction</p>
+          <p className="text-sm text-white font-bold">{worst.run_location} {worst.run_gap || ''} <EpaColorCell val={worst.epa_per_play} /> <span className="text-slate-500 font-normal text-xs">{worst.avg_yards}y | {worst.plays}p</span></p>
+        </div>}
+        <div className="bg-slate-900/60 border border-slate-700/30 rounded-lg px-3 py-2">
+          <p className="text-[10px] text-slate-500">Overall</p>
+          <p className="text-sm text-white font-bold"><EpaColorCell val={overall.epa} /> <span className="text-slate-500 font-normal text-xs">{overall.avg_yards}y | {overall.plays}p</span></p>
+        </div>
+      </div>
+
+      {/* OL visualization */}
+      <div className="flex justify-center gap-1">
+        {['left', 'middle', 'right'].map(loc => {
+          const locCells = cells.filter(c => c.run_location === loc).sort((a, b) => (gapMap[a.run_gap] ?? 3) - (gapMap[b.run_gap] ?? 3))
+          return locCells.map(cell => {
+            const epa = cell.epa_per_play || 0
+            const w = Math.max(Math.round(cell.plays / maxPlays * 80), 30)
+            const bg = epa > 0 ? `rgba(74,222,128,${Math.min(Math.abs(epa) * 2.5, 0.7)})` : `rgba(248,113,113,${Math.min(Math.abs(epa) * 2.5, 0.7)})`
+            const key = `${cell.run_location}-${cell.run_gap || 'none'}`
+            return (
+              <button key={key} onClick={() => setExpanded(expanded === key ? null : key)}
+                className={`rounded-lg p-2 text-center transition-all ${expanded === key ? 'ring-1 ring-amber-500' : ''}`}
+                style={{ background: bg, width: w, minWidth: 50 }}>
+                <p className="text-white font-bold text-sm">{cell.avg_yards}y</p>
+                <p className="text-[9px] text-slate-200">{cell.run_gap || loc}</p>
+                <p className="text-[8px] text-slate-300">{cell.plays}p</p>
+              </button>
+            )
+          })
+        })}
+      </div>
+      <p className="text-center text-[9px] text-slate-600">LE - LT - LG - C - RG - RT - RE | Width = volume, color = EPA (green = positive)</p>
+
+      {/* Expanded detail */}
+      {expanded && (() => {
+        const [loc, gap] = expanded.split('-')
+        const cell = cells.find(c => c.run_location === loc && (c.run_gap || 'none') === gap)
+        if (!cell) return null
+        return (
+          <div className="bg-slate-900/60 border border-slate-700/30 rounded-lg p-4 space-y-2">
+            <p className="text-xs font-semibold text-white">{cell.run_location} {cell.run_gap || ''} - Detail</p>
+            <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 text-xs">
+              <div><p className="text-[10px] text-slate-500">EPA/play</p><p className="font-bold"><EpaColorCell val={cell.epa_per_play} /></p></div>
+              <div><p className="text-[10px] text-slate-500">Avg Yards</p><p className="text-white">{cell.avg_yards}</p></div>
+              <div><p className="text-[10px] text-slate-500">Success%</p><p className="text-white">{cell.success_rate}%</p></div>
+              <div><p className="text-[10px] text-slate-500">Plays</p><p className="text-white">{cell.plays}</p></div>
+              <div><p className="text-[10px] text-slate-500">TDs / Fumbles</p><p className="text-white">{cell.tds ?? 0} / {cell.fumbles ?? 0}</p></div>
+            </div>
+            <div className="flex gap-2 text-[10px]">
+              <span className="bg-slate-800 rounded px-2 py-1">10+ yds: <span className="text-emerald-400 font-bold">{cell.big_runs ?? 0}</span></span>
+              <span className="bg-slate-800 rounded px-2 py-1">4-9 yds: <span className="text-white font-bold">{cell.medium_runs ?? 0}</span></span>
+              <span className="bg-slate-800 rounded px-2 py-1">1-3 yds: <span className="text-slate-400 font-bold">{cell.short_runs ?? 0}</span></span>
+            </div>
+          </div>
+        )
+      })()}
+    </div>
+  )
+}
+
+
+function PassHeatmapSection({ players, season, ctxParams }) {
+  const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [expanded, setExpanded] = useState(null)
+  const ctxKey = ctxParams ? JSON.stringify(ctxParams) : season
+
+  useEffect(() => {
+    if (!players.length) { setData(null); return }
+    setLoading(true)
+    api.getPassHeatmap(players[0].player_id, season, ctxParams)
+      .then(setData).catch(() => setData(null)).finally(() => setLoading(false))
+  }, [players[0]?.player_id, ctxKey])
+
+  if (!players.length) return <p className="text-slate-500 text-sm">Search for a player above</p>
+  if (loading) return <Loading text="Loading pass heatmap..." />
+  if (!data?.data?.length) return <p className="text-slate-500 text-sm">No passing data for this player/season</p>
+
+  const cells = data.data
+  const sorted = [...cells].sort((a, b) => (b.epa_per_play || 0) - (a.epa_per_play || 0))
+  const best = sorted[0], worst = sorted[sorted.length - 1]
+  const maxPlays = Math.max(...cells.map(c => c.plays), 1)
+  const overall = data.overall || {}
+
+  return (
+    <div className="space-y-4">
+      <p className="text-white font-semibold text-sm">{data.player || players[0].player_name} <span className="text-slate-600 text-xs font-normal">{data.season}</span></p>
+
+      {/* Best/Worst */}
+      <div className="flex gap-3">
+        {best && <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-2 flex-1">
+          <p className="text-[10px] text-emerald-400">Best zone</p>
+          <p className="text-sm text-white font-bold">{best.pass_location} {best.pass_length || ''} <EpaColorCell val={best.epa_per_play} /> <span className="text-slate-500 font-normal text-xs">{best.comp_pct}% | {best.plays}p</span></p>
+        </div>}
+        {worst && <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 flex-1">
+          <p className="text-[10px] text-red-400">Worst zone</p>
+          <p className="text-sm text-white font-bold">{worst.pass_location} {worst.pass_length || ''} <EpaColorCell val={worst.epa_per_play} /> <span className="text-slate-500 font-normal text-xs">{worst.comp_pct}% | {worst.plays}p</span></p>
+        </div>}
+        <div className="bg-slate-900/60 border border-slate-700/30 rounded-lg px-3 py-2">
+          <p className="text-[10px] text-slate-500">Overall</p>
+          <p className="text-sm text-white font-bold"><EpaColorCell val={overall.epa} /> <span className="text-slate-500 font-normal text-xs">{overall.comp_pct}% | {overall.plays}p</span></p>
+        </div>
+      </div>
+
+      {/* Field grid: 3 cols x 2 rows (short/deep) */}
+      <div className="grid grid-cols-3 gap-2 max-w-lg mx-auto">
+        <p className="text-[9px] text-slate-600 text-center col-span-3">Deep (15+ air yards)</p>
+        {['left', 'middle', 'right'].map(loc => {
+          const cell = cells.find(c => c.pass_location === loc && c.pass_length === 'deep')
+          if (!cell) return <div key={loc} className="rounded-lg p-3 bg-slate-800/40 text-center text-slate-700 text-[10px]">-</div>
+          const epa = cell.epa_per_play || 0
+          const bg = epa > 0 ? `rgba(74,222,128,${Math.min(Math.abs(epa) * 2.5, 0.7)})` : `rgba(248,113,113,${Math.min(Math.abs(epa) * 2.5, 0.7)})`
+          const key = `${loc}-deep`
+          return (
+            <button key={key} onClick={() => setExpanded(expanded === key ? null : key)}
+              className={`rounded-lg p-3 text-center transition-all ${expanded === key ? 'ring-1 ring-amber-500' : ''}`} style={{ background: bg }}>
+              <p className="text-white font-bold text-sm">{cell.comp_pct}%</p>
+              <p className="text-[10px] text-slate-200"><EpaColorCell val={epa} /> | {cell.plays}p</p>
+            </button>
+          )
+        })}
+        {['left', 'middle', 'right'].map(loc => {
+          const cell = cells.find(c => c.pass_location === loc && c.pass_length === 'short')
+          if (!cell) return <div key={loc} className="rounded-lg p-3 bg-slate-800/40 text-center text-slate-700 text-[10px]">-</div>
+          const epa = cell.epa_per_play || 0
+          const bg = epa > 0 ? `rgba(74,222,128,${Math.min(Math.abs(epa) * 2.5, 0.7)})` : `rgba(248,113,113,${Math.min(Math.abs(epa) * 2.5, 0.7)})`
+          const key = `${loc}-short`
+          return (
+            <button key={key} onClick={() => setExpanded(expanded === key ? null : key)}
+              className={`rounded-lg p-3 text-center transition-all ${expanded === key ? 'ring-1 ring-amber-500' : ''}`} style={{ background: bg }}>
+              <p className="text-white font-bold text-sm">{cell.comp_pct}%</p>
+              <p className="text-[10px] text-slate-200"><EpaColorCell val={epa} /> | {cell.plays}p</p>
+            </button>
+          )
+        })}
+        <p className="text-[9px] text-slate-600 text-center col-span-3">Short (under 15 air yards)</p>
+        <p className="text-[9px] text-slate-600 text-center col-span-3 -mt-1">Left - Middle - Right | Click zone for detail</p>
+      </div>
+
+      {/* Expanded detail */}
+      {expanded && (() => {
+        const [loc, depth] = expanded.split('-')
+        const cell = cells.find(c => c.pass_location === loc && c.pass_length === depth)
+        if (!cell) return null
+        return (
+          <div className="bg-slate-900/60 border border-slate-700/30 rounded-lg p-4 space-y-2">
+            <p className="text-xs font-semibold text-white">{cell.pass_location} {cell.pass_length} - Detail</p>
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 text-xs">
+              <div><p className="text-[10px] text-slate-500">EPA/play</p><p className="font-bold"><EpaColorCell val={cell.epa_per_play} /></p></div>
+              <div><p className="text-[10px] text-slate-500">Comp%</p><p className="text-white">{cell.comp_pct}%</p></div>
+              <div><p className="text-[10px] text-slate-500">Avg Yards</p><p className="text-white">{cell.avg_yards}</p></div>
+              <div><p className="text-[10px] text-slate-500">Air Yards</p><p className="text-white">{cell.avg_air_yards}</p></div>
+              <div><p className="text-[10px] text-slate-500">YAC</p><p className="text-white">{cell.avg_yac ?? '-'}</p></div>
+              <div><p className="text-[10px] text-slate-500">TDs / INTs</p><p className="text-white">{cell.tds ?? 0} / {cell.ints ?? 0}</p></div>
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }

@@ -687,7 +687,12 @@ def run_heatmap(
                 COUNT(*) as plays,
                 ROUND(AVG(epa)::numeric, 3) as epa_per_play,
                 ROUND(AVG(rushing_yards)::numeric, 1) as avg_yards,
-                ROUND(AVG(CASE WHEN success = 1 THEN 100.0 ELSE 0.0 END)::numeric, 1) as success_rate
+                ROUND(AVG(CASE WHEN success = 1 THEN 100.0 ELSE 0.0 END)::numeric, 1) as success_rate,
+                SUM(CASE WHEN touchdown = 1 THEN 1 ELSE 0 END) as tds,
+                SUM(CASE WHEN fumble_lost = 1 THEN 1 ELSE 0 END) as fumbles,
+                SUM(CASE WHEN rushing_yards >= 10 THEN 1 ELSE 0 END) as big_runs,
+                SUM(CASE WHEN rushing_yards BETWEEN 1 AND 3 THEN 1 ELSE 0 END) as short_runs,
+                SUM(CASE WHEN rushing_yards BETWEEN 4 AND 9 THEN 1 ELSE 0 END) as medium_runs
             FROM pbp
             WHERE rusher_player_id = :pid AND season = :season
                   AND rush_attempt = 1 AND epa IS NOT NULL
@@ -696,11 +701,21 @@ def run_heatmap(
             ORDER BY run_location, run_gap
         """), {"pid": gsis, "season": yr}).fetchall()
 
+        # Overall for comparison
+        overall = c.execute(text(f"""
+            SELECT COUNT(*) as plays, ROUND(AVG(epa)::numeric, 3) as epa,
+                   ROUND(AVG(rushing_yards)::numeric, 1) as avg_yards,
+                   ROUND(AVG(CASE WHEN success=1 THEN 100.0 ELSE 0 END)::numeric, 1) as success_rate
+            FROM pbp WHERE rusher_player_id = :pid AND season = :season
+                  AND rush_attempt = 1 AND epa IS NOT NULL{ctx_sql}
+        """), {"pid": gsis, "season": yr}).fetchone()
+
     return {
         "player": player.player_name if player else player_id,
         "player_id": player_id,
         "season": yr,
         "data": [dict(r._mapping) for r in rows],
+        "overall": dict(overall._mapping) if overall else {},
     }
 
 
@@ -732,7 +747,10 @@ def pass_heatmap(
                 ROUND(AVG(epa)::numeric, 3) as epa_per_play,
                 ROUND(AVG(CASE WHEN complete_pass = 1 THEN 100.0 ELSE 0.0 END)::numeric, 1) as comp_pct,
                 ROUND(AVG(passing_yards)::numeric, 1) as avg_yards,
-                ROUND(AVG(air_yards)::numeric, 1) as avg_air_yards
+                ROUND(AVG(air_yards)::numeric, 1) as avg_air_yards,
+                ROUND(AVG(yards_after_catch)::numeric, 1) as avg_yac,
+                SUM(CASE WHEN touchdown = 1 THEN 1 ELSE 0 END) as tds,
+                SUM(CASE WHEN interception = 1 THEN 1 ELSE 0 END) as ints
             FROM pbp
             WHERE {id_col} = :pid AND season = :season
                   AND pass_attempt = 1 AND sack = 0 AND epa IS NOT NULL
@@ -741,12 +759,21 @@ def pass_heatmap(
             ORDER BY pass_location, pass_length
         """), {"pid": gsis, "season": yr}).fetchall()
 
+        overall = c.execute(text(f"""
+            SELECT COUNT(*) as plays, ROUND(AVG(epa)::numeric, 3) as epa,
+                   ROUND(AVG(CASE WHEN complete_pass=1 THEN 100.0 ELSE 0 END)::numeric, 1) as comp_pct,
+                   ROUND(AVG(air_yards)::numeric, 1) as avg_air_yards
+            FROM pbp WHERE {id_col} = :pid AND season = :season
+                  AND pass_attempt = 1 AND sack = 0 AND epa IS NOT NULL{ctx_sql}
+        """), {"pid": gsis, "season": yr}).fetchone()
+
     return {
         "player": player.player_name if player else player_id,
         "player_id": player_id,
         "season": yr,
         "role": role,
         "data": [dict(r._mapping) for r in rows],
+        "overall": dict(overall._mapping) if overall else {},
     }
 
 
