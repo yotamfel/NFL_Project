@@ -900,7 +900,7 @@ function AnecdoteTab() {
                         <button onClick={() => { setEditingHistory(h.id); setEditingText(d.text) }}
                           className="px-2.5 py-1 bg-slate-700 text-slate-300 rounded text-[10px] hover:bg-slate-600 transition-colors">Edit</button>
                       )}
-                      {!trans && (
+                      {!trans && d.language !== 'he' && (
                         <button disabled={histTranslating === h.id} onClick={async () => {
                           setHistTranslating(h.id)
                           try {
