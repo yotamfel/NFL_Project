@@ -52,6 +52,15 @@ const STAT_TIPS = {
   pass_middle_deep: 'Deep pass over the middle - often the most dangerous area.',
   pass_right_short: 'Short pass to the right side of the field.',
   pass_right_deep: 'Deep pass to the right side of the field.',
+  vs_avg: 'How this player compares to the league average in this direction/zone. Green = above average, red = below.',
+  carries: 'Number of rushing attempts in this direction.',
+  targets: 'Number of times this zone was targeted with a pass.',
+  yac: 'Yards After Catch - yards gained by the receiver after catching the ball.',
+  air_yds: 'Average distance the ball traveled in the air on these passes.',
+  run_yards: 'Average rushing yards gained per carry in this direction.',
+  run_success: 'Percentage of carries that gained enough yards to be considered successful.',
+  run_td: 'Touchdowns scored running in this direction.',
+  run_fum: 'Fumbles lost running in this direction.',
   play_down: 'Current down (1st, 2nd, 3rd, or 4th).',
   play_dist: 'Yards to go for a first down.',
   play_ydln: 'Yards from the end zone (1 = goal line, 99 = own 1-yard line).',
@@ -2500,13 +2509,13 @@ function RunHeatmapSection({ players, season, ctxParams }) {
             <tr className="text-slate-600 border-b border-slate-800">
               <th className="text-left py-2 px-2">Direction</th>
               <th className="text-right py-2 px-2">EPA<Tip stat="epa_per_play" /></th>
-              <th className="text-right py-2 px-2 text-[9px]">vs Avg</th>
+              <th className="text-right py-2 px-2 text-[9px]">vs Avg<Tip stat="vs_avg" /></th>
               <th className="py-2 px-2 w-24"></th>
-              <th className="text-right py-2 px-2">Yards</th>
-              <th className="text-right py-2 px-2">Success%</th>
-              <th className="text-right py-2 px-2">Carries</th>
-              <th className="text-center py-2 px-2">TD</th>
-              <th className="text-center py-2 px-2">Fum</th>
+              <th className="text-right py-2 px-2">Yards<Tip stat="run_yards" /></th>
+              <th className="text-right py-2 px-2">Success%<Tip stat="run_success" /></th>
+              <th className="text-right py-2 px-2">Carries<Tip stat="carries" /></th>
+              <th className="text-center py-2 px-2">TD<Tip stat="run_td" /></th>
+              <th className="text-center py-2 px-2">Fum<Tip stat="run_fum" /></th>
             </tr>
           </thead>
           <tbody>
@@ -2652,13 +2661,13 @@ function PassHeatmapSection({ players, season, ctxParams }) {
             <tr className="text-slate-600 border-b border-slate-800">
               <th className="text-left py-2 px-2">Zone</th>
               <th className="text-right py-2 px-2">EPA<Tip stat="epa_per_play" /></th>
-              <th className="text-right py-2 px-2 text-[9px]">vs Avg</th>
+              <th className="text-right py-2 px-2 text-[9px]">vs Avg<Tip stat="vs_avg" /></th>
               <th className="py-2 px-2 w-24"></th>
-              <th className="text-right py-2 px-2">Comp%</th>
-              <th className="text-right py-2 px-2">Yards</th>
-              <th className="text-right py-2 px-2">Air Yds</th>
-              <th className="text-right py-2 px-2">YAC</th>
-              <th className="text-right py-2 px-2">Targets</th>
+              <th className="text-right py-2 px-2">Comp%<Tip stat="comp_pct" /></th>
+              <th className="text-right py-2 px-2">Yards<Tip stat="avg_yards" /></th>
+              <th className="text-right py-2 px-2">Air Yds<Tip stat="air_yds" /></th>
+              <th className="text-right py-2 px-2">YAC<Tip stat="yac" /></th>
+              <th className="text-right py-2 px-2">Targets<Tip stat="targets" /></th>
               <th className="text-center py-2 px-2">TD</th>
               <th className="text-center py-2 px-2">INT</th>
             </tr>
