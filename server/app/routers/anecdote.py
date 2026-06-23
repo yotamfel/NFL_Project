@@ -63,8 +63,17 @@ def _gather_context(query: str) -> str:
     team_abbrevs = ["ARI","ATL","BAL","BUF","CAR","CHI","CIN","CLE","DAL","DEN","DET","GB","HOU","IND","JAX","KC","LAC","LAR","LV","MIA","MIN","NE","NO","NYG","NYJ","PHI","PIT","SEA","SF","TB","TEN","WAS"]
     found_teams = [t for t in team_abbrevs if t.lower() in q_lower]
 
+    # Fuzzy player search: try direct match first, then try last-name-only
+    all_search_words = list(words)
+    # Also try pairs of consecutive words as "first last"
+    for i in range(len(words) - 1):
+        pair = f"%{words[i]}%{words[i+1]}%"
+        for p in _q("SELECT player_id, player_name FROM players WHERE LOWER(player_name) LIKE :q ORDER BY fdv DESC NULLS LAST LIMIT 1", {"q": pair}):
+            if p.player_id not in player_ids_found:
+                all_search_words.append(p.player_name.split()[-1].lower())
+
     # Players
-    for word in words:
+    for word in all_search_words:
         for p in _q("SELECT player_id, player_name, pos, first_season, last_season, n_seasons, fdv FROM players WHERE LOWER(player_name) LIKE :q ORDER BY fdv DESC NULLS LAST LIMIT 3", {"q": f"%{word}%"}):
             if p.player_id in player_ids_found:
                 continue
@@ -174,8 +183,12 @@ TODAY'S DATE: {today_str}
 
 INPUT: "{body.query}"
 
+NOTE: The input may contain typos or informal names. Interpret the intent - "patrik mahoms" means Patrick Mahomes, "the kc qb" means the Kansas City Chiefs quarterback, etc.
+
 RELEVANT DATA FROM OUR DATABASE:
 {context}
+
+If the database returned limited data (e.g. player not found due to typo), use the stats provided for related players/teams that WERE found. Only use stats from the data above - do not invent numbers.
 
 TASK: Generate exactly 3 different anecdote options based on the input and data above.
 {level_instruction}
