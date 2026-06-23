@@ -1415,15 +1415,61 @@ def matchup_finder(
             FROM pbp WHERE {id_col} = :pid AND season = :yr AND {base} AND epa IS NOT NULL AND season_type = 'REG'
         """), {"pid": gsis, "yr": yr}).fetchone()
 
-        # Per-team breakdown
+        # Per-team breakdown with deep stats
         per_team = [dict(r._mapping) for r in c.execute(text(f"""
             SELECT defteam as team, COUNT(*) as plays,
                    ROUND(AVG(epa)::numeric, 3) as epa_per_play,
-                   ROUND(AVG(yards_gained)::numeric, 1) as avg_yards
+                   ROUND(AVG(yards_gained)::numeric, 1) as avg_yards,
+                   ROUND(AVG(CASE WHEN success=1 THEN 100.0 ELSE 0 END)::numeric, 1) as success_rate,
+                   ROUND(AVG(air_yards)::numeric, 1) as avg_air_yards,
+                   ROUND(AVG(CASE WHEN pass_attempt=1 THEN 100.0 ELSE 0 END)::numeric, 1) as pass_pct,
+                   SUM(CASE WHEN interception=1 THEN 1 ELSE 0 END) as ints,
+                   SUM(CASE WHEN fumble_lost=1 THEN 1 ELSE 0 END) as fumbles,
+                   SUM(CASE WHEN yards_gained >= 20 THEN 1 ELSE 0 END) as big_plays,
+                   SUM(CASE WHEN sack=1 THEN 1 ELSE 0 END) as sacks,
+                   SUM(CASE WHEN down=3 AND ydstogo>=7 THEN 1 ELSE 0 END) as third_long,
+                   ROUND(AVG(CASE WHEN down=3 AND ydstogo>=7 THEN epa END)::numeric, 3) as third_long_epa,
+                   MAX(posteam_score_post) as team_score,
+                   MAX(defteam_score_post) as opp_score
             FROM pbp WHERE {id_col} = :pid AND season = :yr AND {base} AND epa IS NOT NULL
                   AND season_type = 'REG' AND defteam = ANY(:teams)
             GROUP BY defteam ORDER BY epa_per_play DESC
         """), {"pid": gsis, "yr": yr, "teams": target_teams}).fetchall()]
+
+        for t in per_team:
+            ts, os_ = t.pop("team_score", None), t.pop("opp_score", None)
+            t["result"] = "W" if ts and os_ and ts > os_ else "L" if ts and os_ and ts < os_ else None
+            t["score"] = f"{int(ts)}-{int(os_)}" if ts is not None and os_ is not None else None
+
+        # Defense rankings (for context)
+        def_rank_rows = c.execute(text(f"""
+            SELECT defteam, ROW_NUMBER() OVER (ORDER BY AVG(epa)) as def_rank
+            FROM pbp WHERE season = :yr AND {base} AND epa IS NOT NULL AND season_type = 'REG'
+            GROUP BY defteam
+        """), {"yr": yr}).fetchall()
+        def_rank_map = {r.defteam: r.def_rank for r in def_rank_rows}
+        for t in per_team:
+            t["def_rank"] = def_rank_map.get(t["team"])
+
+        # Overall air yards for comparison
+        overall_air = c.execute(text(f"""
+            SELECT ROUND(AVG(air_yards)::numeric, 1) as avg_air_yards
+            FROM pbp WHERE {id_col} = :pid AND season = :yr AND {base} AND epa IS NOT NULL
+                  AND season_type = 'REG' AND air_yards IS NOT NULL
+        """), {"pid": gsis, "yr": yr}).scalar()
+
+        # League rank: among all players at pos, where does this one rank vs these defenses
+        league_vs = c.execute(text(f"""
+            SELECT {id_col} as pid, ROUND(AVG(epa)::numeric, 3) as epa
+            FROM pbp WHERE season = :yr AND {base} AND {id_col} IS NOT NULL AND epa IS NOT NULL
+                  AND season_type = 'REG' AND defteam = ANY(:teams)
+            GROUP BY {id_col} HAVING COUNT(*) >= 20 ORDER BY epa DESC
+        """), {"yr": yr, "teams": target_teams}).fetchall()
+        league_rank = None
+        for i, r in enumerate(league_vs):
+            if r.pid == gsis:
+                league_rank = i + 1
+                break
 
     return {
         "player": player.player_name,
@@ -1433,5 +1479,8 @@ def matchup_finder(
         "defense_teams": target_teams,
         "vs_defense": dict(stats._mapping) if stats else {},
         "overall": dict(overall._mapping) if overall else {},
+        "overall_air_yards": float(overall_air) if overall_air else None,
+        "league_rank": league_rank,
+        "league_total": len(league_vs),
         "per_team": per_team,
     }

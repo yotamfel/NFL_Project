@@ -2152,6 +2152,7 @@ function MatchupSection({ players, season }) {
   const [customTeams, setCustomTeams] = useState([])
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [expandedTeam, setExpandedTeam] = useState(null)
   const mode = customTeams.length > 0 ? 'custom' : 'preset'
 
   useEffect(() => {
@@ -2184,31 +2185,89 @@ function MatchupSection({ players, season }) {
         <TeamPicker selected={customTeams} setSelected={setCustomTeams} />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      {/* Summary cards */}
+      <div className="grid grid-cols-3 gap-3">
         <div className="bg-slate-900/60 border border-slate-700/30 rounded-xl p-4 space-y-2">
           <p className="text-xs font-semibold text-slate-400">Overall</p>
           <p className="text-2xl font-bold"><EpaColorCell val={overall.epa_per_play} /></p>
-          <p className="text-xs text-slate-500">Success: {overall.success_rate}% | {overall.avg_yards} yds | {overall.plays} plays</p>
+          <p className="text-xs text-slate-500">Success: {overall.success_rate}% | {overall.avg_yards} yds | {overall.plays}p</p>
         </div>
         <div className="bg-slate-900/60 border border-amber-500/20 rounded-xl p-4 space-y-2">
           <p className="text-xs font-semibold text-amber-400">vs {data.defense_label}</p>
           <p className="text-2xl font-bold"><EpaColorCell val={vsDef.epa_per_play} /></p>
-          <p className="text-xs text-slate-500">Success: {vsDef.success_rate}% | {vsDef.avg_yards} yds | {vsDef.plays} plays</p>
-          {delta && <p className="text-xs"><span className={Number(delta) >= 0 ? 'text-emerald-400' : 'text-red-400'}>{Number(delta) >= 0 ? '+' : ''}{delta} EPA vs overall</span></p>}
+          <p className="text-xs text-slate-500">Success: {vsDef.success_rate}% | {vsDef.avg_yards} yds | {vsDef.plays}p</p>
+          {delta && <p className="text-xs"><span className={Number(delta) >= 0 ? 'text-emerald-400' : 'text-red-400'}>{Number(delta) >= 0 ? '+' : ''}{delta} EPA</span></p>}
+        </div>
+        <div className="bg-slate-900/60 border border-slate-700/30 rounded-xl p-4 space-y-2">
+          <p className="text-xs font-semibold text-slate-400">League Rank</p>
+          {data.league_rank && <p className="text-2xl font-bold text-white">#{data.league_rank} <span className="text-xs text-slate-600 font-normal">of {data.league_total}</span></p>}
+          {data.overall_air_yards && <p className="text-xs text-slate-500">Avg air yards: {data.overall_air_yards}</p>}
         </div>
       </div>
 
+      {/* Per-team breakdown - expandable */}
       {data.per_team?.length > 0 && (
         <div>
-          <p className="text-xs font-semibold text-slate-500 mb-2">Per-Team Breakdown ({data.defense_label})</p>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            {data.per_team.map(t => (
-              <div key={t.team} className="bg-slate-900/40 rounded-lg p-2.5 text-center">
-                <p className="text-xs text-slate-400 font-medium">{t.team}</p>
-                <p className="text-sm font-bold"><EpaColorCell val={t.epa_per_play} /></p>
-                <p className="text-[10px] text-slate-600">{t.plays}p | {t.avg_yards}y</p>
-              </div>
-            ))}
+          <p className="text-xs font-semibold text-slate-500 mb-2">Per-Team Breakdown - click to expand</p>
+          <div className="space-y-1.5">
+            {data.per_team.map(t => {
+              const isExp = expandedTeam === t.team
+              const airDelta = t.avg_air_yards && data.overall_air_yards ? (t.avg_air_yards - data.overall_air_yards).toFixed(1) : null
+              return (
+                <div key={t.team}>
+                  <button onClick={() => setExpandedTeam(isExp ? null : t.team)}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs transition-colors ${isExp ? 'bg-slate-800 border border-slate-700' : 'bg-slate-900/40 hover:bg-slate-800/60'}`}>
+                    <div className="flex items-center gap-2">
+                      <span className="text-white font-semibold">{t.team}</span>
+                      {t.def_rank && <span className="text-slate-600">#{t.def_rank} DEF</span>}
+                      {t.result && <span className={`font-bold ${t.result === 'W' ? 'text-emerald-400' : 'text-red-400'}`}>{t.result}</span>}
+                      {t.score && <span className="text-slate-600">{t.score}</span>}
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="font-bold"><EpaColorCell val={t.epa_per_play} /></span>
+                      <span className="text-slate-500">{t.plays}p</span>
+                      <span className="text-slate-600">{isExp ? '▲' : '▼'}</span>
+                    </div>
+                  </button>
+                  {isExp && (
+                    <div className="bg-slate-900/60 border border-slate-700/40 rounded-lg p-3 mt-1 grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+                      <div>
+                        <p className="text-slate-600 text-[10px]">Success%</p>
+                        <p className="text-slate-200">{t.success_rate}%</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-600 text-[10px]">Avg Yards</p>
+                        <p className="text-slate-200">{t.avg_yards}</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-600 text-[10px]">Air Yards</p>
+                        <p className="text-slate-200">{t.avg_air_yards ?? '-'} {airDelta && <span className={Number(airDelta) >= 0 ? 'text-emerald-400' : 'text-red-400'}>({Number(airDelta) >= 0 ? '+' : ''}{airDelta} vs avg)</span>}</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-600 text-[10px]">Pass%</p>
+                        <p className="text-slate-200">{t.pass_pct}%</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-600 text-[10px]">Big Plays (20+)</p>
+                        <p className="text-slate-200">{t.big_plays ?? 0}</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-600 text-[10px]">Turnovers</p>
+                        <p className="text-slate-200">{(t.ints ?? 0) + (t.fumbles ?? 0)} <span className="text-slate-600">({t.ints ?? 0} INT, {t.fumbles ?? 0} FUM)</span></p>
+                      </div>
+                      <div>
+                        <p className="text-slate-600 text-[10px]">Sacks</p>
+                        <p className="text-slate-200">{t.sacks ?? 0}</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-600 text-[10px]">3rd & Long</p>
+                        <p className="text-slate-200">{t.third_long ?? 0} plays {t.third_long_epa != null && <span>(<EpaColorCell val={t.third_long_epa} /> EPA)</span>}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </div>
         </div>
       )}
