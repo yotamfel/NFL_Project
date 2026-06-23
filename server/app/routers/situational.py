@@ -804,11 +804,79 @@ def pressure_analysis(
         key = "under_pressure" if r.was_pressure else "clean_pocket"
         data[key] = dict(r._mapping)
 
+    extras = {}
+    with engine.connect() as c2:
+        # Pressure rate
+        total_plays = sum(d.get("plays", 0) for d in data.values())
+        pressure_plays = data.get("under_pressure", {}).get("plays", 0)
+        extras["pressure_rate"] = round(pressure_plays / total_plays * 100, 1) if total_plays else 0
+        extras["total_dropbacks"] = total_plays
+
+        # League percentile for EPA under pressure
+        league = c2.execute(text(f"""
+            SELECT p.passer_player_id as pid,
+                   ROUND(AVG(CASE WHEN pt.was_pressure=1 THEN p.epa END)::numeric, 3) as press_epa
+            FROM pbp p JOIN participation pt ON pt.nflverse_game_id = p.game_id AND pt.play_id = p.play_id
+            WHERE p.season = :season AND p.pass_attempt = 1 AND p.epa IS NOT NULL
+                  AND pt.was_pressure IS NOT NULL AND p.season_type = 'REG'
+            GROUP BY p.passer_player_id HAVING COUNT(*) >= 50
+        """), {"season": yr}).fetchall()
+        if league:
+            player_press_epa = data.get("under_pressure", {}).get("epa_per_play")
+            if player_press_epa is not None:
+                vals = sorted([float(r.press_epa) for r in league if r.press_epa is not None])
+                extras["pressure_percentile"] = round(sum(1 for v in vals if v <= float(player_press_epa)) / len(vals) * 100)
+
+        # Sack vs pressure-no-sack
+        sack_split = c2.execute(text(f"""
+            SELECT
+                CASE WHEN p.sack = 1 THEN 'sacked' ELSE 'escaped' END as outcome,
+                COUNT(*) as plays,
+                ROUND(AVG(p.epa)::numeric, 3) as epa,
+                ROUND(AVG(CASE WHEN p.complete_pass=1 THEN 100.0 ELSE 0 END)::numeric, 1) as comp_pct,
+                ROUND(AVG(p.yards_gained)::numeric, 1) as avg_yards
+            FROM pbp p JOIN participation pt ON pt.nflverse_game_id = p.game_id AND pt.play_id = p.play_id
+            WHERE p.passer_player_id = :pid AND p.season = :season AND p.pass_attempt = 1
+                  AND p.epa IS NOT NULL AND pt.was_pressure = 1{ctx_sql}
+            GROUP BY CASE WHEN p.sack = 1 THEN 'sacked' ELSE 'escaped' END
+        """), {"pid": gsis, "season": yr}).fetchall()
+        extras["sack_split"] = {r.outcome: dict(r._mapping) for r in sack_split}
+
+        # Scramble under pressure
+        scramble = c2.execute(text(f"""
+            SELECT
+                CASE WHEN p.qb_scramble = 1 THEN 'scramble' ELSE 'pocket' END as action,
+                COUNT(*) as plays,
+                ROUND(AVG(p.epa)::numeric, 3) as epa,
+                ROUND(AVG(p.yards_gained)::numeric, 1) as avg_yards
+            FROM pbp p JOIN participation pt ON pt.nflverse_game_id = p.game_id AND pt.play_id = p.play_id
+            WHERE p.passer_player_id = :pid AND p.season = :season
+                  AND p.epa IS NOT NULL AND pt.was_pressure = 1 AND p.sack = 0{ctx_sql}
+            GROUP BY CASE WHEN p.qb_scramble = 1 THEN 'scramble' ELSE 'pocket' END
+        """), {"pid": gsis, "season": yr}).fetchall()
+        extras["scramble"] = {r.action: dict(r._mapping) for r in scramble}
+
+        # Blitz vs no-blitz (using number_of_pass_rushers from participation)
+        blitz = c2.execute(text(f"""
+            SELECT
+                CASE WHEN pt.number_of_pass_rushers >= 5 THEN 'blitz' ELSE 'no_blitz' END as blitz,
+                COUNT(*) as plays,
+                ROUND(AVG(p.epa)::numeric, 3) as epa,
+                ROUND(AVG(CASE WHEN p.complete_pass=1 THEN 100.0 ELSE 0 END)::numeric, 1) as comp_pct,
+                ROUND(AVG(CASE WHEN p.sack=1 THEN 100.0 ELSE 0 END)::numeric, 1) as sack_rate
+            FROM pbp p JOIN participation pt ON pt.nflverse_game_id = p.game_id AND pt.play_id = p.play_id
+            WHERE p.passer_player_id = :pid AND p.season = :season AND p.pass_attempt = 1
+                  AND p.epa IS NOT NULL AND pt.number_of_pass_rushers IS NOT NULL{ctx_sql}
+            GROUP BY CASE WHEN pt.number_of_pass_rushers >= 5 THEN 'blitz' ELSE 'no_blitz' END
+        """), {"pid": gsis, "season": yr}).fetchall()
+        extras["blitz"] = {r.blitz: dict(r._mapping) for r in blitz}
+
     return {
         "player": player.player_name if player else player_id,
         "player_id": player_id,
         "season": yr,
         "data": data,
+        **extras,
     }
 
 

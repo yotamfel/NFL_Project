@@ -1032,37 +1032,125 @@ export default function SituationalStats() {
               }}
             />
           </>)}
-          {section === 'pressure' && (
+          {section === 'pressure' && (<>
+            <p className="text-slate-600 text-[10px] mb-2">How the QB performs when the pass rush reaches him vs when he has a clean pocket.</p>
             <SimpleSection title="Pressure" fetchFn={api.getPressureAnalysis} players={players} season={selectedSeasons[0]} ctxParams={ctxParams}
-              renderData={(d, p) => (
-                <div key={p.player_id} className="space-y-3">
-                  <p className="text-white font-semibold text-sm">{d?.player || p.player_name} <span className="text-slate-600 text-xs font-normal">{d?.season || selectedSeasons[0]}</span></p>
-                  {d.data && Object.keys(d.data).length > 0 ? (
-                    <div className="grid grid-cols-2 gap-3">
-                      {['clean_pocket', 'under_pressure'].map(key => {
-                        const s = d.data?.[key]
-                        if (!s) return null
-                        const label = key === 'clean_pocket' ? 'Clean Pocket' : 'Under Pressure'
-                        return (
-                          <div key={key} className={`bg-slate-900/60 border rounded-xl p-4 space-y-2 ${key === 'under_pressure' ? 'border-red-500/20' : 'border-slate-700/30'}`}>
-                            <p className="text-xs font-semibold text-slate-300">{label}</p>
-                            <p className="text-2xl font-bold"><EpaColorCell val={s.epa_per_play} /> <span className="text-xs text-slate-600 font-normal">EPA/play</span></p>
-                            <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
-                              <span className="text-slate-500">Comp%</span><span className="text-slate-200 text-right">{s.comp_pct}%</span>
-                              <span className="text-slate-500">Sack%</span><span className="text-slate-200 text-right">{s.sack_rate}%</span>
-                              <span className="text-slate-500">INT%</span><span className="text-slate-200 text-right">{s.int_rate}%</span>
-                              <span className="text-slate-500">Avg Yards</span><span className="text-slate-200 text-right">{s.avg_yards}</span>
-                              <span className="text-slate-500">Plays</span><span className="text-slate-200 text-right">{s.plays}</span>
-                            </div>
-                          </div>
-                        )
-                      })}
+              renderData={(d, p) => {
+                const cp = d?.data?.clean_pocket, up = d?.data?.under_pressure
+                const delta = cp && up ? (up.epa_per_play - cp.epa_per_play).toFixed(3) : null
+                const [showDeep, setShowDeep] = useState(false)
+                return (
+                <div key={p.player_id} className="space-y-4">
+                  <p className="text-white font-semibold text-sm">{d?.player || p.player_name} <span className="text-slate-600 text-xs font-normal">{d?.season || selectedSeasons[0]}</span>
+                    {d?.pressure_percentile != null && <span className="ml-2 text-xs px-2 py-0.5 rounded bg-amber-500/15 text-amber-400">Under pressure: top {100 - d.pressure_percentile}%</span>}
+                  </p>
+                  {cp || up ? (<>
+                    {/* Summary row */}
+                    <div className="flex gap-3 flex-wrap text-xs">
+                      <span className="bg-slate-900/60 rounded-lg px-3 py-1.5"><span className="text-slate-500">Pressure rate: </span><span className="text-white font-bold">{d?.pressure_rate ?? '-'}%</span></span>
+                      <span className="bg-slate-900/60 rounded-lg px-3 py-1.5"><span className="text-slate-500">Dropbacks: </span><span className="text-white font-bold">{d?.total_dropbacks ?? '-'}</span></span>
                     </div>
-                  ) : <p className="text-slate-500 text-sm">No pressure data for this player/season</p>}
+                    {/* Main 3 cards */}
+                    <div className="grid grid-cols-3 gap-3">
+                      {cp && (
+                        <div className="bg-slate-900/60 border border-slate-700/30 rounded-xl p-4 space-y-2">
+                          <p className="text-xs font-semibold text-slate-300">Clean Pocket</p>
+                          <p className="text-2xl font-bold"><EpaColorCell val={cp.epa_per_play} /></p>
+                          <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[10px]">
+                            <span className="text-slate-500">Comp%</span><span className="text-slate-200 text-right">{cp.comp_pct}%</span>
+                            <span className="text-slate-500">INT%</span><span className="text-slate-200 text-right">{cp.int_rate}%</span>
+                            <span className="text-slate-500">Yards</span><span className="text-slate-200 text-right">{cp.avg_yards}</span>
+                            <span className="text-slate-500">Plays</span><span className="text-slate-200 text-right">{cp.plays}</span>
+                          </div>
+                        </div>
+                      )}
+                      {delta && (
+                        <div className="bg-slate-900/80 border border-slate-700/40 rounded-xl p-4 flex flex-col items-center justify-center">
+                          <p className="text-[10px] text-slate-500 mb-1">Pressure Cost</p>
+                          <p className={`text-2xl font-black ${Number(delta) <= 0 ? 'text-red-400' : 'text-emerald-400'}`}>{delta}</p>
+                          <p className="text-[10px] text-slate-600">EPA drop</p>
+                        </div>
+                      )}
+                      {up && (
+                        <div className="bg-slate-900/60 border border-red-500/20 rounded-xl p-4 space-y-2">
+                          <p className="text-xs font-semibold text-red-400">Under Pressure</p>
+                          <p className="text-2xl font-bold"><EpaColorCell val={up.epa_per_play} /></p>
+                          <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[10px]">
+                            <span className="text-slate-500">Comp%</span><span className="text-slate-200 text-right">{up.comp_pct}%</span>
+                            <span className="text-slate-500">Sack%</span><span className="text-slate-200 text-right">{up.sack_rate}%</span>
+                            <span className="text-slate-500">INT%</span><span className="text-slate-200 text-right">{up.int_rate}%</span>
+                            <span className="text-slate-500">Plays</span><span className="text-slate-200 text-right">{up.plays}</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    {/* Expand for deep stats */}
+                    <button onClick={() => setShowDeep(!showDeep)} className="text-xs text-slate-500 hover:text-amber-400 transition-colors">
+                      {showDeep ? '▲ Hide details' : '▼ Show blitz, scramble & sack breakdown'}
+                    </button>
+                    {showDeep && (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        {/* Blitz */}
+                        {d?.blitz && Object.keys(d.blitz).length > 0 && (
+                          <div className="bg-slate-900/40 border border-slate-700/20 rounded-lg p-3 space-y-1.5">
+                            <p className="text-[10px] font-bold text-slate-400">BLITZ vs STANDARD RUSH</p>
+                            {['blitz', 'no_blitz'].map(k => {
+                              const b = d.blitz[k]; if (!b) return null
+                              return <div key={k} className="text-[10px]">
+                                <span className="text-slate-300 font-medium">{k === 'blitz' ? 'Blitz (5+ rushers)' : 'Standard (4-)'}</span>
+                                <div className="flex gap-2 text-slate-400 mt-0.5">
+                                  <span>EPA: <EpaColorCell val={b.epa} /></span>
+                                  <span>Comp: {b.comp_pct}%</span>
+                                  <span>Sack: {b.sack_rate}%</span>
+                                  <span>{b.plays}p</span>
+                                </div>
+                              </div>
+                            })}
+                          </div>
+                        )}
+                        {/* Sack vs escape */}
+                        {d?.sack_split && Object.keys(d.sack_split).length > 0 && (
+                          <div className="bg-slate-900/40 border border-slate-700/20 rounded-lg p-3 space-y-1.5">
+                            <p className="text-[10px] font-bold text-slate-400">WHEN PRESSURED</p>
+                            {['escaped', 'sacked'].map(k => {
+                              const s = d.sack_split[k]; if (!s) return null
+                              return <div key={k} className="text-[10px]">
+                                <span className={`font-medium ${k === 'escaped' ? 'text-emerald-400' : 'text-red-400'}`}>{k === 'escaped' ? 'Escaped pressure' : 'Sacked'}</span>
+                                <div className="flex gap-2 text-slate-400 mt-0.5">
+                                  <span>EPA: <EpaColorCell val={s.epa} /></span>
+                                  {s.comp_pct != null && <span>Comp: {s.comp_pct}%</span>}
+                                  <span>{s.avg_yards}y</span>
+                                  <span>{s.plays}p</span>
+                                </div>
+                              </div>
+                            })}
+                          </div>
+                        )}
+                        {/* Scramble */}
+                        {d?.scramble && Object.keys(d.scramble).length > 0 && (
+                          <div className="bg-slate-900/40 border border-slate-700/20 rounded-lg p-3 space-y-1.5">
+                            <p className="text-[10px] font-bold text-slate-400">ESCAPE ACTION</p>
+                            {['pocket', 'scramble'].map(k => {
+                              const s = d.scramble[k]; if (!s) return null
+                              return <div key={k} className="text-[10px]">
+                                <span className="text-slate-300 font-medium">{k === 'scramble' ? 'Scrambled' : 'Stayed in pocket'}</span>
+                                <div className="flex gap-2 text-slate-400 mt-0.5">
+                                  <span>EPA: <EpaColorCell val={s.epa} /></span>
+                                  <span>{s.avg_yards}y</span>
+                                  <span>{s.plays}p</span>
+                                </div>
+                              </div>
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </>) : <p className="text-slate-500 text-sm">No pressure data for this player/season</p>}
                 </div>
-              )}
+                )
+              }}
             />
-          )}
+          </>)}
           {section === 'decisions' && (
             <SimpleSection title="Decisions" fetchFn={api.getQbDecisions} players={players} season={selectedSeasons[0]} ctxParams={ctxParams}
               renderData={(d, p) => (
