@@ -170,6 +170,71 @@ def _gather_context(query: str) -> str:
             except Exception:
                 pass
 
+        # Career totals for found players
+        for pid in list(player_ids_found)[:3]:
+            try:
+                career = c.execute(text("""
+                    SELECT 'passing' as cat, SUM(yds) as yds, SUM(td) as td, SUM(int) as ints, COUNT(*) as seasons
+                    FROM passing_seasons WHERE player_id = :pid AND yds IS NOT NULL
+                    UNION ALL
+                    SELECT 'offense', SUM(yds), SUM(td), NULL, COUNT(*)
+                    FROM offense_seasons WHERE player_id = :pid AND yds IS NOT NULL
+                """), {"pid": pid}).fetchall()
+                for r in career:
+                    if r.yds and r.yds > 0:
+                        ctx_parts.append(f"  Career {r.cat}: {r.yds} yds, {r.td} TDs{', ' + str(r.ints) + ' INTs' if r.ints else ''} over {r.seasons} seasons")
+            except Exception:
+                pass
+
+        # Postseason data
+        if any(w in q_lower for w in ["playoff", "postseason", "super bowl", "wild card", "divisional", "championship", "superbowl"]):
+            try:
+                post = c.execute(text("""
+                    SELECT passer_player_name as name, COUNT(*) as plays,
+                           ROUND(AVG(epa)::numeric, 3) as epa, SUM(CASE WHEN touchdown=1 THEN 1 ELSE 0 END) as tds
+                    FROM pbp WHERE season_type = 'POST' AND pass_attempt = 1 AND passer_player_id IS NOT NULL AND epa IS NOT NULL
+                    GROUP BY passer_player_name HAVING COUNT(*) >= 100
+                    ORDER BY epa DESC LIMIT 10
+                """)).fetchall()
+                ctx_parts.append("\n--- POSTSEASON LEADERS ---")
+                for r in post:
+                    ctx_parts.append(f"  {r.name}: {r.plays} plays, EPA {r.epa}, {r.tds} TDs")
+            except Exception:
+                pass
+
+        # Divisional / conference matchup context
+        if any(w in q_lower for w in ["division", "divisional", "rivalry", "afc", "nfc"]):
+            try:
+                div = c.execute(text("""
+                    SELECT posteam, defteam, COUNT(*) as games,
+                           ROUND(AVG(epa)::numeric, 3) as epa
+                    FROM pbp WHERE div_game = 1 AND epa IS NOT NULL AND play_type IN ('pass','run')
+                    GROUP BY posteam, defteam HAVING COUNT(*) >= 200
+                    ORDER BY epa DESC LIMIT 10
+                """)).fetchall()
+                ctx_parts.append("\n--- DIVISIONAL MATCHUPS (best EPA) ---")
+                for r in div:
+                    ctx_parts.append(f"  {r.posteam} vs {r.defteam}: EPA {r.epa} ({r.games} plays)")
+            except Exception:
+                pass
+
+        # Head-to-head if two teams mentioned
+        if len(found_teams) >= 2:
+            t1, t2 = found_teams[0], found_teams[1]
+            try:
+                h2h = c.execute(text("""
+                    SELECT posteam, COUNT(*) as plays, ROUND(AVG(epa)::numeric, 3) as epa,
+                           SUM(CASE WHEN touchdown=1 THEN 1 ELSE 0 END) as tds
+                    FROM pbp WHERE ((posteam = :t1 AND defteam = :t2) OR (posteam = :t2 AND defteam = :t1))
+                          AND epa IS NOT NULL AND play_type IN ('pass','run')
+                    GROUP BY posteam
+                """), {"t1": t1, "t2": t2}).fetchall()
+                ctx_parts.append(f"\n--- HEAD TO HEAD: {t1} vs {t2} ---")
+                for r in h2h:
+                    ctx_parts.append(f"  {r.posteam}: {r.plays} plays, EPA {r.epa}, {r.tds} TDs")
+            except Exception:
+                pass
+
         # League averages
         league = c.execute(text("""
             SELECT season, COUNT(*) as plays, ROUND(AVG(epa)::numeric, 3) as league_epa
@@ -208,14 +273,19 @@ RELEVANT DATA FROM OUR DATABASE:
 TASK: Generate exactly 3 different anecdote options based on the input and data above.
 {level_instruction}
 
+IMPORTANT:
+- The input may mention a specific year, event, or era, but you should draw connections ACROSS seasons and history. For example, if someone mentions "Mahomes 2023", compare it to other great seasons in history. If someone mentions "Super Bowl", find related stats from any relevant year.
+- Think creatively about connections: birthdays, draft classes, team history, career milestones, before/after events, rookie vs veteran comparisons, era comparisons.
+- The data provided covers multiple seasons - use cross-season insights, not just the mentioned year.
+
 RULES:
-- Each anecdote must be factually based on the data provided
+- Each anecdote must be factually based on the data provided - never invent stats
 - Twitter-ready: engaging, concise, shareable
 - Include 1-2 relevant emoji (not excessive)
 - Include 1-2 hashtags at the end
 - If the text exceeds 280 characters, split it into numbered parts (1/N, 2/N...) each under 280 chars
 - Write in English
-- Each option should take a DIFFERENT angle on the data
+- Each option should take a DIFFERENT angle on the data (one could be a comparison, one a record, one a surprising fact)
 
 Return a JSON array of 3 objects:
 [
