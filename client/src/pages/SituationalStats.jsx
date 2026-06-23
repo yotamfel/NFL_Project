@@ -2699,20 +2699,23 @@ function PassHeatmapSection({ players, season, ctxParams }) {
                   </tr>
                   {expanded === key && (
                     <tr><td colSpan={10} className="px-2 pb-2">
-                      <div className="bg-slate-900/60 border border-slate-700/30 rounded-lg p-3 space-y-2">
-                        <div className="flex gap-4 text-[10px]">
-                          <span className="text-slate-400">YAC: <span className="text-white font-bold">{cell.avg_yac ?? '-'}</span></span>
-                          <span className="text-slate-400">Air Yards: <span className="text-white font-bold">{cell.avg_air_yards}</span></span>
-                          <span className="text-slate-400">Total Yards: <span className="text-white font-bold">{cell.avg_yards}</span></span>
+                      <div className="bg-slate-900/60 border border-slate-700/30 rounded-lg p-3 space-y-2 text-[10px]">
+                        <div className="flex gap-4">
+                          <span className="text-slate-400">YAC (yards after catch): <span className="text-white font-bold">{cell.avg_yac ?? '-'}</span></span>
+                          <span className="text-slate-400">Air/YAC split: <span className="text-white font-bold">{cell.avg_air_yards ?? '-'}</span> air + <span className="text-white font-bold">{cell.avg_yac ?? '-'}</span> YAC = <span className="text-white font-bold">{cell.avg_yards}</span> total</span>
                         </div>
                         {(() => {
-                          const recs = (data.top_receivers || []).filter(r => r.pass_location === cell.pass_location && r.pass_length === cell.pass_length).slice(0, 3)
+                          const recs = (data.top_receivers || []).filter(r => r.pass_location === cell.pass_location && r.pass_length === cell.pass_length).slice(0, 4)
                           if (!recs.length) return null
-                          return <div className="text-[10px]">
-                            <span className="text-slate-500">Top receivers: </span>
-                            {recs.map((r, i) => (
-                              <span key={i} className="text-slate-300">{i > 0 && ', '}{r.receiver} <span className="text-slate-500">({r.targets}t, <EpaColorCell val={r.epa} />)</span></span>
-                            ))}
+                          return <div>
+                            <span className="text-slate-500">Top targets in this zone:</span>
+                            <div className="flex gap-2 mt-1 flex-wrap">
+                              {recs.map((r, i) => (
+                                <span key={i} className="bg-slate-800 rounded px-2 py-0.5 text-slate-300">
+                                  {r.receiver} <span className="text-slate-500">{r.targets}t</span> <EpaColorCell val={r.epa} />
+                                </span>
+                              ))}
+                            </div>
                           </div>
                         })()}
                       </div>
