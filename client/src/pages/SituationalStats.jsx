@@ -765,12 +765,19 @@ export default function SituationalStats() {
   const hasCtxFilters = ctxSeasonType !== 'REG' || ctxOpponent.length > 0 || ctxLocation || ctxWeekFrom || ctxWeekTo
   const applyFilters = () => setCtxApplied(v => v + 1)
 
+  const singlePlayerSections = ['pressure', 'matchup', 'decisions', 'runheatmap', 'passheatmap']
+  const maxPlayers = singlePlayerSections.includes(section) ? 1 : 2
+
   const addPlayer = (p) => {
-    if (players.length < 2 && !players.find(x => x.player_id === p.player_id)) {
+    if (players.length < maxPlayers && !players.find(x => x.player_id === p.player_id)) {
       setPlayers(prev => [...prev, p])
     }
   }
   const removePlayer = (id) => setPlayers(prev => prev.filter(p => p.player_id !== id))
+
+  useEffect(() => {
+    if (players.length > maxPlayers) setPlayers(prev => prev.slice(0, maxPlayers))
+  }, [section])
 
   const needsPlayer = !['epa', 'clutch', 'formation', 'explorer', 'dashboard'].includes(section)
   const hideCtxFilters = section === 'matchup'
@@ -829,7 +836,7 @@ export default function SituationalStats() {
             ))}
           </div>
 
-          {needsPlayer && (
+          {needsPlayer && players.length < maxPlayers && (
             <div className="flex-1 min-w-[200px]">
               <PlayerSearch onSelect={addPlayer} placeholder={players.length === 0 ? 'Search player...' : 'Add 2nd player to compare...'} />
             </div>
