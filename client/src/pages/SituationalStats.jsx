@@ -2218,16 +2218,6 @@ function MatchupSection({ players, season }) {
 }
 
 
-const DECISION_METRICS = [
-  { k: 'catchable_pct', label: 'Catchable', good: true, desc: 'Passes that were catchable' },
-  { k: 'int_worthy_pct', label: 'INT-worthy', good: false, desc: 'Bad decisions deserving interception' },
-  { k: 'throwaway_pct', label: 'Throwaway', neutral: true, desc: 'Intentional throw-aways' },
-  { k: 'drop_pct', label: 'Drops', neutral: true, desc: 'Catchable passes dropped by receivers' },
-  { k: 'contested_pct', label: 'Contested', neutral: true, desc: 'Throws into contested coverage' },
-  { k: 'out_of_pocket_pct', label: 'Out of Pocket', neutral: true, desc: 'Left the pocket before throwing' },
-  { k: 'qb_fault_sack_pct', label: 'QB-fault Sack', good: false, desc: 'Sacks caused by holding too long' },
-]
-
 function DecisionsSection({ players, season, ctxParams }) {
   const [allData, setAllData] = useState([])
   const [loading, setLoading] = useState(false)
@@ -2248,80 +2238,100 @@ function DecisionsSection({ players, season, ctxParams }) {
   const colors = ['#f59e0b', '#3b82f6']
   const isCompare = players.length === 2 && allData.length === 2
 
+  const goodMetrics = [
+    { k: 'catchable_pct', label: 'Catchable%', tip: 'catchable_pct' },
+  ]
+  const badMetrics = [
+    { k: 'int_worthy_pct', label: 'INT-worthy%', tip: 'int_worthy_pct' },
+    { k: 'qb_fault_sack_pct', label: 'QB-fault Sack%', tip: 'qb_fault_sack_pct' },
+    { k: 'contested_pct', label: 'Contested%', tip: 'contested_pct' },
+  ]
+  const contextMetrics = [
+    { k: 'throwaway_pct', label: 'Throwaway%', tip: 'throwaway_pct' },
+    { k: 'drop_pct', label: 'Drop%', tip: 'drop_pct' },
+    { k: 'out_of_pocket_pct', label: 'Out of Pocket%', tip: 'out_of_pocket_pct' },
+  ]
+
+  const MetricCard = ({ m, color, borderColor }) => (
+    <div className={`bg-slate-900/60 border rounded-lg p-3 ${borderColor}`}>
+      <p className="text-[10px] text-slate-500 mb-1">{m.label}<Tip stat={m.tip} /></p>
+      <div className="flex items-baseline gap-2">
+        {allData.map((d, i) => (
+          <span key={i} className="text-lg font-bold" style={{ color: isCompare ? colors[i] : color }}>
+            {d.decisions?.[m.k] ?? '-'}%
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+
   return (
     <div className="space-y-4">
-      {/* Horizontal bar comparison for each metric */}
-      <div className="space-y-2">
-        {DECISION_METRICS.map(({ k, label, good, desc }) => {
-          const vals = allData.map(d => d.decisions?.[k] ?? null)
-          if (vals.every(v => v === null)) return null
-          const max = Math.max(...vals.filter(v => v != null), 1)
-          return (
-            <div key={k} className="bg-slate-900/40 rounded-lg px-3 py-2">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-[10px] text-slate-400">{label}<Tip stat={k} /></span>
-                <div className="flex gap-3">
-                  {vals.map((v, i) => (
-                    <span key={i} className="text-xs font-bold" style={{ color: isCompare ? colors[i] : (good === true ? '#34d399' : good === false ? '#f87171' : '#e2e8f0') }}>
-                      {v ?? '-'}%
-                    </span>
-                  ))}
-                </div>
-              </div>
-              <div className="flex gap-1">
-                {vals.map((v, i) => (
-                  <div key={i} className="flex-1 bg-slate-800 rounded-full h-2 overflow-hidden">
-                    <div className="h-full rounded-full transition-all" style={{ width: `${v != null ? (v / max) * 100 : 0}%`, background: isCompare ? colors[i] : (good === true ? '#34d399' : good === false ? '#f87171' : '#94a3b8'), opacity: 0.7 }} />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )
-        })}
-      </div>
-
-      {/* EPA */}
+      {/* Player names */}
       <div className="flex gap-3">
         {allData.map((d, i) => (
-          <div key={i} className="bg-slate-900/60 border border-slate-700/30 rounded-lg px-4 py-2 flex-1">
-            <p className="text-[10px] font-medium" style={{ color: colors[i] }}>{d.player || players[i]?.player_name}</p>
-            <p className="text-sm">EPA/play: <span className="font-bold"><EpaColorCell val={d.decisions?.epa_per_play} /></span> <span className="text-slate-600 text-[10px]">{d.decisions?.total_passes ?? '-'} passes</span></p>
+          <div key={i} className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full" style={{ background: colors[i] }} />
+            <span className="text-white text-sm font-semibold">{d.player || players[i]?.player_name}</span>
+            <span className="text-slate-600 text-xs">{d.season} - {d.decisions?.total_passes ?? '-'} passes</span>
+            <span className="text-xs">EPA: <EpaColorCell val={d.decisions?.epa_per_play} /></span>
           </div>
         ))}
+      </div>
+
+      {/* Grouped metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="space-y-2">
+          <p className="text-[10px] font-bold text-emerald-500">ACCURACY</p>
+          {goodMetrics.map(m => <MetricCard key={m.k} m={m} color="#34d399" borderColor="border-emerald-500/20" />)}
+        </div>
+        <div className="space-y-2">
+          <p className="text-[10px] font-bold text-red-400">RISK</p>
+          {badMetrics.map(m => <MetricCard key={m.k} m={m} color="#f87171" borderColor="border-red-500/20" />)}
+        </div>
+        <div className="space-y-2">
+          <p className="text-[10px] font-bold text-slate-400">CONTEXT</p>
+          {contextMetrics.map(m => <MetricCard key={m.k} m={m} color="#cbd5e1" borderColor="border-slate-700/30" />)}
+        </div>
       </div>
 
       {/* Read distribution - expandable */}
       {allData.some(d => d.read_distribution?.length > 0) && (
         <div>
           <button onClick={() => setShowReads(!showReads)} className="text-xs text-slate-500 hover:text-amber-400 transition-colors">
-            {showReads ? '▲ Hide read distribution' : '▼ Show read distribution'}
+            {showReads ? '▲ Hide read progression' : '▼ Show read progression (which read the QB threw to)'}
           </button>
           {showReads && (
-            <div className={`grid ${isCompare ? 'grid-cols-2' : 'grid-cols-1'} gap-3 mt-2`}>
-              {allData.map((d, i) => {
-                const reads = d.read_distribution || []
-                if (!reads.length) return null
-                const total = reads.reduce((s, r) => s + r.count, 0)
-                return (
-                  <div key={i} className="bg-slate-900/40 rounded-lg p-3">
-                    {isCompare && <p className="text-[10px] font-medium mb-2" style={{ color: colors[i] }}>{d.player || players[i]?.player_name}</p>}
-                    <div className="space-y-1">
-                      {reads.map(r => {
-                        const pct = total > 0 ? (r.count / total * 100).toFixed(1) : 0
-                        return (
-                          <div key={r.read_thrown} className="flex items-center gap-2 text-[10px]">
-                            <span className="text-slate-400 w-20">{r.read_thrown}</span>
-                            <div className="flex-1 bg-slate-800 rounded-full h-1.5 overflow-hidden">
-                              <div className="h-full rounded-full" style={{ width: `${pct}%`, background: colors[i], opacity: 0.7 }} />
+            <div className="bg-slate-900/40 rounded-lg p-4 mt-2 space-y-3">
+              <p className="text-[10px] text-slate-600">Which receiver read the QB threw to on each play. "1st read" means the primary target - fewer 1st reads may indicate the QB is under pressure or the play design is breaking down.</p>
+              <div className={`grid ${isCompare ? 'grid-cols-2' : 'grid-cols-1'} gap-4`}>
+                {allData.map((d, i) => {
+                  const reads = d.read_distribution || []
+                  if (!reads.length) return null
+                  const total = reads.reduce((s, r) => s + r.count, 0)
+                  const maxCount = Math.max(...reads.map(r => r.count), 1)
+                  return (
+                    <div key={i}>
+                      {isCompare && <p className="text-[10px] font-medium mb-2" style={{ color: colors[i] }}>{d.player || players[i]?.player_name}</p>}
+                      <div className="flex items-end gap-1.5 h-20">
+                        {reads.map(r => {
+                          const pct = total > 0 ? (r.count / total * 100) : 0
+                          const h = (r.count / maxCount) * 100
+                          return (
+                            <div key={r.read_thrown} className="flex-1 flex flex-col items-center group">
+                              <div className="w-full relative" style={{ height: '60px' }}>
+                                <div className="absolute bottom-0 left-1 right-1 rounded-t-sm transition-all" style={{ height: `${h}%`, background: colors[i], opacity: 0.7 }} />
+                              </div>
+                              <span className="text-[9px] text-slate-300 font-bold mt-1">{pct.toFixed(0)}%</span>
+                              <span className="text-[8px] text-slate-600">{r.read_thrown}</span>
                             </div>
-                            <span className="text-slate-300 w-14 text-right">{r.count} ({pct}%)</span>
-                          </div>
-                        )
-                      })}
+                          )
+                        })}
+                      </div>
                     </div>
-                  </div>
-                )
-              })}
+                  )
+                })}
+              </div>
             </div>
           )}
         </div>
