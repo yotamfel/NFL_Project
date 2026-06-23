@@ -2500,7 +2500,8 @@ function RunHeatmapSection({ players, season, ctxParams }) {
             <tr className="text-slate-600 border-b border-slate-800">
               <th className="text-left py-2 px-2">Direction</th>
               <th className="text-right py-2 px-2">EPA<Tip stat="epa_per_play" /></th>
-              <th className="py-2 px-2 w-28"></th>
+              <th className="text-right py-2 px-2 text-[9px]">vs Avg</th>
+              <th className="py-2 px-2 w-24"></th>
               <th className="text-right py-2 px-2">Yards</th>
               <th className="text-right py-2 px-2">Success%</th>
               <th className="text-right py-2 px-2">Carries</th>
@@ -2526,6 +2527,11 @@ function RunHeatmapSection({ players, season, ctxParams }) {
                       {isWorst && <span className="ml-1 text-red-400 text-[9px]">worst</span>}
                     </td>
                     <td className="py-2 px-2 text-right font-bold"><EpaColorCell val={epa} /></td>
+                    <td className="py-2 px-2 text-right text-[10px]">{(() => {
+                      const la = data.league_avg?.[key]; if (la == null) return '-'
+                      const d = (epa - la).toFixed(3)
+                      return <span className={Number(d) >= 0 ? 'text-emerald-400' : 'text-red-400'}>{Number(d) >= 0 ? '+' : ''}{d}</span>
+                    })()}</td>
                     <td className="py-2 px-2">
                       <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
                         <div className={`h-full rounded-full ${epa >= 0 ? 'bg-emerald-500' : 'bg-red-500'}`} style={{ width: `${barW}%`, opacity: 0.7 }} />
@@ -2538,11 +2544,24 @@ function RunHeatmapSection({ players, season, ctxParams }) {
                     <td className="py-2 px-2 text-center">{cell.fumbles > 0 ? <span className="text-red-400">{cell.fumbles}</span> : <span className="text-slate-700">-</span>}</td>
                   </tr>
                   {expanded === key && (
-                    <tr><td colSpan={8} className="px-2 pb-2">
-                      <div className="bg-slate-900/60 border border-slate-700/30 rounded-lg p-3 flex gap-3 text-[10px]">
-                        <span className="bg-emerald-500/10 text-emerald-400 rounded px-2 py-1">10+ yards: <span className="font-bold">{cell.big_runs ?? 0}</span></span>
-                        <span className="bg-slate-800 text-slate-300 rounded px-2 py-1">4-9 yards: <span className="font-bold">{cell.medium_runs ?? 0}</span></span>
-                        <span className="bg-slate-800 text-slate-500 rounded px-2 py-1">1-3 yards: <span className="font-bold">{cell.short_runs ?? 0}</span></span>
+                    <tr><td colSpan={9} className="px-2 pb-2">
+                      <div className="bg-slate-900/60 border border-slate-700/30 rounded-lg p-3 space-y-2">
+                        <div className="flex gap-3 text-[10px]">
+                          <span className="bg-emerald-500/10 text-emerald-400 rounded px-2 py-1">10+ yards: <span className="font-bold">{cell.big_runs ?? 0}</span></span>
+                          <span className="bg-slate-800 text-slate-300 rounded px-2 py-1">4-9 yards: <span className="font-bold">{cell.medium_runs ?? 0}</span></span>
+                          <span className="bg-slate-800 text-slate-500 rounded px-2 py-1">1-3 yards: <span className="font-bold">{cell.short_runs ?? 0}</span></span>
+                        </div>
+                        {data.formation?.length > 0 && (() => {
+                          const forms = data.formation.filter(f => f.run_location === cell.run_location)
+                          if (!forms.length) return null
+                          return <div className="flex gap-3 text-[10px]">
+                            {forms.map(f => (
+                              <span key={f.form} className="bg-slate-800 rounded px-2 py-1 text-slate-300">
+                                {f.form === 'shotgun' ? 'Shotgun' : 'Under Center'}: <EpaColorCell val={f.epa} /> <span className="text-slate-500">{f.avg_yards}y | {f.plays}p</span>
+                              </span>
+                            ))}
+                          </div>
+                        })()}
                       </div>
                     </td></tr>
                   )}
@@ -2633,6 +2652,7 @@ function PassHeatmapSection({ players, season, ctxParams }) {
             <tr className="text-slate-600 border-b border-slate-800">
               <th className="text-left py-2 px-2">Zone</th>
               <th className="text-right py-2 px-2">EPA<Tip stat="epa_per_play" /></th>
+              <th className="text-right py-2 px-2 text-[9px]">vs Avg</th>
               <th className="py-2 px-2 w-24"></th>
               <th className="text-right py-2 px-2">Comp%</th>
               <th className="text-right py-2 px-2">Yards</th>
@@ -2660,6 +2680,11 @@ function PassHeatmapSection({ players, season, ctxParams }) {
                       {isWorst && <span className="ml-1 text-red-400 text-[9px]">worst</span>}
                     </td>
                     <td className="py-2 px-2 text-right font-bold"><EpaColorCell val={epa} /></td>
+                    <td className="py-2 px-2 text-right text-[10px]">{(() => {
+                      const la = data.league_avg?.[key]; if (la == null) return '-'
+                      const d = (epa - la).toFixed(3)
+                      return <span className={Number(d) >= 0 ? 'text-emerald-400' : 'text-red-400'}>{Number(d) >= 0 ? '+' : ''}{d}</span>
+                    })()}</td>
                     <td className="py-2 px-2">
                       <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
                         <div className={`h-full rounded-full ${epa >= 0 ? 'bg-emerald-500' : 'bg-red-500'}`} style={{ width: `${barW}%`, opacity: 0.7 }} />
@@ -2673,11 +2698,23 @@ function PassHeatmapSection({ players, season, ctxParams }) {
                     <td className="py-2 px-2 text-center">{cell.ints > 0 ? <span className="text-red-400">{cell.ints}</span> : <span className="text-slate-700">-</span>}</td>
                   </tr>
                   {expanded === key && (
-                    <tr><td colSpan={9} className="px-2 pb-2">
-                      <div className="bg-slate-900/60 border border-slate-700/30 rounded-lg p-3 flex gap-4 text-[10px]">
-                        <span className="text-slate-400">YAC: <span className="text-white font-bold">{cell.avg_yac ?? '-'}</span></span>
-                        <span className="text-slate-400">Air Yards: <span className="text-white font-bold">{cell.avg_air_yards}</span></span>
-                        <span className="text-slate-400">Total Yards: <span className="text-white font-bold">{cell.avg_yards}</span></span>
+                    <tr><td colSpan={10} className="px-2 pb-2">
+                      <div className="bg-slate-900/60 border border-slate-700/30 rounded-lg p-3 space-y-2">
+                        <div className="flex gap-4 text-[10px]">
+                          <span className="text-slate-400">YAC: <span className="text-white font-bold">{cell.avg_yac ?? '-'}</span></span>
+                          <span className="text-slate-400">Air Yards: <span className="text-white font-bold">{cell.avg_air_yards}</span></span>
+                          <span className="text-slate-400">Total Yards: <span className="text-white font-bold">{cell.avg_yards}</span></span>
+                        </div>
+                        {(() => {
+                          const recs = (data.top_receivers || []).filter(r => r.pass_location === cell.pass_location && r.pass_length === cell.pass_length).slice(0, 3)
+                          if (!recs.length) return null
+                          return <div className="text-[10px]">
+                            <span className="text-slate-500">Top receivers: </span>
+                            {recs.map((r, i) => (
+                              <span key={i} className="text-slate-300">{i > 0 && ', '}{r.receiver} <span className="text-slate-500">({r.targets}t, <EpaColorCell val={r.epa} />)</span></span>
+                            ))}
+                          </div>
+                        })()}
                       </div>
                     </td></tr>
                   )}

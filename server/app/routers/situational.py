@@ -710,12 +710,36 @@ def run_heatmap(
                   AND rush_attempt = 1 AND epa IS NOT NULL{ctx_sql}
         """), {"pid": gsis, "season": yr}).fetchone()
 
+        # League avg per direction
+        league_avg = {}
+        for r in c.execute(text(f"""
+            SELECT run_location, run_gap, ROUND(AVG(epa)::numeric, 3) as league_epa
+            FROM pbp WHERE season = :season AND rush_attempt = 1 AND epa IS NOT NULL
+                  AND run_location IS NOT NULL AND season_type = 'REG'
+            GROUP BY run_location, run_gap HAVING COUNT(*) >= 100
+        """), {"season": yr}).fetchall():
+            league_avg[f"{r.run_location}-{r.run_gap or 'none'}"] = float(r.league_epa)
+
+        # Shotgun vs under center
+        formation = [dict(r._mapping) for r in c.execute(text(f"""
+            SELECT run_location,
+                   CASE WHEN shotgun = 1 THEN 'shotgun' ELSE 'under_center' END as form,
+                   COUNT(*) as plays,
+                   ROUND(AVG(epa)::numeric, 3) as epa,
+                   ROUND(AVG(rushing_yards)::numeric, 1) as avg_yards
+            FROM pbp WHERE rusher_player_id = :pid AND season = :season
+                  AND rush_attempt = 1 AND epa IS NOT NULL{ctx_sql}
+            GROUP BY run_location, form HAVING COUNT(*) >= 5
+        """), {"pid": gsis, "season": yr}).fetchall()]
+
     return {
         "player": player.player_name if player else player_id,
         "player_id": player_id,
         "season": yr,
         "data": [dict(r._mapping) for r in rows],
         "overall": dict(overall._mapping) if overall else {},
+        "league_avg": league_avg,
+        "formation": formation,
     }
 
 
@@ -767,6 +791,28 @@ def pass_heatmap(
                   AND pass_attempt = 1 AND sack = 0 AND epa IS NOT NULL{ctx_sql}
         """), {"pid": gsis, "season": yr}).fetchone()
 
+        # Top receivers per zone
+        top_rec = [dict(r._mapping) for r in c.execute(text(f"""
+            SELECT pass_location, pass_length, receiver_player_name as receiver,
+                   COUNT(*) as targets, ROUND(AVG(epa)::numeric, 3) as epa
+            FROM pbp WHERE {id_col} = :pid AND season = :season
+                  AND pass_attempt = 1 AND sack = 0 AND epa IS NOT NULL
+                  AND pass_location IS NOT NULL AND receiver_player_name IS NOT NULL{ctx_sql}
+            GROUP BY pass_location, pass_length, receiver_player_name
+            HAVING COUNT(*) >= 3
+            ORDER BY pass_location, pass_length, targets DESC
+        """), {"pid": gsis, "season": yr}).fetchall()]
+
+        # League avg per zone
+        league_avg = {}
+        for r in c.execute(text(f"""
+            SELECT pass_location, pass_length, ROUND(AVG(epa)::numeric, 3) as league_epa
+            FROM pbp WHERE season = :season AND pass_attempt = 1 AND sack = 0
+                  AND epa IS NOT NULL AND pass_location IS NOT NULL AND season_type = 'REG'
+            GROUP BY pass_location, pass_length HAVING COUNT(*) >= 100
+        """), {"season": yr}).fetchall():
+            league_avg[f"{r.pass_location}-{r.pass_length or 'none'}"] = float(r.league_epa)
+
     return {
         "player": player.player_name if player else player_id,
         "player_id": player_id,
@@ -774,6 +820,8 @@ def pass_heatmap(
         "role": role,
         "data": [dict(r._mapping) for r in rows],
         "overall": dict(overall._mapping) if overall else {},
+        "top_receivers": top_rec,
+        "league_avg": league_avg,
     }
 
 
