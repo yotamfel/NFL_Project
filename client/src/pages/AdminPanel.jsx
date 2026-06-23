@@ -649,6 +649,7 @@ function AnecdoteTab() {
   const [histTranslating, setHistTranslating] = useState(null)
   const [editingHebrew, setEditingHebrew] = useState(null)
   const [editingHebrewText, setEditingHebrewText] = useState('')
+  const [deleteConfirm, setDeleteConfirm] = useState(null)
 
   const loadHistory = () => {
     api.getAnecdoteHistory().then(res => {
@@ -911,10 +912,8 @@ function AnecdoteTab() {
                           {histTranslating === h.id ? '...' : '🇮🇱 Hebrew'}
                         </button>
                       )}
-                      <button onClick={async () => {
-                        if (!confirm('Delete this anecdote?')) return
-                        try { await api.deleteSaved(h.id); loadHistory() } catch {}
-                      }} className="px-2.5 py-1 text-red-400/50 rounded text-[10px] hover:text-red-400 hover:bg-red-500/10 transition-colors">Delete</button>
+                      <button onClick={() => setDeleteConfirm(h.id)}
+                        className="px-2.5 py-1 text-red-400/50 rounded text-[10px] hover:text-red-400 hover:bg-red-500/10 transition-colors">Delete</button>
                     </div>
                     {trans && (
                       <div className="bg-slate-900/60 border border-blue-500/15 rounded-lg p-2.5 space-y-2">
@@ -954,6 +953,22 @@ function AnecdoteTab() {
           ) : <p className="text-slate-600 text-xs">No anecdotes {calDate ? `for ${calDate}` : 'saved yet'}</p>
         })()}
       </div>
+
+      {deleteConfirm && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={() => setDeleteConfirm(null)}>
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-xs space-y-4" onClick={e => e.stopPropagation()}>
+            <p className="text-white font-bold text-sm">Delete anecdote?</p>
+            <p className="text-slate-400 text-xs">This can't be undone.</p>
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => setDeleteConfirm(null)} className="px-4 py-1.5 text-slate-400 text-sm hover:text-white transition-colors">Cancel</button>
+              <button onClick={async () => {
+                try { await api.deleteSaved(deleteConfirm); loadHistory() } catch {}
+                setDeleteConfirm(null)
+              }} className="px-4 py-1.5 bg-red-500 text-white font-bold rounded-lg text-sm hover:bg-red-400 transition-colors">Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
