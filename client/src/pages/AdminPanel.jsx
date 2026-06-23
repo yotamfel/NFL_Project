@@ -695,15 +695,27 @@ function AnecdoteTab() {
 
   const [saveDate, setSaveDate] = useState(new Date().toISOString().slice(0, 10))
 
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+
   const saveSelected = async () => {
     if (selected == null) return
-    const a = anecdotes[selected]
-    const text = editing ?? getDisplayText(a)
-    await api.saveAnecdote(query, text, level, 'en', saveDate)
-    if (translation) {
-      await api.saveAnecdote(query, translation, level, 'he', saveDate)
-    }
-    loadHistory()
+    setSaving(true)
+    try {
+      const a = anecdotes[selected]
+      const original = getDisplayText(a)
+      const text = editing ?? original
+      const wasEdited = editing != null && editing !== original
+      await api.saveAnecdote(query, text, level, 'en', saveDate, wasEdited ? original : null)
+      if (translation) {
+        await api.saveAnecdote(query, translation, level, 'he', saveDate, null)
+      }
+      setSaved(true)
+      setTimeout(() => setSaved(false), 3000)
+      loadHistory()
+    } catch (e) {
+      alert('Save failed: ' + (e.message || 'Unknown error'))
+    } finally { setSaving(false) }
   }
 
   const giveFeedback = (idx, val) => {
@@ -803,9 +815,9 @@ function AnecdoteTab() {
             </button>
             <input type="date" value={saveDate} onChange={e => setSaveDate(e.target.value)}
               className="bg-slate-800 border border-slate-700 text-slate-300 rounded-lg px-2 py-1.5 text-xs" />
-            <button onClick={saveSelected}
-              className="px-3 py-1.5 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded-lg text-xs hover:bg-amber-500/20 transition-colors">
-              💾 Save for {saveDate}
+            <button onClick={saveSelected} disabled={saving}
+              className={`px-3 py-1.5 rounded-lg text-xs transition-colors ${saved ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-amber-500/10 text-amber-400 border border-amber-500/30 hover:bg-amber-500/20'}`}>
+              {saving ? 'Saving...' : saved ? '✓ Saved' : `💾 Save for ${saveDate}`}
             </button>
           </div>
 

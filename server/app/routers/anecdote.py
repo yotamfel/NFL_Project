@@ -33,6 +33,7 @@ class SaveAnecdoteRequest(BaseModel):
     level: str
     language: str = "en"
     scheduled_date: Optional[str] = None
+    original_text: Optional[str] = None
 
 
 def _gather_context(query: str) -> str:
@@ -168,6 +169,27 @@ def generate_anecdotes(
     t0 = time.time()
     context = _gather_context(body.query)
 
+    # Learn from past edits
+    edit_examples = ""
+    try:
+        uid = int(user["sub"])
+        with engine.connect() as conn:
+            edits = conn.execute(text("""
+                SELECT data FROM saved_items
+                WHERE user_id = :uid AND type = 'anecdote'
+                      AND data::text LIKE '%original_text%'
+                ORDER BY created_at DESC LIMIT 5
+            """), {"uid": uid}).fetchall()
+        examples = []
+        for row in edits:
+            d = json.loads(row.data) if isinstance(row.data, str) else row.data
+            if d.get("original_text") and d["original_text"] != d["text"]:
+                examples.append(f"AI wrote: {d['original_text'][:200]}\nUser edited to: {d['text'][:200]}")
+        if examples:
+            edit_examples = "\n\nLEARN FROM PAST EDITS - the user previously edited your output like this:\n" + "\n---\n".join(examples) + "\nApply the same style preferences to new anecdotes."
+    except Exception:
+        pass
+
     level_instruction = {
         "casual": "Write for a casual NFL fan. Keep it clear and surprising, but professional - like a sports journalist, not a fanboy. Use one or two key stats.",
         "deep": "Write for an analytics-savvy NFL audience. Use EPA, advanced metrics, historical comparisons. Show something non-obvious that rewards knowledge.",
@@ -189,6 +211,7 @@ RELEVANT DATA FROM OUR DATABASE:
 {context}
 
 If the database returned limited data (e.g. player not found due to typo), use the stats provided for related players/teams that WERE found. Only use stats from the data above - do not invent numbers.
+{edit_examples}
 
 TASK: Generate exactly 3 different anecdote options based on the input and data above.
 {level_instruction}
@@ -286,7 +309,7 @@ def save_anecdote(
         """), {
             "uid": uid,
             "label": body.query[:80],
-            "data": json.dumps({"query": body.query, "text": body.text, "level": body.level, "language": body.language, "scheduled_date": body.scheduled_date}),
+            "data": json.dumps({"query": body.query, "text": body.text, "level": body.level, "language": body.language, "scheduled_date": body.scheduled_date, "original_text": body.original_text}),
         })
     return {"ok": True}
 
