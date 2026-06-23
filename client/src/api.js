@@ -266,9 +266,10 @@ export const api = {
   postExplorerPlays: (body) => post('/situational/explorer-plays', body),
   getDashboard: (season) => get(`/situational/dashboard${season ? `?season=${season}` : ''}`),
   getTrending: (season) => get(`/situational/trending${season ? `?season=${season}` : ''}`),
-  getMatchup: (playerId, defenseRank, season) => {
+  getMatchup: (playerId, defenseRank, season, teams) => {
     const p = new URLSearchParams({ player_id: playerId })
-    if (defenseRank) p.set('defense_rank', defenseRank)
+    if (teams?.length) p.set('teams', teams.join(','))
+    else if (defenseRank) p.set('defense_rank', defenseRank)
     if (season) p.set('season', season)
     return get(`/situational/matchup?${p}`)
   },

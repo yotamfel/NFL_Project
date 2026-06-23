@@ -1358,6 +1358,7 @@ def trending_players(
 def matchup_finder(
     player_id: str = Query(...),
     defense_rank: str = Query("top10"),
+    teams: Optional[str] = None,
     season: Optional[int] = None,
     user: dict = Depends(require_admin),
 ):
@@ -1377,21 +1378,24 @@ def matchup_finder(
         else:
             id_col, base = "receiver_player_id", "pass_attempt = 1"
 
-        # Rank defenses by EPA allowed
-        def_ranks = c.execute(text(f"""
-            SELECT defteam, ROUND(AVG(epa)::numeric, 3) as def_epa, COUNT(*) as plays
-            FROM pbp WHERE season = :yr AND {base} AND epa IS NOT NULL AND season_type = 'REG'
-            GROUP BY defteam ORDER BY def_epa
-        """), {"yr": yr}).fetchall()
-
-        n = len(def_ranks)
-        cutoff = {"top5": 5, "top10": 10, "bottom5": n - 5, "bottom10": n - 10}.get(defense_rank, 10)
-        if defense_rank.startswith("top"):
-            target_teams = [r.defteam for r in def_ranks[:cutoff]]
-            label = f"Top {cutoff} defenses"
+        if teams:
+            target_teams = [t.strip().upper() for t in teams.split(",")]
+            label = ", ".join(target_teams)
         else:
-            target_teams = [r.defteam for r in def_ranks[cutoff:]]
-            label = f"Bottom {n - cutoff} defenses"
+            def_ranks = c.execute(text(f"""
+                SELECT defteam, ROUND(AVG(epa)::numeric, 3) as def_epa, COUNT(*) as plays
+                FROM pbp WHERE season = :yr AND {base} AND epa IS NOT NULL AND season_type = 'REG'
+                GROUP BY defteam ORDER BY def_epa
+            """), {"yr": yr}).fetchall()
+
+            n = len(def_ranks)
+            cutoff = {"top5": 5, "top10": 10, "bottom5": n - 5, "bottom10": n - 10}.get(defense_rank, 10)
+            if defense_rank.startswith("top"):
+                target_teams = [r.defteam for r in def_ranks[:cutoff]]
+                label = f"Top {cutoff} defenses"
+            else:
+                target_teams = [r.defteam for r in def_ranks[cutoff:]]
+                label = f"Bottom {n - cutoff} defenses"
 
         # Player stats vs these defenses
         stats = c.execute(text(f"""

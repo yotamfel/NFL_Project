@@ -772,6 +772,7 @@ export default function SituationalStats() {
   const removePlayer = (id) => setPlayers(prev => prev.filter(p => p.player_id !== id))
 
   const needsPlayer = !['epa', 'clutch', 'formation', 'explorer', 'dashboard'].includes(section)
+  const hideCtxFilters = section === 'matchup'
 
   return (
     <div className="flex gap-6">
@@ -871,7 +872,7 @@ export default function SituationalStats() {
             </div>
 
             {/* Context filters */}
-            <div className="flex gap-2 items-center flex-wrap">
+            {!hideCtxFilters && <div className="flex gap-2 items-center flex-wrap">
               <span className="text-xs text-slate-600">Filters:</span>
               {['REG', 'POST', 'ALL'].map(st => (
                 <button key={st} onClick={() => setCtxSeasonType(st)}
@@ -905,7 +906,7 @@ export default function SituationalStats() {
                 <button onClick={() => { setCtxSeasonType('REG'); setCtxOpponent([]); setCtxLocation(''); setCtxWeekFrom(''); setCtxWeekTo(''); setCtxApplied(v => v + 1) }}
                   className="text-[10px] text-red-400 hover:text-red-300">Reset</button>
               )}
-            </div>
+            </div>}
           </div>
         )}
 
@@ -2148,15 +2149,17 @@ function TrendingSection({ season, addPlayer }) {
 
 function MatchupSection({ players, season }) {
   const [defRank, setDefRank] = useState('top10')
+  const [customTeams, setCustomTeams] = useState([])
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(false)
+  const mode = customTeams.length > 0 ? 'custom' : 'preset'
 
   useEffect(() => {
     if (!players.length) return
     setLoading(true)
-    api.getMatchup(players[0].player_id, defRank, season)
+    api.getMatchup(players[0].player_id, mode === 'preset' ? defRank : null, season, mode === 'custom' ? customTeams : null)
       .then(setData).catch(() => setData(null)).finally(() => setLoading(false))
-  }, [players[0]?.player_id, defRank, season])
+  }, [players[0]?.player_id, defRank, season, customTeams.join(',')])
 
   if (!players.length) return <p className="text-slate-500 text-sm">Search for a player above to see matchup analysis</p>
   if (loading) return <Loading text="Loading matchup data..." />
@@ -2168,15 +2171,17 @@ function MatchupSection({ players, season }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3 flex-wrap">
+      <div className="flex items-center gap-2 flex-wrap">
         <p className="text-white font-semibold text-sm">{data.player}</p>
         <span className="text-slate-600 text-xs">vs</span>
         {['top5', 'top10', 'bottom10', 'bottom5'].map(r => (
-          <button key={r} onClick={() => setDefRank(r)}
-            className={`px-2.5 py-1 rounded text-xs ${defRank === r ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40' : 'bg-slate-800 text-slate-500 border border-slate-700'}`}>
-            {r === 'top5' ? 'Top 5 DEF' : r === 'top10' ? 'Top 10 DEF' : r === 'bottom10' ? 'Bottom 10 DEF' : 'Bottom 5 DEF'}
+          <button key={r} onClick={() => { setDefRank(r); setCustomTeams([]) }}
+            className={`px-2.5 py-1 rounded text-xs ${mode === 'preset' && defRank === r ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40' : 'bg-slate-800 text-slate-500 border border-slate-700'}`}>
+            {r === 'top5' ? 'Top 5' : r === 'top10' ? 'Top 10' : r === 'bottom10' ? 'Bot 10' : 'Bot 5'}
           </button>
         ))}
+        <span className="text-slate-700">|</span>
+        <TeamPicker selected={customTeams} setSelected={setCustomTeams} />
       </div>
 
       <div className="grid grid-cols-2 gap-3">
