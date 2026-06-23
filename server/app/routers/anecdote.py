@@ -278,6 +278,22 @@ def translate_anecdote(
     if not ANTHROPIC_API_KEY:
         raise HTTPException(status_code=503, detail="AI not configured")
 
+    # Learn from past Hebrew edits
+    he_examples = ""
+    try:
+        uid = int(user["sub"])
+        with engine.connect() as conn:
+            edits = conn.execute(text("""
+                SELECT data FROM saved_items
+                WHERE user_id = :uid AND type = 'anecdote' AND data->>'language' = 'he'
+                ORDER BY created_at DESC LIMIT 3
+            """), {"uid": uid}).fetchall()
+        if edits:
+            examples = [json.loads(r.data)["text"] if isinstance(r.data, str) else r.data["text"] for r in edits]
+            he_examples = "\n\nExamples of Hebrew tweets the user previously approved:\n" + "\n---\n".join(e[:200] for e in examples) + "\nMatch this style and tone."
+    except Exception:
+        pass
+
     try:
         client = Anthropic(api_key=ANTHROPIC_API_KEY)
         resp = client.messages.create(
@@ -285,6 +301,7 @@ def translate_anecdote(
             max_tokens=1000,
             messages=[{"role": "user", "content": f"""Translate this NFL tweet/thread to Hebrew. Keep emoji, hashtags, and player names in English. Keep the same tone and format.
 If there are multiple parts (thread), translate each part separately.
+{he_examples}
 
 Text:
 {body.text}
