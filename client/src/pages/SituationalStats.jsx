@@ -2657,6 +2657,7 @@ function PassHeatmapSection({ players, season, ctxParams }) {
               <th className="text-right py-2 px-2">Comp%</th>
               <th className="text-right py-2 px-2">Yards</th>
               <th className="text-right py-2 px-2">Air Yds</th>
+              <th className="text-right py-2 px-2">YAC</th>
               <th className="text-right py-2 px-2">Targets</th>
               <th className="text-center py-2 px-2">TD</th>
               <th className="text-center py-2 px-2">INT</th>
@@ -2670,8 +2671,7 @@ function PassHeatmapSection({ players, season, ctxParams }) {
               const isBest = cell === best, isWorst = cell === worst
               return (
                 <Fragment key={key}>
-                  <tr className={`border-b border-slate-800/30 hover:bg-slate-800/30 cursor-pointer ${expanded === key ? 'bg-slate-800/40' : ''}`}
-                    onClick={() => setExpanded(expanded === key ? null : key)}>
+                  <tr className="border-b border-slate-800/30 hover:bg-slate-800/30">
                     <td className="py-2 px-2">
                       <span className="text-white font-medium capitalize">{cell.pass_location}</span>
                       {cell.pass_length && <span className="text-slate-500 ml-1">{cell.pass_length}</span>}
@@ -2693,31 +2693,11 @@ function PassHeatmapSection({ players, season, ctxParams }) {
                     <td className="py-2 px-2 text-right text-slate-300">{cell.comp_pct}%</td>
                     <td className="py-2 px-2 text-right text-slate-300">{cell.avg_yards}</td>
                     <td className="py-2 px-2 text-right text-slate-400">{cell.avg_air_yards}</td>
+                    <td className="py-2 px-2 text-right text-slate-400">{cell.avg_yac ?? '-'}</td>
                     <td className="py-2 px-2 text-right text-slate-400">{cell.plays}</td>
                     <td className="py-2 px-2 text-center">{cell.tds > 0 ? <span className="text-emerald-400">{cell.tds}</span> : <span className="text-slate-700">-</span>}</td>
                     <td className="py-2 px-2 text-center">{cell.ints > 0 ? <span className="text-red-400">{cell.ints}</span> : <span className="text-slate-700">-</span>}</td>
                   </tr>
-                  {expanded === key && (
-                    <tr><td colSpan={10} className="px-2 pb-2">
-                      <div className="bg-slate-900/60 border border-slate-700/30 rounded-lg p-3 space-y-2 text-[10px]">
-                        {cell.avg_yac != null && <span className="text-slate-400">YAC (yards after catch): <span className="text-white font-bold">{cell.avg_yac}</span></span>}
-                        {(() => {
-                          const recs = (data.top_receivers || []).filter(r => r.pass_location === cell.pass_location && r.pass_length === cell.pass_length).slice(0, 4)
-                          if (!recs.length) return null
-                          return <div>
-                            <span className="text-slate-500">Top receivers targeted in this zone:</span>
-                            <div className="flex gap-2 mt-1 flex-wrap">
-                              {recs.map((r, i) => (
-                                <span key={i} className="bg-slate-800 rounded px-2 py-0.5 text-slate-300">
-                                  {r.receiver} <span className="text-slate-600">|</span> <span className="text-slate-400">{r.targets} targets</span> <span className="text-slate-600">|</span> EPA: <EpaColorCell val={r.epa} />
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        })()}
-                      </div>
-                    </td></tr>
-                  )}
                 </Fragment>
               )
             })}
