@@ -906,7 +906,9 @@ export default function Comparison() {
                 { key: '_rank', label: '#' },
                 { key: 'player_name', label: 'Player' },
                 { key: 'pos', label: 'Pos' },
+                ...(!compSeason ? [{ key: 'team', label: 'Team' }, { key: 'best_season', label: 'Season' }] : []),
                 { key: 'best_value', label: STAT_OPTIONS[category]?.find(s => s.key === lbStat)?.label ?? lbStat },
+                ...(compSeason ? [{ key: 'team', label: 'Team' }] : []),
               ]}
               rows={lbData.map((p, i) => ({ ...p, _rank: i + 1 }))}
               title={isFdvMode ? 'Leaderboard - FDV (Career Value)' : `Leaderboard - ${STAT_OPTIONS[category]?.find(s => s.key === lbStat)?.label ?? lbStat}`}
@@ -917,10 +919,13 @@ export default function Comparison() {
                 <th className="text-left py-2 pr-4 font-medium w-8">#</th>
                 <th className="text-left py-2 pr-4 font-medium">Player</th>
                 <th className="text-left py-2 pr-4 font-medium text-slate-600">Pos</th>
+                {!isFdvMode && !compSeason && <th className="text-left py-2 pr-4 font-medium text-slate-600">Team</th>}
+                {!isFdvMode && !compSeason && <th className="text-right py-2 pr-4 font-medium text-slate-600">Season</th>}
                 <th className="text-right py-2 font-medium">
                   {isFdvMode ? 'FDV' : (STAT_OPTIONS[category]?.find(s => s.key === lbStat)?.label ?? lbStat)}
                 </th>
                 {isFdvMode && <th className="text-right py-2 pl-4 font-medium text-slate-600">Pos Rank</th>}
+                {!isFdvMode && compSeason && lbData?.[0]?.team && <th className="text-left py-2 pl-4 font-medium text-slate-600">Team</th>}
               </tr>
             </thead>
             <tbody>
@@ -945,6 +950,8 @@ export default function Comparison() {
                       )}
                     </td>
                     <td className="py-2 pr-4 text-slate-500 text-xs">{p.pos}</td>
+                    {!isFdvMode && !compSeason && <td className="py-2 pr-4 text-slate-400 text-xs">{p.team || '-'}</td>}
+                    {!isFdvMode && !compSeason && <td className="py-2 pr-4 text-right text-slate-400 text-xs">{p.best_season || '-'}</td>}
                     <td className="py-2 text-right text-white font-semibold">
                       {isFdvMode ? (p.fdv?.toLocaleString() ?? '-') : (p.best_value?.toLocaleString() ?? '-')}
                     </td>
@@ -953,6 +960,7 @@ export default function Comparison() {
                         {p.pos_group ? `#${p.pos_rank} ${p.pos_group}` : '-'}
                       </td>
                     )}
+                    {!isFdvMode && compSeason && p.team && <td className="py-2 pl-4 text-slate-400 text-xs">{p.team}</td>}
                   </tr>
                 )
               })}

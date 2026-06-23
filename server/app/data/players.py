@@ -145,19 +145,34 @@ def top_players_by_stat(
     if stat not in _ALLOWED_STATS.get(category, frozenset()):
         raise ValueError(f"stat {stat!r} not allowed for category {category!r}")
 
-    sql = text(f"""
-        SELECT p.player_id, p.player_name, p.pos,
-               MAX(s.{stat}) AS best_value
-        FROM {category}_seasons s
-        JOIN players p ON p.player_id = s.player_id
-        WHERE (:pos    IS NULL OR UPPER(p.pos) = ANY(:pos_variants))
-          AND (:season IS NULL OR s.season = :season)
-          AND s.{stat} IS NOT NULL
-        GROUP BY p.player_id, p.player_name, p.pos
-        HAVING MAX(s.{stat}) >= :min_val
-        ORDER BY best_value DESC
-        LIMIT :limit
-    """)
+    if season:
+        sql = text(f"""
+            SELECT p.player_id, p.player_name, p.pos,
+                   s.{stat} AS best_value, s.team
+            FROM {category}_seasons s
+            JOIN players p ON p.player_id = s.player_id
+            WHERE (:pos IS NULL OR UPPER(p.pos) = ANY(:pos_variants))
+              AND s.season = :season
+              AND s.{stat} IS NOT NULL AND s.{stat} >= :min_val
+            ORDER BY best_value DESC
+            LIMIT :limit
+        """)
+    else:
+        sql = text(f"""
+            WITH ranked AS (
+                SELECT p.player_id, p.player_name, p.pos,
+                       s.{stat} AS best_value, s.season AS best_season, s.team,
+                       ROW_NUMBER() OVER (PARTITION BY p.player_id ORDER BY s.{stat} DESC) as rn
+                FROM {category}_seasons s
+                JOIN players p ON p.player_id = s.player_id
+                WHERE (:pos IS NULL OR UPPER(p.pos) = ANY(:pos_variants))
+                  AND s.{stat} IS NOT NULL AND s.{stat} >= :min_val
+            )
+            SELECT player_id, player_name, pos, best_value, best_season, team
+            FROM ranked WHERE rn = 1
+            ORDER BY best_value DESC
+            LIMIT :limit
+        """)
 
     with engine.connect() as conn:
         rows = conn.execute(sql, {"pos": pos, "pos_variants": _pos_variants(pos), "season": season, "min_val": min_val, "limit": limit}).fetchall()
