@@ -665,7 +665,7 @@ export default function SituationalStats() {
   const multiSeasonSections = ['epa', 'clutch', 'explorer', 'splits', 'trend', 'playaction', 'pressure', 'decisions', 'runheatmap', 'passheatmap', 'formation']
 
   useEffect(() => {
-    api.getSituationalSeasons().then(years => {
+    api.getSituationalSeasons().then(async (years) => {
       if (years?.length) {
         setAvailableYears(years)
         if (!initSeasons.length) { setSelectedSeasons([years[0]]) }
@@ -673,8 +673,8 @@ export default function SituationalStats() {
       }
       const pids = searchParams.get('p')?.split(',').filter(Boolean) || []
       if (pids.length) {
-        Promise.all(pids.map(pid => api.getPlayer(pid).catch(() => null)))
-          .then(results => setPlayers(results.filter(Boolean).map(r => ({ player_id: r.player_id, player_name: r.player_name, pos: r.pos }))))
+        const results = await Promise.all(pids.map(pid => api.getPlayer(pid).catch(() => null)))
+        setPlayers(results.filter(Boolean).map(r => ({ player_id: r.player_id, player_name: r.player_name, pos: r.pos })))
       }
       setUrlInited(true)
     }).catch(() => { setUrlInited(true) })
@@ -916,17 +916,27 @@ export default function SituationalStats() {
           </div>
         )}
 
+        {/* Section explainer */}
+        {section === 'matchup' && <p className="text-amber-400/70 text-xs bg-amber-500/5 border border-amber-500/10 rounded-lg px-4 py-2">How a player performs against top and bottom defenses - reveals if stats are inflated by weak opponents.</p>}
+        {section === 'splits' && <p className="text-amber-400/70 text-xs bg-amber-500/5 border border-amber-500/10 rounded-lg px-4 py-2">EPA breakdown by game situation - red zone, 3rd down, clutch moments, weather, formation and more.</p>}
+        {section === 'trend' && <p className="text-amber-400/70 text-xs bg-amber-500/5 border border-amber-500/10 rounded-lg px-4 py-2">Week-by-week EPA consistency - spot hot streaks, slumps, and late-season improvement or decline.</p>}
+        {section === 'playaction' && <p className="text-amber-400/70 text-xs bg-amber-500/5 border border-amber-500/10 rounded-lg px-4 py-2">Play-action: QB fakes a handoff before passing, freezing defenders to create open receivers.</p>}
+        {section === 'pressure' && <p className="text-amber-400/70 text-xs bg-amber-500/5 border border-amber-500/10 rounded-lg px-4 py-2">How the QB performs when the pass rush reaches him vs when he has a clean pocket.</p>}
+        {section === 'decisions' && <p className="text-amber-400/70 text-xs bg-amber-500/5 border border-amber-500/10 rounded-lg px-4 py-2">FTN Charting data on throw quality, decision-making, and read progression.</p>}
+        {section === 'runheatmap' && <p className="text-amber-400/70 text-xs bg-amber-500/5 border border-amber-500/10 rounded-lg px-4 py-2">Run direction and gap tendencies - where the runner goes and how effective each direction is by EPA.</p>}
+        {section === 'passheatmap' && <p className="text-amber-400/70 text-xs bg-amber-500/5 border border-amber-500/10 rounded-lg px-4 py-2">Pass location and depth tendencies - where the QB targets and completion rates by field area.</p>}
+        {section === 'formation' && <p className="text-amber-400/70 text-xs bg-amber-500/5 border border-amber-500/10 rounded-lg px-4 py-2">Personnel groupings and their effectiveness - which formations the team uses most and how they perform.</p>}
+
         {/* Content */}
         <div className="bg-slate-800/50 border border-slate-700/60 rounded-2xl p-5">
           {section === 'dashboard' && <DashboardSection season={selectedSeasons[0]} onNavigate={setSection} />}
           {section === 'epa' && <EpaRankingsSection seasons={selectedSeasons} />}
           {section === 'clutch' && <ClutchRankingsSection seasons={selectedSeasons} />}
           {section === 'explorer' && <ExplorerSection seasons={selectedSeasons} />}
-          {section === 'matchup' && <><p className="text-slate-500 text-xs mb-3">How a player performs against top and bottom defenses - reveals if stats are inflated by weak opponents.</p><MatchupSection players={players} season={selectedSeasons[0]} /></>}
-          {section === 'splits' && <><p className="text-slate-500 text-xs mb-3">EPA breakdown by game situation - red zone, 3rd down, clutch moments, weather, formation and more.</p><SplitsSection players={players} ctxParams={ctxParams} /></>}
-          {section === 'trend' && <><p className="text-slate-500 text-xs mb-3">Week-by-week EPA consistency - spot hot streaks, slumps, and late-season improvement or decline.</p><WeeklyTrendSection players={players} season={selectedSeasons[0]} ctxParams={ctxParams} /></>}
+          {section === 'matchup' && <MatchupSection players={players} season={selectedSeasons[0]} />}
+          {section === 'splits' && <SplitsSection players={players} ctxParams={ctxParams} />}
+          {section === 'trend' && <WeeklyTrendSection players={players} season={selectedSeasons[0]} ctxParams={ctxParams} />}
           {section === 'playaction' && (<>
-            <p className="text-slate-600 text-[10px]">Play-action: QB fakes a handoff before passing, freezing defenders to create open receivers.</p>
             <SimpleSection title="Play-Action" fetchFn={api.getPlayAction} players={players} season={selectedSeasons[0]} ctxParams={ctxParams}
               renderData={(d, p) => {
                 const pa = d?.data?.with_play_action, noPa = d?.data?.without_play_action
@@ -1039,15 +1049,9 @@ export default function SituationalStats() {
               }}
             />
           </>)}
-          {section === 'pressure' && (<>
-            <p className="text-slate-500 text-xs mb-3">How the QB performs when the pass rush reaches him vs when he has a clean pocket.</p>
-            <PressureSection players={players} season={selectedSeasons[0]} ctxParams={ctxParams} />
-          </>)}
-          {section === 'decisions' && (<>
-            <p className="text-slate-500 text-xs mb-3">FTN Charting data on throw quality, decision-making, and read progression.</p>
-            <DecisionsSection players={players} season={selectedSeasons[0]} ctxParams={ctxParams} />
-          </>)}
-          {section === 'runheatmap' && (<><p className="text-slate-500 text-xs mb-3">Run direction and gap tendencies - where the runner goes and how effective each direction is by EPA.</p>
+          {section === 'pressure' && <PressureSection players={players} season={selectedSeasons[0]} ctxParams={ctxParams} />}
+          {section === 'decisions' && <DecisionsSection players={players} season={selectedSeasons[0]} ctxParams={ctxParams} />}
+          {section === 'runheatmap' && (
             <SimpleSection title="Run Heatmap" fetchFn={api.getRunHeatmap} players={players} season={selectedSeasons[0]} ctxParams={ctxParams}
               renderData={(d, p) => (
                 <div key={p.player_id} className="space-y-3">
@@ -1077,8 +1081,8 @@ export default function SituationalStats() {
                 </div>
               )}
             />
-          </>)}
-          {section === 'passheatmap' && (<><p className="text-slate-500 text-xs mb-3">Pass location and depth tendencies - where the QB targets and completion rates by field area.</p>
+          )}
+          {section === 'passheatmap' && (
             <SimpleSection title="Pass Heatmap" fetchFn={(pid, s, ctx) => api.getPassHeatmap(pid, s, ctx)} players={players} season={selectedSeasons[0]} ctxParams={ctxParams}
               renderData={(d, p) => (
                 <div key={p.player_id} className="space-y-3">
@@ -1108,8 +1112,8 @@ export default function SituationalStats() {
                 </div>
               )}
             />
-          </>)}
-          {section === 'formation' && <><p className="text-slate-500 text-xs mb-3">Personnel groupings and their effectiveness - which formations the team uses most and how they perform.</p><FormationSection season={selectedSeasons[0]} /></>}
+          )}
+          {section === 'formation' && <FormationSection season={selectedSeasons[0]} />}
         </div>
 
         {/* Content Creator */}
