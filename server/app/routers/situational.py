@@ -1255,6 +1255,15 @@ def dashboard(
             ORDER BY epa DESC LIMIT 5
         """), {"yr": yr}).fetchall()]
 
+        # Top 5 EPA WRs
+        results["top_wrs"] = [dict(r._mapping) for r in c.execute(text("""
+            SELECT receiver_player_id as gsis_id, receiver_player_name as name, posteam as team,
+                   COUNT(*) as plays, ROUND(AVG(epa)::numeric, 3) as epa
+            FROM pbp WHERE season = :yr AND pass_attempt = 1 AND receiver_player_id IS NOT NULL AND epa IS NOT NULL AND season_type = 'REG'
+            GROUP BY receiver_player_id, receiver_player_name, posteam HAVING COUNT(*) >= 50
+            ORDER BY epa DESC LIMIT 5
+        """), {"yr": yr}).fetchall()]
+
         # Most clutch
         results["most_clutch"] = [dict(r._mapping) for r in c.execute(text("""
             SELECT passer_player_id as gsis_id, passer_player_name as name, posteam as team,

@@ -911,7 +911,7 @@ export default function SituationalStats() {
 
         {/* Content */}
         <div className="bg-slate-800/50 border border-slate-700/60 rounded-2xl p-5">
-          {section === 'dashboard' && <DashboardSection season={selectedSeasons[0]} />}
+          {section === 'dashboard' && <DashboardSection season={selectedSeasons[0]} onNavigate={setSection} />}
           {section === 'epa' && <EpaRankingsSection seasons={selectedSeasons} />}
           {section === 'clutch' && <ClutchRankingsSection seasons={selectedSeasons} />}
           {section === 'explorer' && <ExplorerSection seasons={selectedSeasons} />}
@@ -1962,7 +1962,7 @@ function WeeklyTrendSection({ players, season, ctxParams }) {
 
 // ── Dashboard ────────────────────────────────────────────────────────────────
 
-function DashboardSection({ season }) {
+function DashboardSection({ season, onNavigate }) {
   const [data, setData] = useState(null)
   const [trend, setTrend] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -2015,6 +2015,17 @@ function DashboardSection({ season }) {
         <div className="bg-slate-900/40 border border-slate-700/30 rounded-xl p-4 space-y-2">
           <p className="text-xs font-bold text-amber-400">Top RBs by EPA/play</p>
           {(data.top_rbs || []).map((r, i) => (
+            <div key={i} className="flex justify-between text-xs">
+              <span className="text-white">{i + 1}. {r.name} <span className="text-slate-600">{r.team}</span></span>
+              <EpaColorCell val={r.epa} />
+            </div>
+          ))}
+        </div>
+
+        {/* Top WRs */}
+        <div className="bg-slate-900/40 border border-slate-700/30 rounded-xl p-4 space-y-2">
+          <p className="text-xs font-bold text-amber-400">Top WRs by EPA/play</p>
+          {(data.top_wrs || []).map((r, i) => (
             <div key={i} className="flex justify-between text-xs">
               <span className="text-white">{i + 1}. {r.name} <span className="text-slate-600">{r.team}</span></span>
               <EpaColorCell val={r.epa} />
@@ -2089,9 +2100,8 @@ function DashboardSection({ season }) {
         <p className="text-xs font-bold text-slate-500 mb-2">QUICK PRESETS</p>
         <div className="flex gap-2 flex-wrap">
           {QUICK_PRESETS.map(p => (
-            <button key={p.label} onClick={() => {
-              if (p.section) { /* handled by parent */ }
-            }} className="px-3 py-1.5 bg-slate-800 text-slate-300 border border-slate-700 rounded-lg text-xs hover:border-amber-500/40 hover:text-amber-400 transition-colors">
+            <button key={p.label} onClick={() => onNavigate(p.section || 'explorer')}
+              className="px-3 py-1.5 bg-slate-800 text-slate-300 border border-slate-700 rounded-lg text-xs hover:border-amber-500/40 hover:text-amber-400 transition-colors">
               {p.label}
             </button>
           ))}
