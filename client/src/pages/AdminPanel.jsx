@@ -647,6 +647,8 @@ function AnecdoteTab() {
   const [editingText, setEditingText] = useState('')
   const [histTranslation, setHistTranslation] = useState({})
   const [histTranslating, setHistTranslating] = useState(null)
+  const [editingHebrew, setEditingHebrew] = useState(null)
+  const [editingHebrewText, setEditingHebrewText] = useState('')
 
   const loadHistory = () => {
     api.getAnecdoteHistory().then(res => {
@@ -905,12 +907,36 @@ function AnecdoteTab() {
                           {histTranslating === h.id ? '...' : '🇮🇱 Hebrew'}
                         </button>
                       )}
+                      <button onClick={async () => {
+                        if (!confirm('Delete this anecdote?')) return
+                        try { await api.deleteSaved(h.id); loadHistory() } catch {}
+                      }} className="px-2.5 py-1 text-red-400/50 rounded text-[10px] hover:text-red-400 hover:bg-red-500/10 transition-colors">Delete</button>
                     </div>
                     {trans && (
-                      <div className="bg-slate-900/60 border border-blue-500/15 rounded-lg p-2.5 space-y-1">
-                        <p className="text-slate-200 text-sm whitespace-pre-wrap" dir="rtl">{trans}</p>
-                        <button onClick={() => copyText(trans)}
-                          className="px-2.5 py-1 bg-slate-700 text-slate-300 rounded text-[10px] hover:bg-slate-600 transition-colors">Copy Hebrew</button>
+                      <div className="bg-slate-900/60 border border-blue-500/15 rounded-lg p-2.5 space-y-2">
+                        {editingHebrew === h.id ? (
+                          <textarea value={editingHebrewText} onChange={e => setEditingHebrewText(e.target.value)} rows={3} dir="rtl"
+                            className="w-full bg-slate-900 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/60 resize-none" />
+                        ) : (
+                          <p className="text-slate-200 text-sm whitespace-pre-wrap" dir="rtl">{trans}</p>
+                        )}
+                        <div className="flex gap-1.5">
+                          <button onClick={() => copyText(trans)}
+                            className="px-2.5 py-1 bg-slate-700 text-slate-300 rounded text-[10px] hover:bg-slate-600 transition-colors">Copy</button>
+                          {editingHebrew === h.id ? (<>
+                            <button onClick={() => { setHistTranslation(prev => ({ ...prev, [h.id]: editingHebrewText })); setEditingHebrew(null) }}
+                              className="px-2.5 py-1 bg-emerald-500/15 text-emerald-400 rounded text-[10px] hover:bg-emerald-500/25 transition-colors">Done</button>
+                            <button onClick={() => setEditingHebrew(null)}
+                              className="px-2.5 py-1 text-slate-500 rounded text-[10px] hover:text-slate-300 transition-colors">Cancel</button>
+                          </>) : (
+                            <button onClick={() => { setEditingHebrew(h.id); setEditingHebrewText(trans) }}
+                              className="px-2.5 py-1 bg-slate-700 text-slate-300 rounded text-[10px] hover:bg-slate-600 transition-colors">Edit</button>
+                          )}
+                          <button onClick={async () => {
+                            const hebrewText = editingHebrew === h.id ? editingHebrewText : trans
+                            try { await api.saveAnecdote(d.query || h.label, hebrewText, d.level, 'he', d.scheduled_date, null); loadHistory() } catch {}
+                          }} className="px-2.5 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded text-[10px] hover:bg-amber-500/20 transition-colors">💾 Save Hebrew</button>
+                        </div>
                       </div>
                     )}
                   </div>
