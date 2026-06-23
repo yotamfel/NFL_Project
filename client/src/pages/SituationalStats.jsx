@@ -755,6 +755,7 @@ export default function SituationalStats() {
   // Saved reports
   const [savedReports, setSavedReports] = useState([])
   const [showSaved, setShowSaved] = useState(false)
+  const [saveModal, setSaveModal] = useState(null)
 
   useEffect(() => {
     api.getSaved().then(items => setSavedReports(items.filter(i => i.type === 'situational_report'))).catch(() => {})
@@ -763,11 +764,15 @@ export default function SituationalStats() {
   const saveCurrentState = () => {
     const state = { section, seasons: selectedSeasons, players: players.map(p => ({ player_id: p.player_id, player_name: p.player_name, pos: p.pos })), ctxSeasonType, ctxOpponent, ctxLocation, ctxWeekFrom, ctxWeekTo }
     const label = `${SECTIONS.find(s => s.id === section)?.label || section}${players.length ? ` - ${players.map(p => p.player_name).join(' vs ')}` : ''}`
-    const name = prompt('Report name:', label)
-    if (!name) return
-    api.createSaved({ type: 'situational_report', label: name, data: state })
+    setSaveModal({ state, label })
+  }
+
+  const confirmSave = (name) => {
+    if (!name || !saveModal) return
+    api.createSaved({ type: 'situational_report', label: name, data: saveModal.state })
       .then(() => api.getSaved().then(items => setSavedReports(items.filter(i => i.type === 'situational_report'))))
       .catch(() => {})
+    setSaveModal(null)
   }
 
   const loadReport = (report) => {
@@ -1100,6 +1105,21 @@ export default function SituationalStats() {
         )}
       </div>
       <ColTipPortal />
+      {saveModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={() => setSaveModal(null)}>
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-sm space-y-4" onClick={e => e.stopPropagation()}>
+            <h3 className="text-white font-bold text-sm">Save Report</h3>
+            <input autoFocus defaultValue={saveModal.label}
+              onKeyDown={e => { if (e.key === 'Enter') confirmSave(e.target.value) }}
+              className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-500/60" />
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => setSaveModal(null)} className="px-4 py-1.5 text-slate-400 text-sm hover:text-white transition-colors">Cancel</button>
+              <button onClick={e => confirmSave(e.target.closest('.space-y-4').querySelector('input').value)}
+                className="px-4 py-1.5 bg-amber-500 text-slate-950 font-bold rounded-lg text-sm hover:bg-amber-400 transition-colors">Save</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
