@@ -765,7 +765,7 @@ export default function SituationalStats() {
   const hasCtxFilters = ctxSeasonType !== 'REG' || ctxOpponent.length > 0 || ctxLocation || ctxWeekFrom || ctxWeekTo
   const applyFilters = () => setCtxApplied(v => v + 1)
 
-  const singlePlayerSections = ['pressure', 'matchup', 'decisions', 'runheatmap', 'passheatmap']
+  const singlePlayerSections = ['pressure', 'matchup', 'runheatmap', 'passheatmap']
   const maxPlayers = singlePlayerSections.includes(section) ? 1 : 2
 
   const addPlayer = (p) => {
@@ -1043,48 +1043,10 @@ export default function SituationalStats() {
             <p className="text-slate-600 text-[10px] mb-2">How the QB performs when the pass rush reaches him vs when he has a clean pocket.</p>
             <PressureSection players={players} season={selectedSeasons[0]} ctxParams={ctxParams} />
           </>)}
-          {section === 'decisions' && (
-            <SimpleSection title="Decisions" fetchFn={api.getQbDecisions} players={players} season={selectedSeasons[0]} ctxParams={ctxParams}
-              renderData={(d, p) => (
-                <div key={p.player_id} className="space-y-3">
-                  <p className="text-white font-semibold text-sm">{d?.player || p.player_name} <span className="text-slate-600 text-xs font-normal">{d?.season || selectedSeasons[0]}</span></p>
-                  {d.decisions && Object.keys(d.decisions).length > 0 && (
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                      {[
-                        { k: 'catchable_pct', label: 'Catchable%', good: true },
-                        { k: 'int_worthy_pct', label: 'INT-worthy%', good: false },
-                        { k: 'throwaway_pct', label: 'Throwaway%' },
-                        { k: 'drop_pct', label: 'Drop%' },
-                        { k: 'contested_pct', label: 'Contested%' },
-                        { k: 'out_of_pocket_pct', label: 'Out of Pocket%' },
-                        { k: 'qb_fault_sack_pct', label: 'QB-fault Sack%', good: false },
-                      ].map(({ k, label, good }) => (
-                        <div key={k} className="bg-slate-900/60 rounded-lg p-3 text-center">
-                          <p className="text-xs text-slate-500">{label}<Tip stat={k} /></p>
-                          <p className={`text-lg font-bold ${good === true ? 'text-emerald-400' : good === false ? 'text-red-400' : 'text-white'}`}>
-                            {d.decisions[k] ?? '-'}%
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {d.read_distribution?.length > 0 && (
-                    <div>
-                      <p className="text-xs text-slate-500 mb-2">Read Distribution</p>
-                      <div className="flex gap-2">
-                        {d.read_distribution.map(r => (
-                          <div key={r.read_thrown} className="bg-slate-900/60 rounded-lg px-3 py-2 text-center">
-                            <p className="text-white font-bold">{r.count}</p>
-                            <p className="text-xs text-slate-500">{r.read_thrown}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            />
-          )}
+          {section === 'decisions' && (<>
+            <p className="text-slate-600 text-[10px] mb-2">FTN Charting data on throw quality, decision-making, and read progression.</p>
+            <DecisionsSection players={players} season={selectedSeasons[0]} ctxParams={ctxParams} />
+          </>)}
           {section === 'runheatmap' && (
             <SimpleSection title="Run Heatmap" fetchFn={api.getRunHeatmap} players={players} season={selectedSeasons[0]} ctxParams={ctxParams}
               renderData={(d, p) => (
@@ -2249,6 +2211,119 @@ function MatchupSection({ players, season }) {
               )
             })}
           </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+
+const DECISION_METRICS = [
+  { k: 'catchable_pct', label: 'Catchable', good: true, desc: 'Passes that were catchable' },
+  { k: 'int_worthy_pct', label: 'INT-worthy', good: false, desc: 'Bad decisions deserving interception' },
+  { k: 'throwaway_pct', label: 'Throwaway', neutral: true, desc: 'Intentional throw-aways' },
+  { k: 'drop_pct', label: 'Drops', neutral: true, desc: 'Catchable passes dropped by receivers' },
+  { k: 'contested_pct', label: 'Contested', neutral: true, desc: 'Throws into contested coverage' },
+  { k: 'out_of_pocket_pct', label: 'Out of Pocket', neutral: true, desc: 'Left the pocket before throwing' },
+  { k: 'qb_fault_sack_pct', label: 'QB-fault Sack', good: false, desc: 'Sacks caused by holding too long' },
+]
+
+function DecisionsSection({ players, season, ctxParams }) {
+  const [allData, setAllData] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [showReads, setShowReads] = useState(false)
+  const ctxKey = ctxParams ? JSON.stringify(ctxParams) : season
+
+  useEffect(() => {
+    if (!players.length) { setAllData([]); return }
+    setLoading(true)
+    Promise.all(players.map(p => api.getQbDecisions(p.player_id, season, ctxParams)))
+      .then(setAllData).catch(() => setAllData([])).finally(() => setLoading(false))
+  }, [players.map(p => p.player_id).join(','), ctxKey])
+
+  if (!players.length) return <p className="text-slate-500 text-sm">Search for a player above</p>
+  if (loading) return <Loading text="Loading decisions..." />
+  if (!allData.length) return null
+
+  const colors = ['#f59e0b', '#3b82f6']
+  const isCompare = players.length === 2 && allData.length === 2
+
+  return (
+    <div className="space-y-4">
+      {/* Horizontal bar comparison for each metric */}
+      <div className="space-y-2">
+        {DECISION_METRICS.map(({ k, label, good, desc }) => {
+          const vals = allData.map(d => d.decisions?.[k] ?? null)
+          if (vals.every(v => v === null)) return null
+          const max = Math.max(...vals.filter(v => v != null), 1)
+          return (
+            <div key={k} className="bg-slate-900/40 rounded-lg px-3 py-2">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[10px] text-slate-400">{label}<Tip stat={k} /></span>
+                <div className="flex gap-3">
+                  {vals.map((v, i) => (
+                    <span key={i} className="text-xs font-bold" style={{ color: isCompare ? colors[i] : (good === true ? '#34d399' : good === false ? '#f87171' : '#e2e8f0') }}>
+                      {v ?? '-'}%
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div className="flex gap-1">
+                {vals.map((v, i) => (
+                  <div key={i} className="flex-1 bg-slate-800 rounded-full h-2 overflow-hidden">
+                    <div className="h-full rounded-full transition-all" style={{ width: `${v != null ? (v / max) * 100 : 0}%`, background: isCompare ? colors[i] : (good === true ? '#34d399' : good === false ? '#f87171' : '#94a3b8'), opacity: 0.7 }} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* EPA */}
+      <div className="flex gap-3">
+        {allData.map((d, i) => (
+          <div key={i} className="bg-slate-900/60 border border-slate-700/30 rounded-lg px-4 py-2 flex-1">
+            <p className="text-[10px] font-medium" style={{ color: colors[i] }}>{d.player || players[i]?.player_name}</p>
+            <p className="text-sm">EPA/play: <span className="font-bold"><EpaColorCell val={d.decisions?.epa_per_play} /></span> <span className="text-slate-600 text-[10px]">{d.decisions?.total_passes ?? '-'} passes</span></p>
+          </div>
+        ))}
+      </div>
+
+      {/* Read distribution - expandable */}
+      {allData.some(d => d.read_distribution?.length > 0) && (
+        <div>
+          <button onClick={() => setShowReads(!showReads)} className="text-xs text-slate-500 hover:text-amber-400 transition-colors">
+            {showReads ? '▲ Hide read distribution' : '▼ Show read distribution'}
+          </button>
+          {showReads && (
+            <div className={`grid ${isCompare ? 'grid-cols-2' : 'grid-cols-1'} gap-3 mt-2`}>
+              {allData.map((d, i) => {
+                const reads = d.read_distribution || []
+                if (!reads.length) return null
+                const total = reads.reduce((s, r) => s + r.count, 0)
+                return (
+                  <div key={i} className="bg-slate-900/40 rounded-lg p-3">
+                    {isCompare && <p className="text-[10px] font-medium mb-2" style={{ color: colors[i] }}>{d.player || players[i]?.player_name}</p>}
+                    <div className="space-y-1">
+                      {reads.map(r => {
+                        const pct = total > 0 ? (r.count / total * 100).toFixed(1) : 0
+                        return (
+                          <div key={r.read_thrown} className="flex items-center gap-2 text-[10px]">
+                            <span className="text-slate-400 w-20">{r.read_thrown}</span>
+                            <div className="flex-1 bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                              <div className="h-full rounded-full" style={{ width: `${pct}%`, background: colors[i], opacity: 0.7 }} />
+                            </div>
+                            <span className="text-slate-300 w-14 text-right">{r.count} ({pct}%)</span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
       )}
     </div>
