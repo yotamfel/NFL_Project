@@ -733,9 +733,15 @@ function SavedItemRow({ item, projects, onMove }) {
         item.type === 'player'     ? 'bg-amber-500/20 text-amber-400' :
         item.type === 'comparison' ? 'bg-purple-500/20 text-purple-400' :
         item.type === 'search'     ? 'bg-cyan-500/20 text-cyan-400' :
+        item.type === 'situational_report' ? 'bg-red-500/20 text-red-400' :
         'bg-slate-700 text-slate-300'
-      }`}>{item.type}</span>
-      <span className="text-slate-200 text-sm truncate flex-1">{item.label}</span>
+      }`}>{item.type === 'situational_report' ? 'report' : item.type}</span>
+      {item.type === 'situational_report' ? (
+        <a href={`/situational?tab=${item.data?.section || 'dashboard'}${item.data?.seasons?.length ? '&seasons=' + item.data.seasons.join(',') : ''}${item.data?.players?.length ? '&p=' + item.data.players.map(p => p.player_id).join(',') + '&pn=' + item.data.players.map(p => p.player_name + '|' + p.pos).join(',') : ''}`}
+          className="text-slate-200 text-sm truncate flex-1 hover:text-amber-400 transition-colors">{item.label}</a>
+      ) : (
+        <span className="text-slate-200 text-sm truncate flex-1">{item.label}</span>
+      )}
       <span className="text-slate-600 text-xs shrink-0">{fmt(item.created_at)}</span>
       <div className="relative shrink-0">
         <button onClick={() => setShowMove(!showMove)}
