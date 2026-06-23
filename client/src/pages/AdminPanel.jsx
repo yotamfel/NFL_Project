@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { api } from '../api'
@@ -30,7 +30,7 @@ export default function AdminPanel() {
 
       {/* Tabs */}
       <div className="flex gap-1 bg-slate-900 border border-slate-800 rounded-xl p-1 mb-6 w-fit">
-        {['overview', 'visits', 'users', 'feedback', 'usage'].map(t => (
+        {['overview', 'anecdotes', 'visits', 'users', 'feedback', 'usage'].map(t => (
           <button key={t} onClick={() => setTab(t)}
             className={`px-4 py-1.5 rounded-lg text-sm font-medium capitalize transition-colors ${
               tab === t ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'
@@ -41,6 +41,7 @@ export default function AdminPanel() {
       </div>
 
       {tab === 'overview' && <OverviewTab />}
+      {tab === 'anecdotes' && <AnecdoteTab />}
       {tab === 'visits'   && <VisitsTab />}
       {tab === 'users'    && <UsersTab />}
       {tab === 'feedback' && <FeedbackTab />}
@@ -619,4 +620,218 @@ function UsageTab() {
 
 function Spinner() {
   return <div className="py-12 text-center text-slate-500 text-sm animate-pulse">Loading...</div>
+}
+
+
+// ── Anecdote Generator ──────────────────────────────────────────────────────
+
+function AnecdoteTab() {
+  const [query, setQuery] = useState('')
+  const [level, setLevel] = useState('casual')
+  const [anecdotes, setAnecdotes] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
+  const [selected, setSelected] = useState(null)
+  const [editing, setEditing] = useState(null)
+  const [translation, setTranslation] = useState(null)
+  const [translating, setTranslating] = useState(false)
+  const [feedback, setFeedback] = useState({})
+  const [history, setHistory] = useState([])
+  const [showHistory, setShowHistory] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const editRef = useRef(null)
+
+  useEffect(() => { api.getAnecdoteHistory().then(setHistory).catch(() => {}) }, [])
+
+  const generate = async () => {
+    if (!query.trim()) return
+    setLoading(true); setError(null); setAnecdotes([]); setSelected(null); setTranslation(null); setFeedback({})
+    try {
+      const res = await api.generateAnecdotes(query, level)
+      setAnecdotes(res.anecdotes || [])
+    } catch (e) {
+      setError(e.message || 'Generation failed')
+    } finally { setLoading(false) }
+  }
+
+  const selectAnecdote = (idx) => {
+    setSelected(idx)
+    setEditing(null)
+    setTranslation(null)
+    setCopied(false)
+  }
+
+  const getDisplayText = (a) => {
+    if (a.parts?.length) return a.parts.join('\n\n')
+    return a.text
+  }
+
+  const copyText = (text) => {
+    navigator.clipboard.writeText(text)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  const translateSelected = async () => {
+    if (selected == null) return
+    setTranslating(true)
+    try {
+      const a = anecdotes[selected]
+      const text = editing ?? getDisplayText(a)
+      const res = await api.translateAnecdote(text)
+      setTranslation(res.translation)
+    } catch { setTranslation('Translation failed') }
+    finally { setTranslating(false) }
+  }
+
+  const saveSelected = async () => {
+    if (selected == null) return
+    const a = anecdotes[selected]
+    const text = editing ?? getDisplayText(a)
+    await api.saveAnecdote(query, text, level, 'en')
+    if (translation) {
+      await api.saveAnecdote(query, translation, level, 'he')
+    }
+    api.getAnecdoteHistory().then(setHistory).catch(() => {})
+  }
+
+  const giveFeedback = (idx, val) => {
+    setFeedback(prev => ({ ...prev, [idx]: val }))
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Input */}
+      <div className="bg-slate-900/60 border border-slate-700/30 rounded-2xl p-6 space-y-4">
+        <div>
+          <p className="text-white font-bold text-sm mb-1">Anecdote Generator</p>
+          <p className="text-slate-500 text-xs">Describe a player, event, concept, or anything NFL-related. The AI will find a data-backed anecdote from our database.</p>
+        </div>
+        <textarea value={query} onChange={e => setQuery(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); generate() } }}
+          placeholder='e.g. "Patrick Mahomes clutch moments", "best rookie QB seasons ever", "teams that improved the most in 2024"...'
+          rows={2}
+          className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500/60 resize-none placeholder-slate-600" />
+        <div className="flex items-center gap-3">
+          <div className="flex gap-1 bg-slate-800 rounded-lg p-0.5">
+            {['casual', 'deep'].map(l => (
+              <button key={l} onClick={() => setLevel(l)}
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors capitalize ${level === l ? 'bg-slate-700 text-white' : 'text-slate-500 hover:text-slate-300'}`}>
+                {l === 'casual' ? '☕ Casual' : '🔬 Deep'}
+              </button>
+            ))}
+          </div>
+          <button onClick={generate} disabled={loading || !query.trim()}
+            className="px-5 py-2 bg-amber-500 hover:bg-amber-400 disabled:opacity-40 text-slate-950 font-bold rounded-xl text-sm transition-colors">
+            {loading ? 'Generating...' : 'Generate'}
+          </button>
+        </div>
+      </div>
+
+      {error && <p className="text-red-400 text-sm">{error}</p>}
+
+      {/* Results */}
+      {anecdotes.length > 0 && (
+        <div className="space-y-3">
+          <p className="text-xs text-slate-500">Choose an anecdote:</p>
+          {anecdotes.map((a, i) => {
+            const text = getDisplayText(a)
+            const isSelected = selected === i
+            const fb = feedback[i]
+            return (
+              <div key={i} className={`rounded-xl border p-4 transition-all cursor-pointer ${isSelected ? 'border-amber-500/50 bg-amber-500/5' : 'border-slate-700/40 bg-slate-900/40 hover:border-slate-600'}`}
+                onClick={() => selectAnecdote(i)}>
+                <div className="flex justify-between items-start gap-3">
+                  <p className="text-slate-200 text-sm whitespace-pre-wrap flex-1">{text}</p>
+                  <div className="flex gap-1 shrink-0">
+                    <button onClick={e => { e.stopPropagation(); giveFeedback(i, 1) }}
+                      className={`text-sm px-1.5 py-0.5 rounded transition-colors ${fb === 1 ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-600 hover:text-emerald-400'}`}>👍</button>
+                    <button onClick={e => { e.stopPropagation(); giveFeedback(i, -1) }}
+                      className={`text-sm px-1.5 py-0.5 rounded transition-colors ${fb === -1 ? 'bg-red-500/20 text-red-400' : 'text-slate-600 hover:text-red-400'}`}>👎</button>
+                  </div>
+                </div>
+                {a.parts?.length > 1 && <p className="text-[10px] text-slate-600 mt-1">Thread: {a.parts.length} parts</p>}
+                {text.length <= 280 && <p className="text-[10px] text-slate-600 mt-1">{text.length}/280</p>}
+              </div>
+            )
+          })}
+          <button onClick={generate} disabled={loading} className="text-xs text-slate-500 hover:text-amber-400 transition-colors">
+            {loading ? 'Generating...' : '↻ Generate 3 new options'}
+          </button>
+        </div>
+      )}
+
+      {/* Selected anecdote actions */}
+      {selected != null && (
+        <div className="bg-slate-900/60 border border-amber-500/20 rounded-2xl p-5 space-y-4">
+          <p className="text-xs font-bold text-amber-400">SELECTED ANECDOTE</p>
+
+          {/* Edit area */}
+          {editing != null ? (
+            <textarea ref={editRef} value={editing} onChange={e => setEditing(e.target.value)}
+              rows={4}
+              className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-500/60 resize-none" />
+          ) : (
+            <p className="text-slate-200 text-sm whitespace-pre-wrap">{getDisplayText(anecdotes[selected])}</p>
+          )}
+
+          {/* Action buttons */}
+          <div className="flex gap-2 flex-wrap">
+            {editing != null ? (
+              <button onClick={() => setEditing(null)} className="px-3 py-1.5 bg-slate-800 text-slate-300 rounded-lg text-xs hover:bg-slate-700 transition-colors">Done editing</button>
+            ) : (
+              <button onClick={() => setEditing(getDisplayText(anecdotes[selected]))} className="px-3 py-1.5 bg-slate-800 text-slate-300 rounded-lg text-xs hover:bg-slate-700 transition-colors">Edit</button>
+            )}
+            <button onClick={() => copyText(editing ?? getDisplayText(anecdotes[selected]))}
+              className="px-3 py-1.5 bg-slate-800 text-slate-300 rounded-lg text-xs hover:bg-slate-700 transition-colors">
+              {copied ? '✓ Copied' : 'Copy'}
+            </button>
+            <button onClick={translateSelected} disabled={translating}
+              className="px-3 py-1.5 bg-blue-500/10 text-blue-400 border border-blue-500/30 rounded-lg text-xs hover:bg-blue-500/20 transition-colors">
+              {translating ? 'Translating...' : '🇮🇱 Also in Hebrew'}
+            </button>
+            <button onClick={saveSelected}
+              className="px-3 py-1.5 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded-lg text-xs hover:bg-amber-500/20 transition-colors">
+              💾 Save
+            </button>
+          </div>
+
+          {/* Hebrew translation */}
+          {translation && (
+            <div className="bg-slate-800/60 border border-blue-500/20 rounded-lg p-4 space-y-2">
+              <p className="text-xs font-bold text-blue-400">HEBREW VERSION</p>
+              <p className="text-slate-200 text-sm whitespace-pre-wrap" dir="rtl">{translation}</p>
+              <button onClick={() => copyText(translation)}
+                className="text-xs text-slate-500 hover:text-blue-400 transition-colors">Copy Hebrew</button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* History */}
+      <div>
+        <button onClick={() => setShowHistory(!showHistory)} className="text-xs text-slate-500 hover:text-amber-400 transition-colors">
+          {showHistory ? '▲ Hide history' : `▼ Saved anecdotes (${history.length})`}
+        </button>
+        {showHistory && history.length > 0 && (
+          <div className="mt-2 space-y-2">
+            {history.map(h => {
+              const d = typeof h.data === 'string' ? JSON.parse(h.data) : h.data
+              return (
+                <div key={h.id} className="bg-slate-900/40 border border-slate-700/20 rounded-lg p-3">
+                  <div className="flex justify-between items-start gap-2">
+                    <div className="flex-1">
+                      <p className="text-[10px] text-slate-600 mb-1">{h.label} · {d.level} · {d.language === 'he' ? '🇮🇱' : '🇺🇸'}</p>
+                      <p className="text-slate-300 text-xs whitespace-pre-wrap" dir={d.language === 'he' ? 'rtl' : 'ltr'}>{d.text}</p>
+                    </div>
+                    <button onClick={() => copyText(d.text)} className="text-[10px] text-slate-600 hover:text-amber-400 shrink-0">Copy</button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  )
 }

@@ -11,7 +11,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from app.db import engine
 from app.routers import (
-    admin, anomalies, comparison, content, draft, feedback, players, projects,
+    admin, anecdote, anomalies, comparison, content, draft, feedback, players, projects,
     scout, search, similarity, situational, trends, auth as auth_router, saved,
     user_feedback, notifications, users,
 )
@@ -250,6 +250,7 @@ app.include_router(projects.router, prefix="/api")
 app.include_router(similarity.router, prefix="/api")
 app.include_router(scout.router,      prefix="/api")
 app.include_router(content.router,    prefix="/api")
+app.include_router(anecdote.router,   prefix="/api")
 app.include_router(situational.router, prefix="/api")
 app.include_router(user_feedback.router, prefix="/api")
 app.include_router(notifications.router, prefix="/api")
