@@ -643,6 +643,10 @@ function AnecdoteTab() {
 
   const [calendar, setCalendar] = useState({})
   const [calDate, setCalDate] = useState(null)
+  const [editingHistory, setEditingHistory] = useState(null)
+  const [editingText, setEditingText] = useState('')
+  const [histTranslation, setHistTranslation] = useState({})
+  const [histTranslating, setHistTranslating] = useState(null)
 
   const loadHistory = () => {
     api.getAnecdoteHistory().then(res => {
@@ -857,19 +861,58 @@ function AnecdoteTab() {
               {filtered.map(h => {
                 const d = typeof h.data === 'string' ? JSON.parse(h.data) : h.data
                 const schedDate = d.scheduled_date
+                const isEditing = editingHistory === h.id
+                const trans = histTranslation[h.id]
                 return (
-                  <div key={h.id} className="bg-slate-800/40 border border-slate-700/20 rounded-lg p-3">
-                    <div className="flex gap-2 text-[10px] text-slate-600 mb-1.5">
+                  <div key={h.id} className="bg-slate-800/40 border border-slate-700/20 rounded-lg p-3 space-y-2">
+                    <div className="flex gap-2 text-[10px] text-slate-600">
                       <span>{h.label}</span>
                       <span>{d.level}</span>
                       <span>{d.language === 'he' ? '🇮🇱' : '🇺🇸'}</span>
                       {schedDate && <span className="text-amber-500/70">📅 {schedDate}</span>}
                     </div>
-                    <p className="text-slate-200 text-sm whitespace-pre-wrap mb-2" dir={d.language === 'he' ? 'rtl' : 'ltr'}>{d.text}</p>
-                    <button onClick={() => copyText(d.text)}
-                      className="px-2.5 py-1 bg-slate-700 text-slate-300 rounded text-[10px] hover:bg-slate-600 transition-colors">
-                      {copied ? '✓ Copied' : 'Copy'}
-                    </button>
+                    {isEditing ? (
+                      <textarea value={editingText} onChange={e => setEditingText(e.target.value)} rows={3}
+                        className="w-full bg-slate-900 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-500/60 resize-none" />
+                    ) : (
+                      <p className="text-slate-200 text-sm whitespace-pre-wrap" dir={d.language === 'he' ? 'rtl' : 'ltr'}>{d.text}</p>
+                    )}
+                    <div className="flex gap-1.5 flex-wrap">
+                      <button onClick={() => copyText(d.text)}
+                        className="px-2.5 py-1 bg-slate-700 text-slate-300 rounded text-[10px] hover:bg-slate-600 transition-colors">Copy</button>
+                      {isEditing ? (
+                        <button onClick={async () => {
+                          try {
+                            await api.patchContent(h.id, { note: '', data: { ...d, text: editingText } })
+                            setEditingHistory(null); loadHistory()
+                          } catch {}
+                        }} className="px-2.5 py-1 bg-emerald-500/15 text-emerald-400 rounded text-[10px] hover:bg-emerald-500/25 transition-colors">Save edit</button>
+                      ) : (
+                        <button onClick={() => { setEditingHistory(h.id); setEditingText(d.text) }}
+                          className="px-2.5 py-1 bg-slate-700 text-slate-300 rounded text-[10px] hover:bg-slate-600 transition-colors">Edit</button>
+                      )}
+                      {isEditing && <button onClick={() => setEditingHistory(null)}
+                        className="px-2.5 py-1 text-slate-500 rounded text-[10px] hover:text-slate-300 transition-colors">Cancel</button>}
+                      {!trans && (
+                        <button disabled={histTranslating === h.id} onClick={async () => {
+                          setHistTranslating(h.id)
+                          try {
+                            const res = await api.translateAnecdote(d.text)
+                            setHistTranslation(prev => ({ ...prev, [h.id]: res.translation }))
+                          } catch { setHistTranslation(prev => ({ ...prev, [h.id]: 'Translation failed' })) }
+                          finally { setHistTranslating(null) }
+                        }} className="px-2.5 py-1 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded text-[10px] hover:bg-blue-500/20 transition-colors">
+                          {histTranslating === h.id ? '...' : '🇮🇱 Hebrew'}
+                        </button>
+                      )}
+                    </div>
+                    {trans && (
+                      <div className="bg-slate-900/60 border border-blue-500/15 rounded-lg p-2.5 space-y-1">
+                        <p className="text-slate-200 text-sm whitespace-pre-wrap" dir="rtl">{trans}</p>
+                        <button onClick={() => copyText(trans)}
+                          className="px-2.5 py-1 bg-slate-700 text-slate-300 rounded text-[10px] hover:bg-slate-600 transition-colors">Copy Hebrew</button>
+                      </div>
+                    )}
                   </div>
                 )
               })}
