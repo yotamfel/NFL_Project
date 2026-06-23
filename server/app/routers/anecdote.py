@@ -335,9 +335,9 @@ def anecdote_history(
             ORDER BY created_at DESC LIMIT 100
         """), {"uid": uid}).fetchall()
 
-        # Calendar summary: count per date
+        # Calendar summary: count per scheduled_date
         date_counts = conn.execute(text("""
-            SELECT DATE(created_at) as day, COUNT(*) as count
+            SELECT COALESCE(data->>'scheduled_date', DATE(created_at)::text) as day, COUNT(*) as count
             FROM saved_items WHERE user_id = :uid AND type = 'anecdote'
             GROUP BY day ORDER BY day DESC
         """), {"uid": uid}).fetchall()

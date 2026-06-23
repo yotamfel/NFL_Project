@@ -835,30 +835,35 @@ function AnecdoteTab() {
 
       {/* History with calendar */}
       <div className="bg-slate-900/60 border border-slate-700/30 rounded-2xl p-5 space-y-4">
-        <p className="text-white font-bold text-sm">Saved Anecdotes</p>
+        <div className="flex items-center justify-between">
+          <p className="text-white font-bold text-sm">Saved Anecdotes ({history.length})</p>
+          <input type="date" value={calDate || ''} onChange={e => setCalDate(e.target.value || null)}
+            className="bg-slate-800 border border-slate-700 text-slate-300 rounded-lg px-2 py-1 text-xs" />
+        </div>
 
-        {/* Calendar strip */}
+        {/* Date chips */}
         {Object.keys(calendar).length > 0 && (
-          <div className="space-y-2">
-            <div className="flex gap-1 flex-wrap">
-              <button onClick={() => setCalDate(null)}
-                className={`px-2.5 py-1 rounded text-[10px] ${!calDate ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40' : 'bg-slate-800 text-slate-500 border border-slate-700'}`}>
-                All ({history.length})
+          <div className="flex gap-1 flex-wrap">
+            <button onClick={() => setCalDate(null)}
+              className={`px-2.5 py-1 rounded text-[10px] ${!calDate ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40' : 'bg-slate-800 text-slate-500 border border-slate-700'}`}>
+              All
+            </button>
+            {Object.entries(calendar).sort(([a], [b]) => b.localeCompare(a)).map(([date, count]) => (
+              <button key={date} onClick={() => setCalDate(date)}
+                className={`px-2.5 py-1 rounded text-[10px] ${calDate === date ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40' : 'bg-slate-800 text-slate-500 border border-slate-700'}`}>
+                {date.slice(5)} <span className="text-slate-600">({count})</span>
               </button>
-              {Object.entries(calendar).sort(([a], [b]) => b.localeCompare(a)).map(([date, count]) => (
-                <button key={date} onClick={() => setCalDate(date)}
-                  className={`px-2.5 py-1 rounded text-[10px] ${calDate === date ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40' : 'bg-slate-800 text-slate-500 border border-slate-700'}`}>
-                  {date.slice(5)} <span className="text-slate-600">({count})</span>
-                </button>
-              ))}
-            </div>
+            ))}
           </div>
         )}
 
         {/* Filtered list */}
         {(() => {
           const filtered = calDate
-            ? history.filter(h => h.created_at?.startsWith(calDate))
+            ? history.filter(h => {
+                const d = typeof h.data === 'string' ? JSON.parse(h.data) : h.data
+                return d.scheduled_date === calDate || h.created_at?.startsWith(calDate)
+              })
             : history
           return filtered.length > 0 ? (
             <div className="space-y-2">
@@ -867,18 +872,17 @@ function AnecdoteTab() {
                 const schedDate = d.scheduled_date
                 return (
                   <div key={h.id} className="bg-slate-800/40 border border-slate-700/20 rounded-lg p-3">
-                    <div className="flex justify-between items-start gap-2">
-                      <div className="flex-1">
-                        <div className="flex gap-2 text-[10px] text-slate-600 mb-1">
-                          <span>{h.label}</span>
-                          <span>{d.level}</span>
-                          <span>{d.language === 'he' ? '🇮🇱' : '🇺🇸'}</span>
-                          {schedDate && <span className="text-amber-500/70">📅 {schedDate}</span>}
-                        </div>
-                        <p className="text-slate-300 text-xs whitespace-pre-wrap" dir={d.language === 'he' ? 'rtl' : 'ltr'}>{d.text}</p>
-                      </div>
-                      <button onClick={() => copyText(d.text)} className="text-[10px] text-slate-600 hover:text-amber-400 shrink-0">Copy</button>
+                    <div className="flex gap-2 text-[10px] text-slate-600 mb-1.5">
+                      <span>{h.label}</span>
+                      <span>{d.level}</span>
+                      <span>{d.language === 'he' ? '🇮🇱' : '🇺🇸'}</span>
+                      {schedDate && <span className="text-amber-500/70">📅 {schedDate}</span>}
                     </div>
+                    <p className="text-slate-200 text-sm whitespace-pre-wrap mb-2" dir={d.language === 'he' ? 'rtl' : 'ltr'}>{d.text}</p>
+                    <button onClick={() => copyText(d.text)}
+                      className="px-2.5 py-1 bg-slate-700 text-slate-300 rounded text-[10px] hover:bg-slate-600 transition-colors">
+                      {copied ? '✓ Copied' : 'Copy'}
+                    </button>
                   </div>
                 )
               })}
