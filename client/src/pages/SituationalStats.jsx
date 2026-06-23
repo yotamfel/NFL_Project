@@ -2723,6 +2723,7 @@ function FormationSection({ season }) {
   const team = teamSel[0] || 'KC'
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [expanded, setExpanded] = useState(null)
 
   useEffect(() => {
     setLoading(true)
@@ -2758,9 +2759,13 @@ function FormationSection({ season }) {
             </thead>
             <tbody>
               {data.data.map((r, i) => {
-                const best = i === 0, worst = i === data.data.length - 1 && data.data.length > 1
+                const isExp = expanded === r.personnel
+                const det = data.details?.[r.personnel] || {}
+                const league = data.league?.[r.personnel]
                 return (
-                <tr key={r.personnel} className="border-b border-slate-800/30 hover:bg-slate-800/20">
+                <Fragment key={r.personnel}>
+                <tr className={`border-b border-slate-800/30 hover:bg-slate-800/20 cursor-pointer ${isExp ? 'bg-slate-800/30' : ''}`}
+                  onClick={() => setExpanded(isExp ? null : r.personnel)}>
                   <td className="py-2 px-2">
                     <span className="text-white font-medium">{r.label || r.personnel}</span>
                   </td>
@@ -2778,6 +2783,43 @@ function FormationSection({ season }) {
                   <td className="py-2 px-2 text-right text-slate-300">{r.avg_yards}</td>
                   <td className="py-2 px-2 text-right text-slate-500">{r.plays}</td>
                 </tr>
+                {isExp && (
+                  <tr><td colSpan={10} className="px-2 pb-2">
+                    <div className="bg-slate-900/60 border border-slate-700/30 rounded-lg p-3 space-y-2 text-[10px]">
+                      {/* League comparison */}
+                      {league && (
+                        <div className="flex gap-3 text-slate-400">
+                          <span>League avg EPA: <EpaColorCell val={league.epa} /></span>
+                          <span>League usage: {league.usage_pct}%</span>
+                          <span>Team vs league: <span className={r.epa_per_play > league.epa ? 'text-emerald-400' : 'text-red-400'}>{(r.epa_per_play - league.epa) >= 0 ? '+' : ''}{(r.epa_per_play - league.epa).toFixed(3)} EPA</span></span>
+                        </div>
+                      )}
+                      {/* Shotgun split */}
+                      {det.shotgun && Object.keys(det.shotgun).length > 0 && (
+                        <div className="flex gap-3">
+                          {['shotgun', 'under_center'].map(f => {
+                            const s = det.shotgun[f]; if (!s) return null
+                            return <span key={f} className="bg-slate-800 rounded px-2 py-1 text-slate-300">
+                              {f === 'shotgun' ? 'Shotgun' : 'Under Center'}: <EpaColorCell val={s.epa} /> <span className="text-slate-500">{s.plays}p</span>
+                            </span>
+                          })}
+                        </div>
+                      )}
+                      {/* Play-action */}
+                      {det.play_action && Object.keys(det.play_action).length > 0 && (
+                        <div className="flex gap-3">
+                          {['pa', 'no_pa'].map(k => {
+                            const s = det.play_action[k]; if (!s) return null
+                            return <span key={k} className="bg-slate-800 rounded px-2 py-1 text-slate-300">
+                              {k === 'pa' ? 'Play-action' : 'No play-action'}: <EpaColorCell val={s.epa} /> <span className="text-slate-500">{s.plays}p</span>
+                            </span>
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </td></tr>
+                )}
+                </Fragment>
                 )
               })}
             </tbody>

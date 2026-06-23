@@ -682,10 +682,63 @@ def formation_analysis(
             d["label"] = _parse_personnel(d["personnel"])
             data.append(d)
 
+        # Per-formation details: shotgun split + play-action
+        details = {}
+        for d in data:
+            pers = d["personnel"]
+            det = {}
+            # Shotgun vs under center
+            sg = c.execute(text("""
+                SELECT CASE WHEN p.shotgun=1 THEN 'shotgun' ELSE 'under_center' END as form,
+                       COUNT(*) as plays, ROUND(AVG(p.epa)::numeric, 3) as epa
+                FROM participation pt JOIN pbp p ON p.game_id = pt.nflverse_game_id AND p.play_id = pt.play_id
+                WHERE p.posteam = :team AND p.season = :season AND pt.offense_personnel = :pers
+                      AND p.epa IS NOT NULL AND p.play_type IN ('pass','run')
+                GROUP BY form
+            """), {"team": team.upper(), "season": yr, "pers": pers}).fetchall()
+            det["shotgun"] = {r.form: {"plays": r.plays, "epa": float(r.epa)} for r in sg}
+
+            # Play-action rate (join FTN if available)
+            try:
+                pa = c.execute(text("""
+                    SELECT CASE WHEN f.is_play_action THEN 'pa' ELSE 'no_pa' END as pa,
+                           COUNT(*) as plays, ROUND(AVG(p.epa)::numeric, 3) as epa
+                    FROM participation pt
+                    JOIN pbp p ON p.game_id = pt.nflverse_game_id AND p.play_id = pt.play_id
+                    JOIN ftn_charting f ON f.nflverse_game_id = p.game_id AND f.nflverse_play_id = p.play_id
+                    WHERE p.posteam = :team AND p.season = :season AND pt.offense_personnel = :pers
+                          AND p.epa IS NOT NULL AND p.pass_attempt = 1 AND f.is_play_action IS NOT NULL
+                    GROUP BY pa
+                """), {"team": team.upper(), "season": yr, "pers": pers}).fetchall()
+                det["play_action"] = {r.pa: {"plays": r.plays, "epa": float(r.epa)} for r in pa}
+            except Exception:
+                det["play_action"] = {}
+
+            details[pers] = det
+
+        # League avg usage per formation
+        league_usage = {}
+        league_rows = c.execute(text("""
+            SELECT pt.offense_personnel, ROUND(AVG(p.epa)::numeric, 3) as league_epa,
+                   COUNT(*) as league_plays
+            FROM participation pt JOIN pbp p ON p.game_id = pt.nflverse_game_id AND p.play_id = pt.play_id
+            WHERE p.season = :season AND p.epa IS NOT NULL AND pt.offense_personnel IS NOT NULL
+                  AND p.play_type IN ('pass','run') AND p.season_type = 'REG'
+            GROUP BY pt.offense_personnel HAVING COUNT(*) >= 100
+        """), {"season": yr}).fetchall()
+        total_league = sum(r.league_plays for r in league_rows)
+        for r in league_rows:
+            league_usage[r.offense_personnel] = {
+                "epa": float(r.league_epa),
+                "usage_pct": round(r.league_plays / total_league * 100, 1) if total_league else 0,
+            }
+
     return {
         "team": team.upper(),
         "season": yr,
         "data": data,
+        "details": details,
+        "league": league_usage,
     }
 
 
