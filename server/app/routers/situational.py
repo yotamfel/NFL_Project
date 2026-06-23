@@ -715,7 +715,7 @@ def formation_analysis(
                 "pass_epa": round(sum((v["pass_epa"] or 0) * v["plays"] for v in variants) / total_p, 3),
                 "rush_epa": round(sum((v["rush_epa"] or 0) * v["plays"] for v in variants) / total_p, 3),
                 "variant_count": len(variants),
-                "variants": [{"personnel": v["personnel"], "ol_label": _ol_only(v["personnel"]), "plays": v["plays"], "epa": v["epa_per_play"]} for v in variants] if len(variants) > 1 else [],
+                "variants": [{"ol_label": _ol_only(v["personnel"]), "plays": v["plays"], "epa": v["epa_per_play"], "usage_pct": round(v["plays"] / total_plays * 100, 1) if total_plays else 0, "success_rate": v["success_rate"], "avg_yards": v["avg_yards"], "pass_pct": v["pass_pct"], "pass_epa": v["pass_epa"], "rush_epa": v["rush_epa"]} for v in variants] if len(variants) > 1 else [],
             }
             data.append(merged)
         data.sort(key=lambda x: -x["plays"])

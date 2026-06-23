@@ -2851,16 +2851,28 @@ function FormationSection({ season }) {
                           <table className="w-full text-[10px]">
                             <thead>
                               <tr className="text-slate-600 border-b border-slate-800">
-                                <th className="text-left py-1 px-1">OL Lineup (C, G, T)</th>
+                                <th className="text-left py-1 px-1">OL Lineup</th>
+                                <th className="text-right py-1 px-1">Usage%</th>
                                 <th className="text-right py-1 px-1">EPA</th>
+                                <th className="text-right py-1 px-1">Pass%</th>
+                                <th className="text-right py-1 px-1">Pass EPA</th>
+                                <th className="text-right py-1 px-1">Rush EPA</th>
+                                <th className="text-right py-1 px-1">Success%</th>
+                                <th className="text-right py-1 px-1">Avg Yds</th>
                                 <th className="text-right py-1 px-1">Plays</th>
                               </tr>
                             </thead>
                             <tbody>
                               {r.variants.map((v, vi) => (
                                 <tr key={vi} className="border-b border-slate-800/20">
-                                  <td className="py-1 px-1 text-slate-300">{v.ol_label || v.personnel}</td>
-                                  <td className="py-1 px-1 text-right"><EpaColorCell val={v.epa} /></td>
+                                  <td className="py-1 px-1 text-slate-300">{v.ol_label}</td>
+                                  <td className="py-1 px-1 text-right text-slate-400">{v.usage_pct}%</td>
+                                  <td className="py-1 px-1 text-right font-bold"><EpaColorCell val={v.epa} /></td>
+                                  <td className="py-1 px-1 text-right text-slate-400">{v.pass_pct}%</td>
+                                  <td className="py-1 px-1 text-right"><EpaColorCell val={v.pass_epa} /></td>
+                                  <td className="py-1 px-1 text-right"><EpaColorCell val={v.rush_epa} /></td>
+                                  <td className="py-1 px-1 text-right text-slate-300">{v.success_rate}%</td>
+                                  <td className="py-1 px-1 text-right text-slate-300">{v.avg_yards}</td>
                                   <td className="py-1 px-1 text-right text-slate-500">{v.plays}</td>
                                 </tr>
                               ))}
