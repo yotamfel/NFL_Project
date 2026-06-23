@@ -2784,49 +2784,82 @@ function FormationSection({ season }) {
                   <td className="py-2 px-2 text-right text-slate-500">{r.plays}</td>
                 </tr>
                 {isExp && (
-                  <tr><td colSpan={10} className="px-2 pb-2">
-                    <div className="bg-slate-900/60 border border-slate-700/30 rounded-lg p-3 space-y-2 text-[10px]">
+                  <tr><td colSpan={10} className="px-2 pb-3">
+                    <div className="bg-slate-900/60 border border-slate-700/30 rounded-lg p-4 space-y-4">
                       {/* League comparison */}
                       {league && (
-                        <div className="flex gap-3 text-slate-400">
-                          <span>League avg EPA: <EpaColorCell val={league.epa} /></span>
-                          <span>League usage: {league.usage_pct}%</span>
-                          <span>Team vs league: <span className={r.epa_per_play > league.epa ? 'text-emerald-400' : 'text-red-400'}>{(r.epa_per_play - league.epa) >= 0 ? '+' : ''}{(r.epa_per_play - league.epa).toFixed(3)} EPA</span></span>
+                        <div>
+                          <p className="text-[10px] font-bold text-slate-500 mb-1.5">LEAGUE COMPARISON</p>
+                          <div className="grid grid-cols-3 gap-3 text-xs">
+                            <div className="bg-slate-800/60 rounded-lg p-2.5">
+                              <p className="text-[9px] text-slate-500">League EPA</p>
+                              <p className="font-bold"><EpaColorCell val={league.epa} /></p>
+                            </div>
+                            <div className="bg-slate-800/60 rounded-lg p-2.5">
+                              <p className="text-[9px] text-slate-500">League Usage</p>
+                              <p className="text-white font-bold">{league.usage_pct}%</p>
+                            </div>
+                            <div className="bg-slate-800/60 rounded-lg p-2.5">
+                              <p className="text-[9px] text-slate-500">Team vs League</p>
+                              <p className={`font-bold ${r.epa_per_play > league.epa ? 'text-emerald-400' : 'text-red-400'}`}>{(r.epa_per_play - league.epa) >= 0 ? '+' : ''}{(r.epa_per_play - league.epa).toFixed(3)} EPA</p>
+                            </div>
+                          </div>
                         </div>
                       )}
-                      {/* Shotgun split */}
-                      {det.shotgun && Object.keys(det.shotgun).length > 0 && (
-                        <div className="flex gap-3">
-                          {['shotgun', 'under_center'].map(f => {
-                            const s = det.shotgun[f]; if (!s) return null
-                            return <span key={f} className="bg-slate-800 rounded px-2 py-1 text-slate-300">
-                              {f === 'shotgun' ? 'Shotgun' : 'Under Center'}: <EpaColorCell val={s.epa} /> <span className="text-slate-500">{s.plays}p</span>
-                            </span>
-                          })}
+                      {/* Formation & play-action splits */}
+                      {(det.shotgun && Object.keys(det.shotgun).length > 0) || (det.play_action && Object.keys(det.play_action).length > 0) ? (
+                        <div>
+                          <p className="text-[10px] font-bold text-slate-500 mb-1.5">SPLITS</p>
+                          <div className="grid grid-cols-2 gap-3">
+                            {det.shotgun && Object.keys(det.shotgun).length > 0 && (
+                              <div className="bg-slate-800/60 rounded-lg p-2.5 space-y-1">
+                                <p className="text-[9px] text-slate-500">Shotgun vs Under Center</p>
+                                {['shotgun', 'under_center'].map(f => {
+                                  const s = det.shotgun[f]; if (!s) return null
+                                  return <div key={f} className="flex justify-between text-xs">
+                                    <span className="text-slate-300">{f === 'shotgun' ? 'Shotgun' : 'Under Center'}</span>
+                                    <span><EpaColorCell val={s.epa} /> <span className="text-slate-600">{s.plays}p</span></span>
+                                  </div>
+                                })}
+                              </div>
+                            )}
+                            {det.play_action && Object.keys(det.play_action).length > 0 && (
+                              <div className="bg-slate-800/60 rounded-lg p-2.5 space-y-1">
+                                <p className="text-[9px] text-slate-500">Play-Action</p>
+                                {['pa', 'no_pa'].map(k => {
+                                  const s = det.play_action[k]; if (!s) return null
+                                  return <div key={k} className="flex justify-between text-xs">
+                                    <span className="text-slate-300">{k === 'pa' ? 'With PA' : 'Without PA'}</span>
+                                    <span><EpaColorCell val={s.epa} /> <span className="text-slate-600">{s.plays}p</span></span>
+                                  </div>
+                                })}
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      )}
-                      {/* Play-action */}
-                      {det.play_action && Object.keys(det.play_action).length > 0 && (
-                        <div className="flex gap-3">
-                          {['pa', 'no_pa'].map(k => {
-                            const s = det.play_action[k]; if (!s) return null
-                            return <span key={k} className="bg-slate-800 rounded px-2 py-1 text-slate-300">
-                              {k === 'pa' ? 'Play-action' : 'No play-action'}: <EpaColorCell val={s.epa} /> <span className="text-slate-500">{s.plays}p</span>
-                            </span>
-                          })}
-                        </div>
-                      )}
-                      {/* OL variants */}
+                      ) : null}
+                      {/* OL variants as mini table */}
                       {r.variants?.length > 0 && (
                         <div>
-                          <span className="text-slate-500">OL variants ({r.variant_count}):</span>
-                          <div className="flex gap-2 mt-1 flex-wrap">
-                            {r.variants.map((v, vi) => (
-                              <span key={vi} className="bg-slate-800 rounded px-2 py-0.5 text-slate-400">
-                                {v.plays}p | <EpaColorCell val={v.epa} />
-                              </span>
-                            ))}
-                          </div>
+                          <p className="text-[10px] font-bold text-slate-500 mb-1.5">OL VARIANTS ({r.variant_count})</p>
+                          <table className="w-full text-[10px]">
+                            <thead>
+                              <tr className="text-slate-600 border-b border-slate-800">
+                                <th className="text-left py-1 px-1">Personnel</th>
+                                <th className="text-right py-1 px-1">EPA</th>
+                                <th className="text-right py-1 px-1">Plays</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {r.variants.map((v, vi) => (
+                                <tr key={vi} className="border-b border-slate-800/20">
+                                  <td className="py-1 px-1 text-slate-400">{v.personnel}</td>
+                                  <td className="py-1 px-1 text-right"><EpaColorCell val={v.epa} /></td>
+                                  <td className="py-1 px-1 text-right text-slate-500">{v.plays}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
                         </div>
                       )}
                     </div>
