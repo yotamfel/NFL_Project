@@ -39,6 +39,19 @@ const STAT_TIPS = {
   pass_length: 'Short (under 15 air yards) or deep (15+ air yards) pass.',
   read_thrown: 'Which read the QB threw to - 1st, 2nd, 3rd, or checkdown read.',
   epa_dist: 'Percentage of plays with positive EPA. The bar shows the green/red split - more green = more successful plays. A high EPA+% means consistent performance, not just a few big plays.',
+  run_left_end: 'Run outside the left tackle, around the edge.',
+  run_left_tackle: 'Run through the gap between left guard and left tackle.',
+  run_left_guard: 'Run through the gap between center and left guard.',
+  run_middle: 'Run up the middle, through or near the center.',
+  run_right_guard: 'Run through the gap between center and right guard.',
+  run_right_tackle: 'Run through the gap between right guard and right tackle.',
+  run_right_end: 'Run outside the right tackle, around the edge.',
+  pass_left_short: 'Short pass (under 15 air yards) to the left side of the field.',
+  pass_left_deep: 'Deep pass (15+ air yards) to the left side of the field.',
+  pass_middle_short: 'Short pass over the middle of the field.',
+  pass_middle_deep: 'Deep pass over the middle - often the most dangerous area.',
+  pass_right_short: 'Short pass to the right side of the field.',
+  pass_right_deep: 'Deep pass to the right side of the field.',
   play_down: 'Current down (1st, 2nd, 3rd, or 4th).',
   play_dist: 'Yards to go for a first down.',
   play_ydln: 'Yards from the end zone (1 = goal line, 99 = own 1-yard line).',
@@ -2508,6 +2521,7 @@ function RunHeatmapSection({ players, season, ctxParams }) {
                     <td className="py-2 px-2">
                       <span className="text-white font-medium capitalize">{cell.run_location}</span>
                       {cell.run_gap && <span className="text-slate-500 ml-1">{cell.run_gap}</span>}
+                      <Tip stat={`run_${cell.run_location}_${cell.run_gap || ''}`} />
                       {isBest && <span className="ml-1 text-emerald-400 text-[9px]">best</span>}
                       {isWorst && <span className="ml-1 text-red-400 text-[9px]">worst</span>}
                     </td>
@@ -2639,6 +2653,7 @@ function PassHeatmapSection({ players, season, ctxParams }) {
                     <td className="py-2 px-2">
                       <span className="text-white font-medium capitalize">{cell.pass_location}</span>
                       {cell.pass_length && <span className="text-slate-500 ml-1">{cell.pass_length}</span>}
+                      <Tip stat={`pass_${cell.pass_location}_${cell.pass_length || ''}`} />
                       {isBest && <span className="ml-1 text-emerald-400 text-[9px]">best</span>}
                       {isWorst && <span className="ml-1 text-red-400 text-[9px]">worst</span>}
                     </td>
