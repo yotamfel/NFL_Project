@@ -653,6 +653,15 @@ def formation_analysis(
         if wr: skill.append(f"{wr} WR")
         return f"{code} ({', '.join(skill)})" if skill else raw
 
+    def _ol_only(raw):
+        """Extract only OL positions: '1 C, 2 G, 1 QB, 1 RB, 2 T, 1 TE, 3 WR' -> '1C, 2G, 2T'."""
+        ol = []
+        for part in raw.split(","):
+            m = re.match(r'\s*(\d+)\s+(\w+)', part.strip())
+            if m and m.group(2) in ("C", "G", "T"):
+                ol.append(f"{m.group(1)}{m.group(2)}")
+        return ", ".join(ol) if ol else raw
+
     with engine.connect() as c:
         rows = c.execute(text("""
             SELECT
@@ -706,7 +715,7 @@ def formation_analysis(
                 "pass_epa": round(sum((v["pass_epa"] or 0) * v["plays"] for v in variants) / total_p, 3),
                 "rush_epa": round(sum((v["rush_epa"] or 0) * v["plays"] for v in variants) / total_p, 3),
                 "variant_count": len(variants),
-                "variants": [{"personnel": v["personnel"], "plays": v["plays"], "epa": v["epa_per_play"]} for v in variants] if len(variants) > 1 else [],
+                "variants": [{"personnel": v["personnel"], "ol_label": _ol_only(v["personnel"]), "plays": v["plays"], "epa": v["epa_per_play"]} for v in variants] if len(variants) > 1 else [],
             }
             data.append(merged)
         data.sort(key=lambda x: -x["plays"])

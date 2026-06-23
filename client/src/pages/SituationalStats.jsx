@@ -52,6 +52,12 @@ const STAT_TIPS = {
   pass_middle_deep: 'Deep pass over the middle - often the most dangerous area.',
   pass_right_short: 'Short pass to the right side of the field.',
   pass_right_deep: 'Deep pass to the right side of the field.',
+  league_epa_form: 'Average EPA across all teams using this formation.',
+  league_usage_form: 'How often all teams in the league use this formation (% of total plays).',
+  team_vs_league: 'How this team performs in this formation compared to the league average. Green = better than average.',
+  shotgun_split: 'EPA when this formation lines up in shotgun vs under center. Shows if the formation works better from one alignment.',
+  pa_split_form: 'EPA with and without play-action fakes in this formation. Shows if play-action is effective from this personnel grouping.',
+  ol_variants: 'Different offensive line combinations used within this formation. Same skill players (RB/WR/TE) but different OL arrangements (Centers, Guards, Tackles).',
   vs_avg: 'How this player compares to the league average in this direction/zone. Green = above average, red = below.',
   carries: 'Number of rushing attempts in this direction.',
   targets: 'Number of times this zone was targeted with a pass.',
@@ -2792,15 +2798,15 @@ function FormationSection({ season }) {
                           <p className="text-[10px] font-bold text-slate-500 mb-1.5">LEAGUE COMPARISON</p>
                           <div className="grid grid-cols-3 gap-3 text-xs">
                             <div className="bg-slate-800/60 rounded-lg p-2.5">
-                              <p className="text-[9px] text-slate-500">League EPA</p>
+                              <p className="text-[9px] text-slate-500">League EPA<Tip stat="league_epa_form" /></p>
                               <p className="font-bold"><EpaColorCell val={league.epa} /></p>
                             </div>
                             <div className="bg-slate-800/60 rounded-lg p-2.5">
-                              <p className="text-[9px] text-slate-500">League Usage</p>
+                              <p className="text-[9px] text-slate-500">League Usage<Tip stat="league_usage_form" /></p>
                               <p className="text-white font-bold">{league.usage_pct}%</p>
                             </div>
                             <div className="bg-slate-800/60 rounded-lg p-2.5">
-                              <p className="text-[9px] text-slate-500">Team vs League</p>
+                              <p className="text-[9px] text-slate-500">Team vs League<Tip stat="team_vs_league" /></p>
                               <p className={`font-bold ${r.epa_per_play > league.epa ? 'text-emerald-400' : 'text-red-400'}`}>{(r.epa_per_play - league.epa) >= 0 ? '+' : ''}{(r.epa_per_play - league.epa).toFixed(3)} EPA</p>
                             </div>
                           </div>
@@ -2813,7 +2819,7 @@ function FormationSection({ season }) {
                           <div className="grid grid-cols-2 gap-3">
                             {det.shotgun && Object.keys(det.shotgun).length > 0 && (
                               <div className="bg-slate-800/60 rounded-lg p-2.5 space-y-1">
-                                <p className="text-[9px] text-slate-500">Shotgun vs Under Center</p>
+                                <p className="text-[9px] text-slate-500">Shotgun vs Under Center<Tip stat="shotgun_split" /></p>
                                 {['shotgun', 'under_center'].map(f => {
                                   const s = det.shotgun[f]; if (!s) return null
                                   return <div key={f} className="flex justify-between text-xs">
@@ -2825,7 +2831,7 @@ function FormationSection({ season }) {
                             )}
                             {det.play_action && Object.keys(det.play_action).length > 0 && (
                               <div className="bg-slate-800/60 rounded-lg p-2.5 space-y-1">
-                                <p className="text-[9px] text-slate-500">Play-Action</p>
+                                <p className="text-[9px] text-slate-500">Play-Action<Tip stat="pa_split_form" /></p>
                                 {['pa', 'no_pa'].map(k => {
                                   const s = det.play_action[k]; if (!s) return null
                                   return <div key={k} className="flex justify-between text-xs">
@@ -2841,11 +2847,11 @@ function FormationSection({ season }) {
                       {/* OL variants as mini table */}
                       {r.variants?.length > 0 && (
                         <div>
-                          <p className="text-[10px] font-bold text-slate-500 mb-1.5">OL VARIANTS ({r.variant_count})</p>
+                          <p className="text-[10px] font-bold text-slate-500 mb-1.5">OL VARIANTS ({r.variant_count})<Tip stat="ol_variants" /></p>
                           <table className="w-full text-[10px]">
                             <thead>
                               <tr className="text-slate-600 border-b border-slate-800">
-                                <th className="text-left py-1 px-1">Personnel</th>
+                                <th className="text-left py-1 px-1">OL Lineup (C, G, T)</th>
                                 <th className="text-right py-1 px-1">EPA</th>
                                 <th className="text-right py-1 px-1">Plays</th>
                               </tr>
@@ -2853,7 +2859,7 @@ function FormationSection({ season }) {
                             <tbody>
                               {r.variants.map((v, vi) => (
                                 <tr key={vi} className="border-b border-slate-800/20">
-                                  <td className="py-1 px-1 text-slate-400">{v.personnel}</td>
+                                  <td className="py-1 px-1 text-slate-300">{v.ol_label || v.personnel}</td>
                                   <td className="py-1 px-1 text-right"><EpaColorCell val={v.epa} /></td>
                                   <td className="py-1 px-1 text-right text-slate-500">{v.plays}</td>
                                 </tr>
