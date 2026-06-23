@@ -882,19 +882,23 @@ function AnecdoteTab() {
                     <div className="flex gap-1.5 flex-wrap">
                       <button onClick={() => copyText(d.text)}
                         className="px-2.5 py-1 bg-slate-700 text-slate-300 rounded text-[10px] hover:bg-slate-600 transition-colors">Copy</button>
-                      {isEditing ? (
+                      {isEditing ? (<>
                         <button onClick={async () => {
                           try {
                             await api.updateAnecdote(h.id, { ...d, text: editingText })
                             setEditingHistory(null); loadHistory()
                           } catch (e) { alert('Save failed: ' + (e.message || '')) }
-                        }} className="px-2.5 py-1 bg-emerald-500/15 text-emerald-400 rounded text-[10px] hover:bg-emerald-500/25 transition-colors">Save edit</button>
-                      ) : (
+                        }} className="px-2.5 py-1 bg-emerald-500/15 text-emerald-400 rounded text-[10px] hover:bg-emerald-500/25 transition-colors">Save</button>
+                        {d.original_text && editingText !== d.original_text && (
+                          <button onClick={() => setEditingText(d.original_text)}
+                            className="px-2.5 py-1 text-amber-400/70 rounded text-[10px] hover:text-amber-400 transition-colors">Revert to original</button>
+                        )}
+                        <button onClick={() => setEditingHistory(null)}
+                          className="px-2.5 py-1 text-slate-500 rounded text-[10px] hover:text-slate-300 transition-colors">Cancel</button>
+                      </>) : (
                         <button onClick={() => { setEditingHistory(h.id); setEditingText(d.text) }}
                           className="px-2.5 py-1 bg-slate-700 text-slate-300 rounded text-[10px] hover:bg-slate-600 transition-colors">Edit</button>
                       )}
-                      {isEditing && <button onClick={() => setEditingHistory(null)}
-                        className="px-2.5 py-1 text-slate-500 rounded text-[10px] hover:text-slate-300 transition-colors">Cancel</button>}
                       {!trans && (
                         <button disabled={histTranslating === h.id} onClick={async () => {
                           setHistTranslating(h.id)
@@ -920,12 +924,14 @@ function AnecdoteTab() {
                         ) : (
                           <p className="text-slate-200 text-sm whitespace-pre-wrap" dir="rtl">{trans}</p>
                         )}
-                        <div className="flex gap-1.5">
-                          <button onClick={() => copyText(trans)}
+                        <div className="flex gap-1.5 flex-wrap">
+                          <button onClick={() => copyText(editingHebrew === h.id ? editingHebrewText : trans)}
                             className="px-2.5 py-1 bg-slate-700 text-slate-300 rounded text-[10px] hover:bg-slate-600 transition-colors">Copy</button>
                           {editingHebrew === h.id ? (<>
                             <button onClick={() => { setHistTranslation(prev => ({ ...prev, [h.id]: editingHebrewText })); setEditingHebrew(null) }}
                               className="px-2.5 py-1 bg-emerald-500/15 text-emerald-400 rounded text-[10px] hover:bg-emerald-500/25 transition-colors">Done</button>
+                            <button onClick={() => setEditingHebrewText(trans)}
+                              className="px-2.5 py-1 text-amber-400/70 rounded text-[10px] hover:text-amber-400 transition-colors">Revert</button>
                             <button onClick={() => setEditingHebrew(null)}
                               className="px-2.5 py-1 text-slate-500 rounded text-[10px] hover:text-slate-300 transition-colors">Cancel</button>
                           </>) : (
@@ -935,7 +941,9 @@ function AnecdoteTab() {
                           <button onClick={async () => {
                             const hebrewText = editingHebrew === h.id ? editingHebrewText : trans
                             try { await api.saveAnecdote(d.query || h.label, hebrewText, d.level, 'he', d.scheduled_date, null); loadHistory() } catch {}
-                          }} className="px-2.5 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded text-[10px] hover:bg-amber-500/20 transition-colors">💾 Save Hebrew</button>
+                          }} className="px-2.5 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded text-[10px] hover:bg-amber-500/20 transition-colors">💾 Save</button>
+                          <button onClick={() => setHistTranslation(prev => { const n = { ...prev }; delete n[h.id]; return n })}
+                            className="px-2.5 py-1 text-red-400/50 rounded text-[10px] hover:text-red-400 hover:bg-red-500/10 transition-colors">Remove</button>
                         </div>
                       </div>
                     )}
