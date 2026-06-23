@@ -637,7 +637,8 @@ export default function SituationalStats() {
   const [searchParams, setSearchParams] = useSearchParams()
 
   const initSection = searchParams.get('tab') || 'dashboard'
-  const initSeasons = searchParams.get('seasons')?.split(',').map(Number).filter(Boolean) || []
+  const initSeason = searchParams.get('seasons')?.split(',').map(Number).filter(Boolean)?.[0]
+  const initSeasons = initSeason ? [initSeason] : []
   const initST = searchParams.get('st') || 'REG'
   const initOpp = searchParams.get('opp')?.split(',').filter(Boolean) || []
   const initLoc = searchParams.get('loc') || ''
@@ -821,10 +822,8 @@ export default function SituationalStats() {
         <div className="flex items-center gap-3 flex-wrap">
           <div className="flex items-center gap-1.5">
             {availableYears.map(y => (
-              <button key={y} onClick={() => setSelectedSeasons(prev =>
-                prev.includes(y) ? (prev.length > 1 ? prev.filter(s => s !== y) : prev) : [...prev, y]
-              )}
-                className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${selectedSeasons.includes(y) ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40' : 'bg-slate-800 text-slate-500 border border-slate-700'}`}>
+              <button key={y} onClick={() => setSelectedSeasons([y])}
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${selectedSeasons[0] === y ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40' : 'bg-slate-800 text-slate-500 border border-slate-700'}`}>
                 {y}
               </button>
             ))}
