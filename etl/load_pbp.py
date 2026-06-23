@@ -295,13 +295,25 @@ if __name__ == "__main__":
             for old_yr in to_delete:
                 conn.execute(text("DELETE FROM pbp WHERE season = :yr"), {"yr": old_yr})
                 print(f"Deleted PBP {old_yr} (keeping only {MAX_PBP_YEARS} most recent)")
-    # Also trim FTN and Participation to same range
+    # Trim FTN to same range as PBP
     with eng.begin() as conn:
         try:
             conn.execute(text("DELETE FROM ftn_charting WHERE season < :min_yr"), {"min_yr": all_years[0]})
         except: pass
+
+    # Participation: keep only 2 most recent years (DB size constraint)
+    MAX_PART_YEARS = 2
+    with eng.begin() as conn:
         try:
-            conn.execute(text("DELETE FROM participation WHERE LEFT(nflverse_game_id, 4)::int < :min_yr"), {"min_yr": all_years[0]})
+            part_existing = [r[0] for r in conn.execute(text(
+                "SELECT DISTINCT LEFT(nflverse_game_id, 4)::int as yr FROM participation ORDER BY yr"
+            )).fetchall()]
+            part_combined = sorted(set(part_existing + [y for y in all_years if y >= 2016]))
+            if len(part_combined) > MAX_PART_YEARS:
+                part_to_delete = part_combined[:len(part_combined) - MAX_PART_YEARS]
+                for old_yr in part_to_delete:
+                    conn.execute(text("DELETE FROM participation WHERE nflverse_game_id LIKE :pattern"), {"pattern": f"{old_yr}_%"})
+                    print(f"Deleted Participation {old_yr} (keeping only {MAX_PART_YEARS} most recent)")
         except: pass
 
     load_pbp_seasons(all_years)
