@@ -641,7 +641,16 @@ function AnecdoteTab() {
   const [copied, setCopied] = useState(false)
   const editRef = useRef(null)
 
-  useEffect(() => { api.getAnecdoteHistory().then(setHistory).catch(() => {}) }, [])
+  const [calendar, setCalendar] = useState({})
+  const [calDate, setCalDate] = useState(null)
+
+  const loadHistory = () => {
+    api.getAnecdoteHistory().then(res => {
+      setHistory(res.items || res || [])
+      setCalendar(res.calendar || {})
+    }).catch(() => {})
+  }
+  useEffect(() => { loadHistory() }, [])
 
   const generate = async () => {
     if (!query.trim()) return
@@ -684,15 +693,17 @@ function AnecdoteTab() {
     finally { setTranslating(false) }
   }
 
+  const [saveDate, setSaveDate] = useState(new Date().toISOString().slice(0, 10))
+
   const saveSelected = async () => {
     if (selected == null) return
     const a = anecdotes[selected]
     const text = editing ?? getDisplayText(a)
-    await api.saveAnecdote(query, text, level, 'en')
+    await api.saveAnecdote(query, text, level, 'en', saveDate)
     if (translation) {
-      await api.saveAnecdote(query, translation, level, 'he')
+      await api.saveAnecdote(query, translation, level, 'he', saveDate)
     }
-    api.getAnecdoteHistory().then(setHistory).catch(() => {})
+    loadHistory()
   }
 
   const giveFeedback = (idx, val) => {
@@ -790,9 +801,11 @@ function AnecdoteTab() {
               className="px-3 py-1.5 bg-blue-500/10 text-blue-400 border border-blue-500/30 rounded-lg text-xs hover:bg-blue-500/20 transition-colors">
               {translating ? 'Translating...' : '🇮🇱 Also in Hebrew'}
             </button>
+            <input type="date" value={saveDate} onChange={e => setSaveDate(e.target.value)}
+              className="bg-slate-800 border border-slate-700 text-slate-300 rounded-lg px-2 py-1.5 text-xs" />
             <button onClick={saveSelected}
               className="px-3 py-1.5 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded-lg text-xs hover:bg-amber-500/20 transition-colors">
-              💾 Save
+              💾 Save for {saveDate}
             </button>
           </div>
 
@@ -808,29 +821,58 @@ function AnecdoteTab() {
         </div>
       )}
 
-      {/* History */}
-      <div>
-        <button onClick={() => setShowHistory(!showHistory)} className="text-xs text-slate-500 hover:text-amber-400 transition-colors">
-          {showHistory ? '▲ Hide history' : `▼ Saved anecdotes (${history.length})`}
-        </button>
-        {showHistory && history.length > 0 && (
-          <div className="mt-2 space-y-2">
-            {history.map(h => {
-              const d = typeof h.data === 'string' ? JSON.parse(h.data) : h.data
-              return (
-                <div key={h.id} className="bg-slate-900/40 border border-slate-700/20 rounded-lg p-3">
-                  <div className="flex justify-between items-start gap-2">
-                    <div className="flex-1">
-                      <p className="text-[10px] text-slate-600 mb-1">{h.label} · {d.level} · {d.language === 'he' ? '🇮🇱' : '🇺🇸'}</p>
-                      <p className="text-slate-300 text-xs whitespace-pre-wrap" dir={d.language === 'he' ? 'rtl' : 'ltr'}>{d.text}</p>
-                    </div>
-                    <button onClick={() => copyText(d.text)} className="text-[10px] text-slate-600 hover:text-amber-400 shrink-0">Copy</button>
-                  </div>
-                </div>
-              )
-            })}
+      {/* History with calendar */}
+      <div className="bg-slate-900/60 border border-slate-700/30 rounded-2xl p-5 space-y-4">
+        <p className="text-white font-bold text-sm">Saved Anecdotes</p>
+
+        {/* Calendar strip */}
+        {Object.keys(calendar).length > 0 && (
+          <div className="space-y-2">
+            <div className="flex gap-1 flex-wrap">
+              <button onClick={() => setCalDate(null)}
+                className={`px-2.5 py-1 rounded text-[10px] ${!calDate ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40' : 'bg-slate-800 text-slate-500 border border-slate-700'}`}>
+                All ({history.length})
+              </button>
+              {Object.entries(calendar).sort(([a], [b]) => b.localeCompare(a)).map(([date, count]) => (
+                <button key={date} onClick={() => setCalDate(date)}
+                  className={`px-2.5 py-1 rounded text-[10px] ${calDate === date ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40' : 'bg-slate-800 text-slate-500 border border-slate-700'}`}>
+                  {date.slice(5)} <span className="text-slate-600">({count})</span>
+                </button>
+              ))}
+            </div>
           </div>
         )}
+
+        {/* Filtered list */}
+        {(() => {
+          const filtered = calDate
+            ? history.filter(h => h.created_at?.startsWith(calDate))
+            : history
+          return filtered.length > 0 ? (
+            <div className="space-y-2">
+              {filtered.map(h => {
+                const d = typeof h.data === 'string' ? JSON.parse(h.data) : h.data
+                const schedDate = d.scheduled_date
+                return (
+                  <div key={h.id} className="bg-slate-800/40 border border-slate-700/20 rounded-lg p-3">
+                    <div className="flex justify-between items-start gap-2">
+                      <div className="flex-1">
+                        <div className="flex gap-2 text-[10px] text-slate-600 mb-1">
+                          <span>{h.label}</span>
+                          <span>{d.level}</span>
+                          <span>{d.language === 'he' ? '🇮🇱' : '🇺🇸'}</span>
+                          {schedDate && <span className="text-amber-500/70">📅 {schedDate}</span>}
+                        </div>
+                        <p className="text-slate-300 text-xs whitespace-pre-wrap" dir={d.language === 'he' ? 'rtl' : 'ltr'}>{d.text}</p>
+                      </div>
+                      <button onClick={() => copyText(d.text)} className="text-[10px] text-slate-600 hover:text-amber-400 shrink-0">Copy</button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          ) : <p className="text-slate-600 text-xs">No anecdotes {calDate ? `for ${calDate}` : 'saved yet'}</p>
+        })()}
       </div>
     </div>
   )

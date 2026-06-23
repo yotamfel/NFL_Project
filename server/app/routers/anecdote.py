@@ -32,6 +32,7 @@ class SaveAnecdoteRequest(BaseModel):
     text: str
     level: str
     language: str = "en"
+    scheduled_date: Optional[str] = None
 
 
 def _gather_context(query: str) -> str:
@@ -264,18 +265,32 @@ def save_anecdote(
         """), {
             "uid": uid,
             "label": body.query[:80],
-            "data": json.dumps({"query": body.query, "text": body.text, "level": body.level, "language": body.language}),
+            "data": json.dumps({"query": body.query, "text": body.text, "level": body.level, "language": body.language, "scheduled_date": body.scheduled_date}),
         })
     return {"ok": True}
 
 
 @router.get("/history")
-def anecdote_history(user: dict = Depends(require_admin)):
+def anecdote_history(
+    month: Optional[str] = None,
+    user: dict = Depends(require_admin),
+):
     uid = int(user["sub"])
     with engine.connect() as conn:
         rows = conn.execute(text("""
             SELECT id, label, data, created_at FROM saved_items
             WHERE user_id = :uid AND type = 'anecdote'
-            ORDER BY created_at DESC LIMIT 50
+            ORDER BY created_at DESC LIMIT 100
         """), {"uid": uid}).fetchall()
-    return [dict(r._mapping) for r in rows]
+
+        # Calendar summary: count per date
+        date_counts = conn.execute(text("""
+            SELECT DATE(created_at) as day, COUNT(*) as count
+            FROM saved_items WHERE user_id = :uid AND type = 'anecdote'
+            GROUP BY day ORDER BY day DESC
+        """), {"uid": uid}).fetchall()
+
+    return {
+        "items": [dict(r._mapping) for r in rows],
+        "calendar": {str(r.day): r.count for r in date_counts},
+    }
