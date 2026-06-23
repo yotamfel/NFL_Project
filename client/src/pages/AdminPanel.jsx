@@ -836,26 +836,13 @@ function AnecdoteTab() {
       {/* History with calendar */}
       <div className="bg-slate-900/60 border border-slate-700/30 rounded-2xl p-5 space-y-4">
         <div className="flex items-center justify-between">
-          <p className="text-white font-bold text-sm">Saved Anecdotes ({history.length})</p>
-          <input type="date" value={calDate || ''} onChange={e => setCalDate(e.target.value || null)}
-            className="bg-slate-800 border border-slate-700 text-slate-300 rounded-lg px-2 py-1 text-xs" />
-        </div>
-
-        {/* Date chips */}
-        {Object.keys(calendar).length > 0 && (
-          <div className="flex gap-1 flex-wrap">
-            <button onClick={() => setCalDate(null)}
-              className={`px-2.5 py-1 rounded text-[10px] ${!calDate ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40' : 'bg-slate-800 text-slate-500 border border-slate-700'}`}>
-              All
-            </button>
-            {Object.entries(calendar).sort(([a], [b]) => b.localeCompare(a)).map(([date, count]) => (
-              <button key={date} onClick={() => setCalDate(date)}
-                className={`px-2.5 py-1 rounded text-[10px] ${calDate === date ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40' : 'bg-slate-800 text-slate-500 border border-slate-700'}`}>
-                {date.slice(5)} <span className="text-slate-600">({count})</span>
-              </button>
-            ))}
+          <p className="text-white font-bold text-sm">Saved Anecdotes</p>
+          <div className="flex items-center gap-2">
+            {calDate && <button onClick={() => setCalDate(null)} className="text-[10px] text-red-400 hover:text-red-300">Clear</button>}
+            <input type="date" value={calDate || ''} onChange={e => setCalDate(e.target.value || null)}
+              className="bg-slate-800 border border-slate-700 text-slate-300 rounded-lg px-2 py-1 text-xs" />
           </div>
-        )}
+        </div>
 
         {/* Filtered list */}
         {(() => {
