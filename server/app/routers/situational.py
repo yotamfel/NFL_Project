@@ -676,26 +676,57 @@ def formation_analysis(
             LIMIT 15
         """), {"team": team.upper(), "season": yr}).fetchall()
 
-        data = []
+        raw_data = []
         for r in rows:
             d = dict(r._mapping)
             d["label"] = _parse_personnel(d["personnel"])
-            data.append(d)
+            raw_data.append(d)
 
-        # Per-formation details: shotgun split + play-action
+        # Group by label (e.g. "11 (1 RB, 1 TE, 3 WR)")
+        from collections import defaultdict
+        grouped = defaultdict(list)
+        for d in raw_data:
+            grouped[d["label"]].append(d)
+
+        total_plays = sum(d["plays"] for d in raw_data)
+        data = []
+        for label, variants in grouped.items():
+            total_p = sum(v["plays"] for v in variants)
+            if total_p < 10:
+                continue
+            merged = {
+                "label": label,
+                "personnel": variants[0]["personnel"],
+                "plays": total_p,
+                "usage_pct": round(total_p / total_plays * 100, 1) if total_plays else 0,
+                "epa_per_play": round(sum(v["epa_per_play"] * v["plays"] for v in variants) / total_p, 3),
+                "success_rate": round(sum(v["success_rate"] * v["plays"] for v in variants) / total_p, 1),
+                "avg_yards": round(sum(v["avg_yards"] * v["plays"] for v in variants) / total_p, 1),
+                "pass_pct": round(sum(v["pass_pct"] * v["plays"] for v in variants) / total_p, 1),
+                "pass_epa": round(sum((v["pass_epa"] or 0) * v["plays"] for v in variants) / total_p, 3),
+                "rush_epa": round(sum((v["rush_epa"] or 0) * v["plays"] for v in variants) / total_p, 3),
+                "variant_count": len(variants),
+                "variants": [{"personnel": v["personnel"], "plays": v["plays"], "epa": v["epa_per_play"]} for v in variants] if len(variants) > 1 else [],
+            }
+            data.append(merged)
+        data.sort(key=lambda x: -x["plays"])
+
+        # Per-formation details: shotgun split + play-action (use all raw personnel strings)
         details = {}
         for d in data:
-            pers = d["personnel"]
+            all_pers = [v["personnel"] for v in grouped[d["label"]]]
+            pers_filter = all_pers[0] if len(all_pers) == 1 else all_pers
+            pers = d["label"]
             det = {}
             # Shotgun vs under center
             sg = c.execute(text("""
                 SELECT CASE WHEN p.shotgun=1 THEN 'shotgun' ELSE 'under_center' END as form,
                        COUNT(*) as plays, ROUND(AVG(p.epa)::numeric, 3) as epa
                 FROM participation pt JOIN pbp p ON p.game_id = pt.nflverse_game_id AND p.play_id = pt.play_id
-                WHERE p.posteam = :team AND p.season = :season AND pt.offense_personnel = :pers
+                WHERE p.posteam = :team AND p.season = :season AND pt.offense_personnel = ANY(:pers_list)
                       AND p.epa IS NOT NULL AND p.play_type IN ('pass','run')
                 GROUP BY form
-            """), {"team": team.upper(), "season": yr, "pers": pers}).fetchall()
+            """), {"team": team.upper(), "season": yr, "pers_list": all_pers}).fetchall()
             det["shotgun"] = {r.form: {"plays": r.plays, "epa": float(r.epa)} for r in sg}
 
             # Play-action rate (join FTN if available)
@@ -706,15 +737,15 @@ def formation_analysis(
                     FROM participation pt
                     JOIN pbp p ON p.game_id = pt.nflverse_game_id AND p.play_id = pt.play_id
                     JOIN ftn_charting f ON f.nflverse_game_id = p.game_id AND f.nflverse_play_id = p.play_id
-                    WHERE p.posteam = :team AND p.season = :season AND pt.offense_personnel = :pers
+                    WHERE p.posteam = :team AND p.season = :season AND pt.offense_personnel = ANY(:pers_list)
                           AND p.epa IS NOT NULL AND p.pass_attempt = 1 AND f.is_play_action IS NOT NULL
                     GROUP BY pa
-                """), {"team": team.upper(), "season": yr, "pers": pers}).fetchall()
+                """), {"team": team.upper(), "season": yr, "pers_list": all_pers}).fetchall()
                 det["play_action"] = {r.pa: {"plays": r.plays, "epa": float(r.epa)} for r in pa}
             except Exception:
                 det["play_action"] = {}
 
-            details[pers] = det
+            details[d["label"]] = det
 
         # League avg usage per formation
         league_usage = {}
@@ -727,10 +758,15 @@ def formation_analysis(
             GROUP BY pt.offense_personnel HAVING COUNT(*) >= 100
         """), {"season": yr}).fetchall()
         total_league = sum(r.league_plays for r in league_rows)
+        league_grouped = defaultdict(lambda: {"epa_sum": 0, "plays": 0})
         for r in league_rows:
-            league_usage[r.offense_personnel] = {
-                "epa": float(r.league_epa),
-                "usage_pct": round(r.league_plays / total_league * 100, 1) if total_league else 0,
+            lbl = _parse_personnel(r.offense_personnel)
+            league_grouped[lbl]["epa_sum"] += float(r.league_epa) * r.league_plays
+            league_grouped[lbl]["plays"] += r.league_plays
+        for lbl, v in league_grouped.items():
+            league_usage[lbl] = {
+                "epa": round(v["epa_sum"] / v["plays"], 3) if v["plays"] else 0,
+                "usage_pct": round(v["plays"] / total_league * 100, 1) if total_league else 0,
             }
 
     return {

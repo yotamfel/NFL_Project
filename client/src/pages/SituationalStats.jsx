@@ -2759,13 +2759,13 @@ function FormationSection({ season }) {
             </thead>
             <tbody>
               {data.data.map((r, i) => {
-                const isExp = expanded === r.personnel
-                const det = data.details?.[r.personnel] || {}
-                const league = data.league?.[r.personnel]
+                const isExp = expanded === r.label
+                const det = data.details?.[r.label] || {}
+                const league = data.league?.[r.label]
                 return (
-                <Fragment key={r.personnel}>
+                <Fragment key={r.label}>
                 <tr className={`border-b border-slate-800/30 hover:bg-slate-800/20 cursor-pointer ${isExp ? 'bg-slate-800/30' : ''}`}
-                  onClick={() => setExpanded(isExp ? null : r.personnel)}>
+                  onClick={() => setExpanded(isExp ? null : r.label)}>
                   <td className="py-2 px-2">
                     <span className="text-white font-medium">{r.label || r.personnel}</span>
                   </td>
@@ -2814,6 +2814,19 @@ function FormationSection({ season }) {
                               {k === 'pa' ? 'Play-action' : 'No play-action'}: <EpaColorCell val={s.epa} /> <span className="text-slate-500">{s.plays}p</span>
                             </span>
                           })}
+                        </div>
+                      )}
+                      {/* OL variants */}
+                      {r.variants?.length > 0 && (
+                        <div>
+                          <span className="text-slate-500">OL variants ({r.variant_count}):</span>
+                          <div className="flex gap-2 mt-1 flex-wrap">
+                            {r.variants.map((v, vi) => (
+                              <span key={vi} className="bg-slate-800 rounded px-2 py-0.5 text-slate-400">
+                                {v.plays}p | <EpaColorCell val={v.epa} />
+                              </span>
+                            ))}
+                          </div>
                         </div>
                       )}
                     </div>
