@@ -1999,41 +1999,27 @@ function DashboardSection({ season, onNavigate }) {
         ))}
       </div>
 
+      {/* Top players row */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {[
+          { title: 'Top QBs', data: data.top_qbs },
+          { title: 'Top RBs', data: data.top_rbs },
+          { title: 'Top WRs', data: data.top_wrs },
+        ].map(({ title, data: pl }) => (
+          <div key={title} className="bg-slate-900/40 border border-slate-700/30 rounded-xl p-4 space-y-2">
+            <p className="text-xs font-bold text-amber-400">{title} by EPA/play</p>
+            {(pl || []).map((r, i) => (
+              <div key={i} className="flex justify-between text-xs">
+                <span className="text-white">{i + 1}. {r.name} <span className="text-slate-600">{r.team}</span></span>
+                <EpaColorCell val={r.epa} />
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+
+      {/* Clutch + Teams row */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Top QBs */}
-        <div className="bg-slate-900/40 border border-slate-700/30 rounded-xl p-4 space-y-2">
-          <p className="text-xs font-bold text-amber-400">Top QBs by EPA/play</p>
-          {(data.top_qbs || []).map((r, i) => (
-            <div key={i} className="flex justify-between text-xs">
-              <span className="text-white">{i + 1}. {r.name} <span className="text-slate-600">{r.team}</span></span>
-              <EpaColorCell val={r.epa} />
-            </div>
-          ))}
-        </div>
-
-        {/* Top RBs */}
-        <div className="bg-slate-900/40 border border-slate-700/30 rounded-xl p-4 space-y-2">
-          <p className="text-xs font-bold text-amber-400">Top RBs by EPA/play</p>
-          {(data.top_rbs || []).map((r, i) => (
-            <div key={i} className="flex justify-between text-xs">
-              <span className="text-white">{i + 1}. {r.name} <span className="text-slate-600">{r.team}</span></span>
-              <EpaColorCell val={r.epa} />
-            </div>
-          ))}
-        </div>
-
-        {/* Top WRs */}
-        <div className="bg-slate-900/40 border border-slate-700/30 rounded-xl p-4 space-y-2">
-          <p className="text-xs font-bold text-amber-400">Top WRs by EPA/play</p>
-          {(data.top_wrs || []).map((r, i) => (
-            <div key={i} className="flex justify-between text-xs">
-              <span className="text-white">{i + 1}. {r.name} <span className="text-slate-600">{r.team}</span></span>
-              <EpaColorCell val={r.epa} />
-            </div>
-          ))}
-        </div>
-
-        {/* Most Clutch */}
         <div className="bg-slate-900/40 border border-slate-700/30 rounded-xl p-4 space-y-2">
           <p className="text-xs font-bold text-red-400">Most Clutch QBs (WPA)</p>
           {(data.most_clutch || []).map((r, i) => (
@@ -2044,11 +2030,11 @@ function DashboardSection({ season, onNavigate }) {
           ))}
         </div>
 
-        {/* Team EPA */}
         <div className="bg-slate-900/40 border border-slate-700/30 rounded-xl p-4 space-y-1">
           <p className="text-xs font-bold text-blue-400">Team EPA Rankings</p>
-          <div className="max-h-56 overflow-y-auto space-y-0.5">
-            <div className="flex justify-between text-[9px] text-slate-600 px-0.5 mb-1 sticky top-0 bg-slate-900/40">
+          <style>{`.team-scroll::-webkit-scrollbar{width:4px}.team-scroll::-webkit-scrollbar-track{background:transparent}.team-scroll::-webkit-scrollbar-thumb{background:#334155;border-radius:4px}`}</style>
+          <div className="max-h-40 overflow-y-auto space-y-0.5 team-scroll">
+            <div className="flex justify-between text-[9px] text-slate-600 px-0.5 mb-1 sticky top-0 bg-slate-900/90">
               <span>Team</span>
               <span className="flex gap-3"><span className="w-12 text-right">Pass</span><span className="w-12 text-right">Rush</span><span className="w-12 text-right">Avg</span></span>
             </div>
