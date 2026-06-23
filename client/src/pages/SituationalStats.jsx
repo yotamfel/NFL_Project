@@ -79,7 +79,6 @@ const SECTIONS = [
   { id: 'epa', label: 'EPA Rankings', icon: '📊' },
   { id: 'clutch', label: 'Clutch Rankings', icon: '🔥' },
   { id: 'explorer', label: 'Custom Explorer', icon: '🔍' },
-  { id: 'trending', label: 'Trending', icon: '📈' },
   { id: 'splits', label: 'Situational Splits', icon: '📋' },
   { id: 'matchup', label: 'Matchup Finder', icon: '🆚' },
   { id: 'trend', label: 'Weekly Trend', icon: '📉' },
@@ -772,7 +771,7 @@ export default function SituationalStats() {
   }
   const removePlayer = (id) => setPlayers(prev => prev.filter(p => p.player_id !== id))
 
-  const needsPlayer = !['epa', 'clutch', 'formation', 'explorer', 'dashboard', 'trending'].includes(section)
+  const needsPlayer = !['epa', 'clutch', 'formation', 'explorer', 'dashboard'].includes(section)
 
   return (
     <div className="flex gap-6">
@@ -916,7 +915,6 @@ export default function SituationalStats() {
           {section === 'epa' && <EpaRankingsSection seasons={selectedSeasons} />}
           {section === 'clutch' && <ClutchRankingsSection seasons={selectedSeasons} />}
           {section === 'explorer' && <ExplorerSection seasons={selectedSeasons} />}
-          {section === 'trending' && <TrendingSection season={selectedSeasons[0]} addPlayer={addPlayer} />}
           {section === 'matchup' && <MatchupSection players={players} season={selectedSeasons[0]} />}
           {section === 'splits' && <SplitsSection players={players} ctxParams={ctxParams} />}
           {section === 'trend' && <WeeklyTrendSection players={players} season={selectedSeasons[0]} ctxParams={ctxParams} />}
@@ -1966,11 +1964,17 @@ function WeeklyTrendSection({ players, season, ctxParams }) {
 
 function DashboardSection({ season }) {
   const [data, setData] = useState(null)
+  const [trend, setTrend] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     setLoading(true)
-    api.getDashboard(season).then(setData).catch(() => setData(null)).finally(() => setLoading(false))
+    Promise.all([
+      api.getDashboard(season),
+      api.getTrending(season),
+    ]).then(([d, t]) => { setData(d); setTrend(t) })
+      .catch(() => { setData(null); setTrend(null) })
+      .finally(() => setLoading(false))
   }, [season])
 
   if (loading) return <Loading text="Loading dashboard..." />
@@ -2050,6 +2054,35 @@ function DashboardSection({ season }) {
           </div>
         </div>
       </div>
+
+      {/* Trending */}
+      {trend && (
+        <div>
+          <p className="text-xs font-bold text-slate-500 mb-2">TRENDING {trend.recent_weeks && <span className="font-normal text-slate-600">- last 3 weeks ({trend.recent_weeks}) vs earlier ({trend.earlier_weeks})</span>}</p>
+          {trend.too_early ? (
+            <p className="text-slate-600 text-xs">Not enough data yet - trending starts from week 3.</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {[
+                { title: 'QBs Rising', players: trend.qb_improved, color: '#34d399', icon: '↗' },
+                { title: 'QBs Falling', players: trend.qb_declined, color: '#f87171', icon: '↘' },
+                { title: 'RBs Rising', players: trend.rb_improved, color: '#34d399', icon: '↗' },
+                { title: 'RBs Falling', players: trend.rb_declined, color: '#f87171', icon: '↘' },
+              ].map(({ title, players: pl, color, icon }) => pl?.length > 0 && (
+                <div key={title} className="bg-slate-900/40 border border-slate-700/30 rounded-xl p-3 space-y-1.5">
+                  <p className="text-[10px] font-bold" style={{ color }}>{icon} {title}</p>
+                  {pl.map((r, i) => (
+                    <div key={i} className="flex justify-between text-[10px]">
+                      <span className="text-slate-300">{r.name} <span className="text-slate-600">{r.team}</span></span>
+                      <span className={`font-bold ${r.delta > 0 ? 'text-emerald-400' : 'text-red-400'}`}>{r.delta > 0 ? '+' : ''}{r.delta}</span>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Quick Presets */}
       <div>

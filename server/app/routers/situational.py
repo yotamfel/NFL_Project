@@ -1296,54 +1296,50 @@ def trending_players(
 ):
     yr = season or _latest_season()
     with engine.connect() as c:
-        # Compare first half (weeks 1-9) vs second half (weeks 10+) EPA
-        rows = c.execute(text("""
-            WITH halves AS (
-                SELECT passer_player_id as gsis_id, passer_player_name as name, posteam as team,
-                       ROUND(AVG(CASE WHEN week <= 9 THEN epa END)::numeric, 3) as epa_h1,
-                       ROUND(AVG(CASE WHEN week >= 10 THEN epa END)::numeric, 3) as epa_h2,
-                       COUNT(*) FILTER (WHERE week <= 9) as plays_h1,
-                       COUNT(*) FILTER (WHERE week >= 10) as plays_h2
-                FROM pbp WHERE season = :yr AND pass_attempt = 1 AND passer_player_id IS NOT NULL
-                      AND epa IS NOT NULL AND season_type = 'REG'
-                GROUP BY passer_player_id, passer_player_name, posteam
-                HAVING COUNT(*) FILTER (WHERE week <= 9) >= 80 AND COUNT(*) FILTER (WHERE week >= 10) >= 80
-            )
-            SELECT *, ROUND((epa_h2 - epa_h1)::numeric, 3) as delta
-            FROM halves WHERE epa_h1 IS NOT NULL AND epa_h2 IS NOT NULL
-            ORDER BY delta DESC
-        """), {"yr": yr}).fetchall()
+        max_week = c.execute(text(
+            "SELECT MAX(week) FROM pbp WHERE season = :yr AND season_type = 'REG'"
+        ), {"yr": yr}).scalar() or 0
 
-        improved = [dict(r._mapping) for r in rows[:5]]
-        declined = [dict(r._mapping) for r in rows[-5:][::-1]]
+        if max_week < 3:
+            return {"season": yr, "max_week": max_week, "too_early": True,
+                    "qb_improved": [], "qb_declined": [], "rb_improved": [], "rb_declined": []}
 
-        # RB trending
-        rb_rows = c.execute(text("""
-            WITH halves AS (
-                SELECT rusher_player_id as gsis_id, rusher_player_name as name, posteam as team,
-                       ROUND(AVG(CASE WHEN week <= 9 THEN epa END)::numeric, 3) as epa_h1,
-                       ROUND(AVG(CASE WHEN week >= 10 THEN epa END)::numeric, 3) as epa_h2,
-                       COUNT(*) FILTER (WHERE week <= 9) as plays_h1,
-                       COUNT(*) FILTER (WHERE week >= 10) as plays_h2
-                FROM pbp WHERE season = :yr AND rush_attempt = 1 AND rusher_player_id IS NOT NULL
-                      AND epa IS NOT NULL AND season_type = 'REG'
-                GROUP BY rusher_player_id, rusher_player_name, posteam
-                HAVING COUNT(*) FILTER (WHERE week <= 9) >= 40 AND COUNT(*) FILTER (WHERE week >= 10) >= 40
-            )
-            SELECT *, ROUND((epa_h2 - epa_h1)::numeric, 3) as delta
-            FROM halves WHERE epa_h1 IS NOT NULL AND epa_h2 IS NOT NULL
-            ORDER BY delta DESC
-        """), {"yr": yr}).fetchall()
+        recent_start = max(max_week - 2, 1)
 
-        rb_improved = [dict(r._mapping) for r in rb_rows[:5]]
-        rb_declined = [dict(r._mapping) for r in rb_rows[-5:][::-1]]
+        def _trending(id_col, name_col, base_filter, min_recent, min_earlier):
+            rows = c.execute(text(f"""
+                WITH splits AS (
+                    SELECT {id_col} as gsis_id, {name_col} as name, posteam as team,
+                           ROUND(AVG(CASE WHEN week < :recent THEN epa END)::numeric, 3) as epa_earlier,
+                           ROUND(AVG(CASE WHEN week >= :recent THEN epa END)::numeric, 3) as epa_recent,
+                           COUNT(*) FILTER (WHERE week < :recent) as plays_earlier,
+                           COUNT(*) FILTER (WHERE week >= :recent) as plays_recent
+                    FROM pbp WHERE season = :yr AND {base_filter} AND {id_col} IS NOT NULL
+                          AND epa IS NOT NULL AND season_type = 'REG'
+                    GROUP BY {id_col}, {name_col}, posteam
+                    HAVING COUNT(*) FILTER (WHERE week < :recent) >= :min_e
+                       AND COUNT(*) FILTER (WHERE week >= :recent) >= :min_r
+                )
+                SELECT *, ROUND((epa_recent - epa_earlier)::numeric, 3) as delta
+                FROM splits WHERE epa_earlier IS NOT NULL AND epa_recent IS NOT NULL
+                ORDER BY delta DESC
+            """), {"yr": yr, "recent": recent_start, "min_e": min_earlier, "min_r": min_recent}).fetchall()
+            improved = [dict(r._mapping) for r in rows[:5]]
+            declined = [dict(r._mapping) for r in rows[-5:][::-1]]
+            return improved, declined
+
+        qb_imp, qb_dec = _trending("passer_player_id", "passer_player_name", "pass_attempt = 1", 30, 50)
+        rb_imp, rb_dec = _trending("rusher_player_id", "rusher_player_name", "rush_attempt = 1", 15, 25)
 
     return {
         "season": yr,
-        "qb_improved": improved,
-        "qb_declined": declined,
-        "rb_improved": rb_improved,
-        "rb_declined": rb_declined,
+        "max_week": max_week,
+        "recent_weeks": f"{recent_start}-{max_week}",
+        "earlier_weeks": f"1-{recent_start - 1}",
+        "qb_improved": qb_imp,
+        "qb_declined": qb_dec,
+        "rb_improved": rb_imp,
+        "rb_declined": rb_dec,
     }
 
 
