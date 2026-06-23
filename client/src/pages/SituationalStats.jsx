@@ -672,9 +672,13 @@ export default function SituationalStats() {
         setSeason(years[0])
       }
       const pids = searchParams.get('p')?.split(',').filter(Boolean) || []
+      const pnames = searchParams.get('pn')?.split(',') || []
       if (pids.length) {
-        const results = await Promise.all(pids.map(pid => api.getPlayer(pid).catch(() => null)))
-        setPlayers(results.filter(Boolean).map(r => ({ player_id: r.player_id, player_name: r.player_name, pos: r.pos })))
+        const restored = pids.map((pid, i) => {
+          const parts = pnames[i]?.split('|') || []
+          return { player_id: pid, player_name: parts[0] || pid, pos: parts[1] || '' }
+        })
+        setPlayers(restored)
       }
       setUrlInited(true)
     }).catch(() => { setUrlInited(true) })
@@ -686,7 +690,10 @@ export default function SituationalStats() {
     const p = new URLSearchParams()
     if (section !== 'dashboard') p.set('tab', section)
     if (selectedSeasons.length) p.set('seasons', selectedSeasons.join(','))
-    if (players.length) p.set('p', players.map(pl => pl.player_id).join(','))
+    if (players.length) {
+      p.set('p', players.map(pl => pl.player_id).join(','))
+      p.set('pn', players.map(pl => `${pl.player_name}|${pl.pos}`).join(','))
+    }
     if (ctxSeasonType !== 'REG') p.set('st', ctxSeasonType)
     if (ctxOpponent.length) p.set('opp', ctxOpponent.join(','))
     if (ctxLocation) p.set('loc', ctxLocation)
