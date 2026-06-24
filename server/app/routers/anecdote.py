@@ -192,7 +192,7 @@ def generate_anecdotes(
 
     level_instruction = {
         "casual": "Write for a casual NFL fan. Keep it clear and surprising, but professional - like a sports journalist, not a fanboy. Use one or two key stats.",
-        "deep": "Write for an analytics-savvy NFL audience. Use EPA, advanced metrics, historical comparisons. Show something non-obvious that rewards knowledge.",
+        "deep": "Write for someone who understands football deeply. You can use advanced terminology (passer rating, ANY/A, success rate, pressure rate, YAC, ADOT, red zone efficiency, etc.) and deeper statistical context. Not just EPA - use whatever advanced stats fit best. Assume the reader knows what these terms mean.",
     }.get(body.level, "casual")
 
     from datetime import date
@@ -213,7 +213,8 @@ RELEVANT DATA FROM OUR DATABASE:
 If the database returned limited data (e.g. player not found due to typo), use the stats provided for related players/teams that WERE found. Only use stats from the data above - do not invent numbers.
 {edit_examples}
 
-TASK: Generate exactly 3 different anecdote options based on the input and data above.
+TASK: Generate exactly 3 anecdote options based on the input and data above.
+Each anecdote must be about a COMPLETELY DIFFERENT fact or stat - not 3 ways to phrase the same thing. Find 3 separate interesting data points from the provided data.
 {level_instruction}
 
 IMPORTANT:
