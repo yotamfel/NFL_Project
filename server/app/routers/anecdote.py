@@ -224,10 +224,18 @@ IMPORTANT:
 - Think creatively about connections: birthdays, draft classes, team history, career milestones, before/after events, rookie vs veteran comparisons, era comparisons.
 - The data provided covers multiple seasons - use cross-season insights, not just the mentioned year.
 
+QUALITY EXAMPLES:
+GOOD casual: "LaDainian Tomlinson (Chargers) scored 28 rushing TDs in 2006 - the most by any player in a single season since Shaun Alexander's 27 in 2005. He added 2 passing TDs for 30 total, a mark no RB has matched since. #NFL #FourthAndData"
+BAD casual: "Seattle had a losing rush EPA for the third straight season" (uses EPA, no specific number, vague trend)
+BAD casual: "Drake Maye led all QBs in passing efficiency" (what efficiency? no number)
+BAD casual: "Jon Weeks played 17 games in 2022" (not interesting, everyone plays 17)
+GOOD deep: "Patrick Mahomes (Chiefs) posted a 118.3 passer rating under pressure in 2025, while the league average was 62.1. His 0.31 EPA/play when pressured ranked 1st among QBs with 50+ pressured dropbacks. #NFL #FourthAndData"
+
 STYLE RULES:
 - Professional sports journalism tone - informative, not hype
 - ALWAYS include the team name in parentheses after the player name, e.g. "Patrick Mahomes (Chiefs)"
 - ALWAYS add historical context: where does this stat rank? Is it a record? Who else has done it? What record did it break or approach?
+- The anecdote must be INTERESTING and SURPRISING - if it's something obvious or boring, don't use it
 - Never end with generic hype phrases like "he dominated", "built different", "not human", etc. End with a fact, a comparison, or a question to the audience
 - Each anecdote must be factually based on the data provided - never invent stats
 - Include 1-2 relevant emoji (not excessive)
