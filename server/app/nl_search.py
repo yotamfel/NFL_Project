@@ -179,6 +179,13 @@ Respond with ONLY the SQL — no prose, no markdown fences. PostgreSQL dialect,
 a single SELECT or WITH...SELECT, always ending with a LIMIT clause (10 unless
 the question clearly implies a different count).
 
+IMPORTANT: NEVER return just a COUNT(*). Always return the actual rows with
+player names, stats, season, and team. If the user asks "how many", return
+the detailed list PLUS include a count. For example, for "how many QBs ran
+for 1000 yards" return each QB's name, team, season, and rushing yards -
+not just a number. Use LIMIT 10 for the detail rows, but if the total is
+more, add a comment with the real count.
+
 If the question cannot be answered from this database — it isn't about the data
 above, it's too vague, or it needs data this database doesn't have — respond
 with EXACTLY one line:
