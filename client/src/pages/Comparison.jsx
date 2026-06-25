@@ -330,6 +330,7 @@ export default function Comparison() {
   const [seasonTo,      setSeasonTo]      = useState('')
   const [lbStat,        setLbStat]        = useState('')
   const [lbData,        setLbData]        = useState(null)
+  const [lbMin,         setLbMin]         = useState('')
   const [narState,      setNarState]      = useState('idle')  // idle | loading | done | error
   const [narrative,     setNarrative]     = useState(null)
   const [narLogId,      setNarLogId]      = useState(null)
@@ -367,14 +368,15 @@ export default function Comparison() {
         api.topPlayersByStat(category, lbStat, {
           pos: filterPos || undefined,
           season: compSeason ? parseInt(compSeason) : undefined,
-          limit: 20,
+          min: parseFloat(lbMin) || 0,
+          limit: 30,
         })
           .then(setLbData)
           .catch(() => setLbData(null))
       }
     }, 300)
     return () => clearTimeout(lbDebounce.current)
-  }, [category, lbStat, compSeason, filterPos, isFdvMode])
+  }, [category, lbStat, compSeason, filterPos, lbMin, isFdvMode])
 
   // Load comparison data (career or specific season)
   useEffect(() => {
@@ -880,22 +882,29 @@ export default function Comparison() {
       <div className="bg-slate-800/70 border border-slate-700/60 rounded-2xl p-5">
         <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
           <div>
-            <h2 className="text-white font-bold">Top 20 Leaderboard</h2>
+            <h2 className="text-white font-bold">Leaderboard</h2>
             <p className="text-slate-500 text-xs mt-0.5">
-              {isFdvMode ? 'All-time career value' : (compSeason ? `${compSeason} season` : 'Career totals')} - {playerIds.length > 0 ? 'compared players highlighted' : 'add players above to highlight them'}
+              {isFdvMode ? 'All-time career value' : (compSeason ? `${compSeason} season` : 'Best single season')} {filterPos && `- ${filterPos}`} {lbMin && `- min ${Number(lbMin).toLocaleString()}`}
             </p>
           </div>
-          <select
-            value={lbStat}
-            onChange={e => setLbStat(e.target.value)}
-            className="bg-slate-900 border border-slate-700 text-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-slate-500">
-            <option value="__fdv__">FDV (Career Value)</option>
-            <optgroup label={category.charAt(0).toUpperCase() + category.slice(1)}>
-              {(STAT_OPTIONS[category] ?? []).map(s => (
-                <option key={s.key} value={s.key}>{s.label}</option>
-              ))}
-            </optgroup>
-          </select>
+          <div className="flex gap-2 items-center flex-wrap">
+            {!isFdvMode && (
+              <input type="number" value={lbMin} onChange={e => setLbMin(e.target.value)}
+                placeholder="Min value"
+                className="w-24 bg-slate-900 border border-slate-700 text-slate-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-slate-500 placeholder-slate-600" />
+            )}
+            <select
+              value={lbStat}
+              onChange={e => setLbStat(e.target.value)}
+              className="bg-slate-900 border border-slate-700 text-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-slate-500">
+              <option value="__fdv__">FDV (Career Value)</option>
+              <optgroup label={category.charAt(0).toUpperCase() + category.slice(1)}>
+                {(STAT_OPTIONS[category] ?? []).map(s => (
+                  <option key={s.key} value={s.key}>{s.label}</option>
+                ))}
+              </optgroup>
+            </select>
+          </div>
         </div>
         {lbData && lbData.length > 0 ? (
           <div className="relative group pt-7">
