@@ -191,7 +191,7 @@ def generate_anecdotes(
         pass
 
     level_instruction = {
-        "casual": "Write for a casual NFL fan. Use traditional stats with SPECIFIC NUMBERS: touchdowns, yards, completions, records, wins, streaks, draft position, games played, career milestones. Do NOT use EPA, WPA, success rate, or any advanced analytics terms. Every anecdote MUST contain at least one concrete number (e.g. '4,839 passing yards' not 'above average'). Never say 'above/below average' - give the actual stat.",
+        "casual": "Write for a casual NFL fan. Use traditional stats with SPECIFIC NUMBERS: touchdowns, yards, completions, records, wins, streaks, draft position, games played, career milestones. Do NOT use EPA, WPA, success rate, or any advanced analytics terms. Every anecdote MUST contain at least one concrete number (e.g. '4,839 passing yards' not 'above average'). Never say 'above/below average' or vague descriptions - give the actual stat. Focus on a SPECIFIC player achievement, game, or record - not general team trends or broad observations.",
         "deep": "Write for someone who understands football deeply. Use advanced terminology: passer rating, ANY/A, success rate, pressure rate, YAC, ADOT, red zone efficiency, completion% over expected, etc. You may use EPA but also use other advanced metrics. Assume the reader knows what these terms mean.",
     }.get(body.level, "casual")
 
