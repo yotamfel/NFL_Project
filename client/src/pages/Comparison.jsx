@@ -365,6 +365,7 @@ export default function Comparison() {
           .catch(() => setLbData(null))
       } else {
         api.topPlayersByStat(category, lbStat, {
+          pos: filterPos || undefined,
           season: compSeason ? parseInt(compSeason) : undefined,
           limit: 20,
         })
@@ -373,7 +374,7 @@ export default function Comparison() {
       }
     }, 300)
     return () => clearTimeout(lbDebounce.current)
-  }, [category, lbStat, compSeason, isFdvMode])
+  }, [category, lbStat, compSeason, filterPos, isFdvMode])
 
   // Load comparison data (career or specific season)
   useEffect(() => {
