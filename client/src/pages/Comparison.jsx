@@ -331,6 +331,7 @@ export default function Comparison() {
   const [lbStat,        setLbStat]        = useState('')
   const [lbData,        setLbData]        = useState(null)
   const [lbMin,         setLbMin]         = useState('')
+  const [chartStats,    setChartStats]    = useState(() => (CHART_METRICS[category] ?? CHART_METRICS.passing).map(m => m.key))
   const [narState,      setNarState]      = useState('idle')  // idle | loading | done | error
   const [narrative,     setNarrative]     = useState(null)
   const [narLogId,      setNarLogId]      = useState(null)
@@ -485,7 +486,7 @@ export default function Comparison() {
             }`}>
             {fdvInfo ? '▲' : '▼'} What is FDV?
           </button>
-          <select value={category} onChange={e => setCategory(e.target.value)}
+          <select value={category} onChange={e => { setCategory(e.target.value); setChartStats((CHART_METRICS[e.target.value] ?? CHART_METRICS.passing).map(m => m.key)) }}
             className="bg-slate-800 border border-slate-700 text-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-slate-500">
             {CATEGORIES.map(c => (
               <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
@@ -838,8 +839,21 @@ export default function Comparison() {
                 ))}
               </div>
             </div>
+            <div className="flex gap-1.5 flex-wrap mb-2">
+              {(STAT_OPTIONS[category] ?? []).map(s => {
+                const isActive = chartStats.includes(s.key)
+                return (
+                  <button key={s.key} onClick={() => setChartStats(prev =>
+                    isActive ? (prev.length > 1 ? prev.filter(k => k !== s.key) : prev) : [...prev, s.key]
+                  )} className={`px-2 py-0.5 rounded text-[10px] transition-colors ${isActive ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40' : 'bg-slate-800 text-slate-500 border border-slate-700/50 hover:text-slate-300'}`}>
+                    {s.label}
+                  </button>
+                )
+              })}
+            </div>
             <div className="grid grid-cols-2 gap-3">
-              {metrics.map(({ key, label }) => {
+              {chartStats.map(key => {
+                const label = (STAT_OPTIONS[category] ?? []).find(s => s.key === key)?.label ?? key
                 const chartData = data.players.map((p, i) => {
                   const row = data.career.find(c => c.player_id === p.player_id)
                   return { name: shortName(p.player_name), value: row?.[key] ?? 0 }
