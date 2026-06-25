@@ -191,8 +191,8 @@ def generate_anecdotes(
         pass
 
     level_instruction = {
-        "casual": "Write for a casual NFL fan. Use traditional stats with SPECIFIC NUMBERS: touchdowns, yards, completions, records, wins, streaks, draft position, games played, career milestones. Do NOT use EPA, WPA, success rate, or any advanced analytics terms. Every anecdote MUST contain at least one concrete number (e.g. '4,839 passing yards' not 'above average'). Never say 'above/below average' or vague descriptions - give the actual stat. Focus on a SPECIFIC player achievement, game, or record - not general team trends or broad observations.",
-        "deep": "Write for someone who understands football deeply. Use advanced terminology: passer rating, ANY/A, success rate, pressure rate, YAC, ADOT, red zone efficiency, completion% over expected, etc. You may use EPA but also use other advanced metrics. Assume the reader knows what these terms mean.",
+        "casual": "Write for a casual NFL fan. Use traditional stats with SPECIFIC NUMBERS: touchdowns, yards, completions, records, wins, streaks, draft position, games played, career milestones. Do NOT use EPA, WPA, success rate, or any advanced analytics terms. Every anecdote MUST contain at least one concrete number (e.g. '4,839 passing yards' not 'above average'). Never say 'above/below average' or vague descriptions - give the actual stat. Focus on specific player or team achievements with historical context (e.g. 'most since X', 'first player to Y since Z'). Not general trends or vague observations.",
+        "deep": "Write for someone who understands football deeply. Use advanced terminology: passer rating, ANY/A, success rate, pressure rate, YAC, ADOT, red zone efficiency, completion% over expected, etc. You may use EPA but also other advanced metrics. Assume the reader knows these terms. You can include trends and broader analysis, but always back them with SPECIFIC NUMBERS - never vague descriptions. Every claim must have a concrete stat.",
     }.get(body.level, "casual")
 
     from datetime import date
