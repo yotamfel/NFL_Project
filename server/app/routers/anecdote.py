@@ -269,7 +269,7 @@ STYLE RULES:
 - Never end with generic hype phrases like "he dominated", "built different", "not human", etc. End with a fact, a comparison, or a question to the audience
 - Each anecdote must be factually based on the data provided - never invent stats
 - Include 1-2 relevant emoji (not excessive)
-- Always end with #NFL #FourthAndData #NFLThisDay (use #FourthAndData not #Fourth&Data - the ampersand breaks hashtags on Twitter)
+- EVERY anecdote MUST end with exactly these 3 hashtags: #NFL #FourthAndData #NFLThisDay
 - If the text exceeds 280 characters, split it into numbered parts (1/N, 2/N...) each under 280 chars
 - Write in English
 - Each option should take a DIFFERENT angle (comparison, record/ranking, surprising context)
