@@ -135,6 +135,28 @@ def _gather_context(query: str) -> str:
         for r in _q("SELECT passer_player_name as name,ROUND(AVG(epa)::numeric,3) as epa,COUNT(*) as plays FROM pbp WHERE season=:yr AND pass_attempt=1 AND passer_player_id IS NOT NULL AND epa IS NOT NULL AND season_type='REG' GROUP BY passer_player_name HAVING COUNT(*)>=200 ORDER BY epa DESC LIMIT 5", {"yr": yr}):
             ctx_parts.append(f"Top QB EPA {yr}: {r.name} ({r.epa})")
 
+    # Week-specific standout performances
+    week_match = _re.findall(r'week\s*(\d+)', q_lower)
+    year_match = _re.findall(r'\b(20[0-2]\d)\b', query)
+    if week_match:
+        wk = int(week_match[0])
+        yr_for_week = int(year_match[0]) if year_match else None
+        if yr_for_week:
+            ctx_parts.append(f"\n--- WEEK {wk}, {yr_for_week} STANDOUTS ---")
+            # Best passing games
+            for r in _q("SELECT passer_player_name as name, posteam as team, defteam, SUM(passing_yards) as yds, SUM(CASE WHEN touchdown=1 THEN 1 ELSE 0 END) as tds, SUM(CASE WHEN interception=1 THEN 1 ELSE 0 END) as ints, COUNT(*) as att, ROUND(AVG(CASE WHEN complete_pass=1 THEN 100.0 ELSE 0 END)::numeric,1) as comp_pct FROM pbp WHERE season=:yr AND week=:wk AND pass_attempt=1 AND passer_player_id IS NOT NULL AND season_type='REG' GROUP BY passer_player_name,posteam,defteam HAVING COUNT(*)>=15 ORDER BY yds DESC LIMIT 5", {"yr": yr_for_week, "wk": wk}):
+                ctx_parts.append(f"  Pass: {r.name} ({r.team} vs {r.defteam}): {r.yds}yds, {r.tds}TD, {r.ints}INT, {r.comp_pct}% comp, {r.att} att")
+            # Best rushing games
+            for r in _q("SELECT rusher_player_name as name, posteam as team, defteam, SUM(rushing_yards) as yds, SUM(CASE WHEN touchdown=1 THEN 1 ELSE 0 END) as tds, COUNT(*) as carries FROM pbp WHERE season=:yr AND week=:wk AND rush_attempt=1 AND rusher_player_id IS NOT NULL AND season_type='REG' GROUP BY rusher_player_name,posteam,defteam HAVING COUNT(*)>=8 ORDER BY yds DESC LIMIT 5", {"yr": yr_for_week, "wk": wk}):
+                ctx_parts.append(f"  Rush: {r.name} ({r.team} vs {r.defteam}): {r.yds}yds, {r.tds}TD, {r.carries} carries")
+            # Best receiving games
+            for r in _q("SELECT receiver_player_name as name, posteam as team, defteam, SUM(receiving_yards) as yds, SUM(CASE WHEN touchdown=1 THEN 1 ELSE 0 END) as tds, COUNT(*) as targets FROM pbp WHERE season=:yr AND week=:wk AND pass_attempt=1 AND receiver_player_id IS NOT NULL AND complete_pass=1 AND season_type='REG' GROUP BY receiver_player_name,posteam,defteam HAVING COUNT(*)>=3 ORDER BY yds DESC LIMIT 5", {"yr": yr_for_week, "wk": wk}):
+                ctx_parts.append(f"  Rec: {r.name} ({r.team} vs {r.defteam}): {r.yds}yds, {r.tds}TD, {r.targets} catches")
+            # Game scores
+            for r in _q("SELECT posteam, defteam, MAX(posteam_score_post) as score, MAX(defteam_score_post) as opp_score FROM pbp WHERE season=:yr AND week=:wk AND season_type='REG' AND posteam_score_post IS NOT NULL GROUP BY posteam,defteam", {"yr": yr_for_week, "wk": wk}):
+                if r.score is not None and r.opp_score is not None:
+                    ctx_parts.append(f"  Game: {r.posteam} {int(r.score)} - {int(r.opp_score)} {r.defteam}")
+
     # Postseason
     if any(w in q_lower for w in ["playoff","postseason","super bowl","superbowl","wild card","divisional","championship"]):
         for r in _q("SELECT passer_player_name as name,COUNT(*) as plays,ROUND(AVG(epa)::numeric,3) as epa,SUM(CASE WHEN touchdown=1 THEN 1 ELSE 0 END) as tds FROM pbp WHERE season_type='POST' AND pass_attempt=1 AND passer_player_id IS NOT NULL AND epa IS NOT NULL GROUP BY passer_player_name HAVING COUNT(*)>=100 ORDER BY epa DESC LIMIT 10"):
