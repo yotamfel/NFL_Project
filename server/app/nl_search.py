@@ -379,21 +379,24 @@ Write a cohesive 3-5 sentence analytical paragraph about what this data reveals.
 restate the numbers — explain what they MEAN: patterns, surprises, historical context, or
 implications. Be specific with numbers but weave them into a narrative.
 
-Then decide if this data would be well-represented as a chart.
+ALWAYS generate a chart if the data has 2+ rows. Choose the best type:
+- "bar" for comparing values across categories (players, teams)
+- "line" for trends over time (seasons, weeks)
+- "scatter" for correlations between two stats
 
 Respond with ONLY valid JSON (no markdown fences, no backticks):
 {{
   "summary": "your analytical paragraph here",
   "chart": {{
     "type": "bar" | "line" | "scatter",
-    "data": [...],
-    "x_key": "field_name",
-    "y_key": "field_name",
+    "data": [pick the most relevant rows, max 20, with clean labels],
+    "x_key": "field_name_for_x_axis",
+    "y_key": "field_name_for_y_axis",
     "title": "short chart title"
-  }} | null
+  }}
 }}
 
-Set "chart" to null if the data is a single value, under 3 rows, or not naturally chartable."""
+Set "chart" to null ONLY if the data is a single value or 1 row."""
 
 
 def _generate_insights(question: str, rows: list[dict]) -> tuple[str, dict | None, int]:

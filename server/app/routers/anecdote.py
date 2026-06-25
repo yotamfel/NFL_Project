@@ -191,8 +191,8 @@ def generate_anecdotes(
         pass
 
     level_instruction = {
-        "casual": "Write for a casual NFL fan. Keep it clear and surprising, but professional - like a sports journalist, not a fanboy. Use one or two key stats.",
-        "deep": "Write for someone who understands football deeply. You can use advanced terminology (passer rating, ANY/A, success rate, pressure rate, YAC, ADOT, red zone efficiency, etc.) and deeper statistical context. Not just EPA - use whatever advanced stats fit best. Assume the reader knows what these terms mean.",
+        "casual": "Write for a casual NFL fan. Use traditional stats people understand: touchdowns, yards, completions, records, wins, streaks, draft position, games played, career milestones. Do NOT use EPA or advanced analytics. Keep it clear, surprising, and professional.",
+        "deep": "Write for someone who understands football deeply. Use advanced terminology: passer rating, ANY/A, success rate, pressure rate, YAC, ADOT, red zone efficiency, completion% over expected, etc. You may use EPA but also use other advanced metrics. Assume the reader knows what these terms mean.",
     }.get(body.level, "casual")
 
     from datetime import date
