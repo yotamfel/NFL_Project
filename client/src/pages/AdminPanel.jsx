@@ -642,7 +642,7 @@ function AnecdoteTab() {
   const editRef = useRef(null)
 
   const [calendar, setCalendar] = useState({})
-  const [calDate, setCalDate] = useState(null)
+  const [calDate, setCalDate] = useState(new Date().toISOString().slice(0, 10))
   const [editingHistory, setEditingHistory] = useState(null)
   const [editingText, setEditingText] = useState('')
   const [histTranslation, setHistTranslation] = useState({})
