@@ -191,6 +191,14 @@ def generate_anecdotes(
     t0 = time.time()
     context = _gather_context(body.query)
 
+    # Strip EPA/WPA references from context for casual mode
+    if body.level == "casual":
+        import re as _r
+        context = _r.sub(r',?\s*EPA\s*-?[\d.]+', '', context)
+        context = _r.sub(r',?\s*WPA\s*-?[\d.]+', '', context)
+        context = _r.sub(r',?\s*[\d.]+%\s*sr\b', '', context)
+        context = _r.sub(r',?\s*[\d.]+%\s*success\b', '', context)
+
     # Learn from past edits
     edit_examples = ""
     try:
@@ -213,7 +221,7 @@ def generate_anecdotes(
         pass
 
     level_instruction = {
-        "casual": "Write for a casual NFL fan. Use traditional stats with SPECIFIC NUMBERS: touchdowns, yards, completions, records, wins, streaks, draft position, games played, career milestones. Do NOT use EPA, WPA, success rate, or any advanced analytics terms. Every anecdote MUST contain at least one concrete number (e.g. '4,839 passing yards' not 'above average'). Never say 'above/below average' or vague descriptions - give the actual stat. Focus on specific player or team achievements with historical context (e.g. 'most since X', 'first player to Y since Z'). Not general trends or vague observations.",
+        "casual": "CASUAL MODE RULES (STRICT): Use ONLY traditional stats: touchdowns, yards, completions, passer rating, interceptions, sacks, fumbles, records, wins, streaks, draft position, games played, career milestones. ABSOLUTELY FORBIDDEN words: EPA, WPA, expected points, success rate, efficiency (use specific stats instead). Every anecdote MUST have at least one specific number. Add historical context: 'most since X', 'first to Y since Z', 'Nth in NFL history'. Focus on specific achievements, not trends.",
         "deep": "Write for someone who understands football deeply. Use advanced terminology: passer rating, ANY/A, success rate, pressure rate, YAC, ADOT, red zone efficiency, completion% over expected, etc. You may use EPA but also other advanced metrics. Assume the reader knows these terms. You can include trends and broader analysis, but always back them with SPECIFIC NUMBERS - never vague descriptions. Every claim must have a concrete stat.",
     }.get(body.level, "casual")
 
