@@ -192,6 +192,10 @@ const CONTENT = {
             body: 'Below the chart, a table shows the value for each season in the selected range, useful for spotting year-over-year changes.',
           },
           {
+            title: 'Save & export',
+            body: 'Hover over either chart to reveal a bookmark icon (save to your Saved page) and a download icon (export as PNG). Admins also see a folder icon to save the chart directly into a Research Project. Use the "Season breakdown" table\'s CSV button to export the raw season-by-season numbers for offline analysis.',
+          },
+          {
             title: 'Historical reference lines',
             body: [
               '1970 - AFL–NFL merger: the modern NFL era begins. Data coverage starts here.',
@@ -642,6 +646,10 @@ const CONTENT = {
           {
             title: 'Season Breakdown',
             body: 'טבלה מתחת לגרף מציגה את הערך לכל עונה בטווח הנבחר - שימושית לזיהוי שינויים משנה לשנה.',
+          },
+          {
+            title: 'שמירה וייצוא',
+            body: 'עבור עם העכבר מעל אחד הגרפים לחשיפת אייקון Bookmark (שמירה לעמוד Saved) ואייקון הורדה (ייצוא כ-PNG). אדמינים רואים גם אייקון תיקייה לשמירת הגרף ישירות ל-Research Project. כפתור ה-CSV בטבלת "Season Breakdown" מייצא את הנתונים הגולמיים לכל עונה לצורך ניתוח עצמאי.',
           },
           {
             title: 'קווי עזר היסטוריים',

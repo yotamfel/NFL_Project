@@ -455,7 +455,17 @@ export default function LeagueTrends() {
                 </span>
               )}
             </p>
-            <ExportableChart title={`${statInfo?.label ?? stat} by team - ${aggInfo?.label}`}>
+            <ExportableChart
+              title={`${statInfo?.label ?? stat} by team - ${aggInfo?.label}`}
+              chartData={{
+                chartType: 'GenericBar',
+                data: teamData,
+                config: {
+                  xKey: 'team',
+                  bars: [{ dataKey: 'value', label: statInfo?.label ?? stat, color: '#3b82f6' }],
+                },
+              }}
+            >
               <ResponsiveContainer width="100%" height={Math.max(320, teamData.length * 22)}>
                 <BarChart data={teamData} layout="vertical"
                   margin={{ top: 0, right: 60, left: 40, bottom: 0 }}>
@@ -573,9 +583,22 @@ export default function LeagueTrends() {
               )}
             </p>
 
-            <ExportableChart title={comparing
-              ? `${statInfo?.label ?? stat} - ${team1Label} vs ${team2Label}`
-              : `${statInfo?.label ?? stat} - ${aggInfo?.label}`}>
+            <ExportableChart
+              title={comparing
+                ? `${statInfo?.label ?? stat} - ${team1Label} vs ${team2Label}`
+                : `${statInfo?.label ?? stat} - ${aggInfo?.label}`}
+              chartData={{
+                chartType: 'GenericLine',
+                data: chartData,
+                config: {
+                  xKey: 'season',
+                  lines: [
+                    { dataKey: 't1', label: team1Label, color: LINE_COLORS[0] },
+                    ...(comparing ? [{ dataKey: 't2', label: team2Label, color: LINE_COLORS[1] }] : []),
+                  ],
+                },
+              }}
+            >
               <ResponsiveContainer width="100%" height={320}>
                 <LineChart data={chartData} margin={{ top: 5, right: 24, left: 10, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
