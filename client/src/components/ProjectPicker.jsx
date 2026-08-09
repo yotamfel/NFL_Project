@@ -10,6 +10,7 @@ export default function ProjectPicker({ type, label, data, onDone }) {
   const [saving, setSaving] = useState(false)
   const [open, setOpen] = useState(false)
   const [note, setNote] = useState('')
+  const [error, setError] = useState('')
 
   useEffect(() => {
     if (open && user && !user.isGuest) {
@@ -41,22 +42,25 @@ export default function ProjectPicker({ type, label, data, onDone }) {
 
   const save = async () => {
     setSaving(true)
+    setError('')
     try {
       const item = await api.createSaved({ type, label, data, note: note.trim() || undefined })
       if (selected.size > 0) {
         await api.assignToProjects(item.id, [...selected])
       }
       onDone?.()
-    } catch {}
+      setOpen(false)
+      setSelected(new Set())
+      setNote('')
+    } catch (e) {
+      setError(e.message || 'Failed to save')
+    }
     setSaving(false)
-    setOpen(false)
-    setSelected(new Set())
-    setNote('')
   }
 
   if (!open) {
     return (
-      <button onClick={() => setOpen(true)}
+      <button onClick={() => { setError(''); setOpen(true) }}
         className="text-xs text-amber-500 hover:text-amber-300 transition-colors ml-2">
         + Project
       </button>
@@ -98,12 +102,18 @@ export default function ProjectPicker({ type, label, data, onDone }) {
         rows={2}
         className="w-full bg-slate-800 border border-slate-700 text-slate-300 text-xs rounded-lg px-3 py-2 focus:outline-none focus:border-amber-500/40 placeholder-slate-600 resize-none" />
 
+      {error && (
+        <p className="text-xs text-rose-400 bg-rose-500/10 border border-rose-500/30 rounded-lg px-3 py-2">
+          {error}
+        </p>
+      )}
+
       <div className="flex gap-2 pt-1">
         <button onClick={save} disabled={saving}
           className="text-xs px-4 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg transition-colors disabled:opacity-50">
           {saving ? '...' : selected.size > 0 ? `Save to ${selected.size} project${selected.size > 1 ? 's' : ''}` : 'Save (no project)'}
         </button>
-        <button onClick={() => { setOpen(false); setSelected(new Set()) }}
+        <button onClick={() => { setOpen(false); setSelected(new Set()); setError('') }}
           className="text-xs px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg transition-colors">
           Cancel
         </button>
