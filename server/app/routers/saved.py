@@ -47,7 +47,7 @@ def create_saved(body: SavedItemBody, current_user: dict = Depends(get_current_u
     import json
     with engine.begin() as conn:
         row = conn.execute(text(
-            "INSERT INTO saved_items (user_id, type, label, data, note) VALUES (:uid, :type, :label, :data::jsonb, :note) RETURNING id, created_at"
+            "INSERT INTO saved_items (user_id, type, label, data, note) VALUES (:uid, :type, :label, CAST(:data AS jsonb), :note) RETURNING id, created_at"
         ), {"uid": uid, "type": body.type, "label": label, "data": json.dumps(body.data), "note": note}).fetchone()
     return {"id": row.id, "created_at": row.created_at}
 
@@ -118,7 +118,7 @@ def migrate_saved(body: MigrateBody, current_user: dict = Depends(get_current_us
             if existing:
                 continue
             conn.execute(text(
-                "INSERT INTO saved_items (user_id, type, label, data, note) VALUES (:uid, :type, :label, :data::jsonb, :note)"
+                "INSERT INTO saved_items (user_id, type, label, data, note) VALUES (:uid, :type, :label, CAST(:data AS jsonb), :note)"
             ), {"uid": uid, "type": itype, "label": label,
                 "data": json.dumps(item.get("data", {})), "note": item.get("note", "")})
             inserted += 1

@@ -79,6 +79,7 @@ def delete_project(project_id: int, user: dict = Depends(get_current_user)):
 
 @router.post("/assign")
 def assign_to_projects(body: AssignBody, user: dict = Depends(get_current_user)):
+    import json
     uid = int(user["sub"])
     with engine.begin() as conn:
         item = conn.execute(text(
@@ -95,10 +96,10 @@ def assign_to_projects(body: AssignBody, user: dict = Depends(get_current_user))
                 raise HTTPException(status_code=404, detail=f"Project {pid} not found")
             row = conn.execute(text("""
                 INSERT INTO saved_items (user_id, type, label, data, note, project_id)
-                VALUES (:uid, :type, :label, :data, :note, :pid)
+                VALUES (:uid, :type, :label, CAST(:data AS jsonb), :note, :pid)
                 RETURNING id
             """), {"uid": uid, "type": item.type, "label": item.label,
-                   "data": item.data, "note": item.note, "pid": pid}).fetchone()
+                   "data": json.dumps(item.data), "note": item.note, "pid": pid}).fetchone()
             new_ids.append(row.id)
     return {"created_ids": new_ids}
 
