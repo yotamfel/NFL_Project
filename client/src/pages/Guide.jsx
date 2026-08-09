@@ -358,6 +358,10 @@ const CONTENT = {
             title: 'Saved searches',
             body: 'Smart Search results can be saved. Each saved search shows the original question, the SQL, and the result table. Expand any entry to review.',
           },
+          {
+            title: 'Research Projects (admin only)',
+            body: 'A folder icon (📁 "+ Project") appears next to save buttons across the app - use it to save a chart, table, comparison, or search directly into one or more named project folders, stored server-side. Manage projects from the "Projects" tab on the Saved page: create, rename, delete, and move items between projects or back to "Unsorted". Click a chart or table item\'s label to expand an inline preview with its own PNG (charts) or CSV (tables) download button - no need to go back to the source page.',
+          },
         ],
       },
       {
@@ -813,6 +817,10 @@ const CONTENT = {
           {
             title: 'Smart Search שמורות',
             body: 'תוצאות Smart Search ניתנות לשמירה. כל רשומה מציגה את השאלה המקורית, ה-SQL, וטבלת התוצאות. פתח כל רשומה לסקירה.',
+          },
+          {
+            title: 'Research Projects (אדמין בלבד)',
+            body: 'אייקון תיקייה (📁 "+ Project") מופיע לצד כפתורי שמירה במקומות שונים באתר - השתמש בו לשמירת גרף, טבלה, השוואה, או חיפוש ישירות לתוך תיקיית פרויקט אחת או יותר, בצד השרת. נהל פרויקטים מטאב "Projects" בעמוד Saved: צור, שנה שם, מחק, והעבר פריטים בין פרויקטים או חזרה ל-"Unsorted". לחיצה על הכותרת של פריט גרף או טבלה פותחת תצוגה מקדימה מוטמעת עם כפתור הורדה משלה (PNG לגרפים, CSV לטבלאות) - בלי צורך לחזור לעמוד המקור.',
           },
         ],
       },
