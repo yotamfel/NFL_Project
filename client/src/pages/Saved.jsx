@@ -12,6 +12,7 @@ import ProjectPicker from '../components/ProjectPicker'
 import { posColor } from '../utils/posColors'
 import { CsvDownloadButton } from '../components/StatTable'
 import { CareerLineChart } from '../components/StatChart'
+import { exportTableAsCsv, csvFilename } from '../utils/exportCsv'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const TABS = [
@@ -802,12 +803,7 @@ function SavedItemRow({ item, projects, onMove }) {
 
       {expanded && item.type === 'table' && (
         <div className="border-t border-slate-700/50 px-3 py-3">
-          <div className="relative group scroll-x max-h-72 overflow-auto rounded-lg border border-slate-700/60">
-            <CsvDownloadButton
-              columns={item.data?.columns || []}
-              rows={item.data?.rows || []}
-              title={item.label}
-            />
+          <div className="scroll-x max-h-72 overflow-auto rounded-lg border border-slate-700/60">
             <table className="min-w-full text-xs">
               <thead>
                 <tr className="bg-slate-900/60">
@@ -827,6 +823,11 @@ function SavedItemRow({ item, projects, onMove }) {
               </tbody>
             </table>
           </div>
+          <button
+            onClick={() => exportTableAsCsv(item.data?.columns || [], item.data?.rows || [], csvFilename(item.label))}
+            className="mt-2 px-2.5 py-1 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-300 hover:bg-amber-500/30 text-xs font-medium transition-colors">
+            Download CSV
+          </button>
         </div>
       )}
     </div>
