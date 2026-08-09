@@ -725,44 +725,110 @@ function ProjectsTab() {
 
 function SavedItemRow({ item, projects, onMove }) {
   const [showMove, setShowMove] = useState(false)
+  const [expanded, setExpanded] = useState(false)
+  const [exporting, setExporting] = useState(false)
+  const exportRef = useRef(null)
+  const previewable = item.type === 'chart' || item.type === 'table'
+
+  const handleExportPng = async () => {
+    if (!exportRef.current || exporting) return
+    setExporting(true)
+    try {
+      const png = await toPng(exportRef.current, { pixelRatio: 2, backgroundColor: '#0f172a' })
+      const a = document.createElement('a')
+      a.href = png
+      a.download = `${(item.label || 'chart').replace(/[^a-z0-9 \--]/gi, '').replace(/\s+/g, '_')}.png`
+      a.click()
+    } finally { setExporting(false) }
+  }
+
   return (
-    <div className="flex items-center gap-3 bg-slate-800/50 rounded-lg px-3 py-2">
-      <span className={`text-xs font-bold px-2 py-0.5 rounded-full shrink-0 ${
-        item.type === 'chart'      ? 'bg-blue-500/20 text-blue-400' :
-        item.type === 'table'      ? 'bg-green-500/20 text-green-400' :
-        item.type === 'player'     ? 'bg-amber-500/20 text-amber-400' :
-        item.type === 'comparison' ? 'bg-purple-500/20 text-purple-400' :
-        item.type === 'search'     ? 'bg-cyan-500/20 text-cyan-400' :
-        item.type === 'situational_report' ? 'bg-red-500/20 text-red-400' :
-        'bg-slate-700 text-slate-300'
-      }`}>{item.type === 'situational_report' ? 'report' : item.type}</span>
-      {item.type === 'situational_report' ? (
-        <a href={`/situational?tab=${item.data?.section || 'dashboard'}${item.data?.seasons?.length ? '&seasons=' + item.data.seasons.join(',') : ''}${item.data?.players?.length ? '&p=' + item.data.players.map(p => p.player_id).join(',') + '&pn=' + item.data.players.map(p => p.player_name + '|' + p.pos).join(',') : ''}`}
-          className="text-slate-200 text-sm truncate flex-1 hover:text-amber-400 transition-colors">{item.label}</a>
-      ) : (
-        <span className="text-slate-200 text-sm truncate flex-1">{item.label}</span>
-      )}
-      <span className="text-slate-600 text-xs shrink-0">{fmt(item.created_at)}</span>
-      <div className="relative shrink-0">
-        <button onClick={() => setShowMove(!showMove)}
-          className="text-slate-500 hover:text-slate-300 text-xs transition-colors">Move</button>
-        {showMove && (
-          <div className="absolute right-0 top-full mt-1 w-48 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 py-1">
-            <button onClick={() => { onMove(item.id, null); setShowMove(false) }}
-              className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-700/60">
-              Unsorted
-            </button>
-            {projects.map(p => (
-              <button key={p.id} onClick={() => { onMove(item.id, p.id); setShowMove(false) }}
-                className={`w-full text-left px-3 py-1.5 text-xs hover:bg-slate-700/60 ${
-                  item.project_id === p.id ? 'text-amber-400 font-semibold' : 'text-slate-300'
-                }`}>
-                {p.name}
-              </button>
-            ))}
-          </div>
+    <div className="bg-slate-800/50 rounded-lg overflow-hidden">
+      <div className="flex items-center gap-3 px-3 py-2">
+        <span className={`text-xs font-bold px-2 py-0.5 rounded-full shrink-0 ${
+          item.type === 'chart'      ? 'bg-blue-500/20 text-blue-400' :
+          item.type === 'table'      ? 'bg-green-500/20 text-green-400' :
+          item.type === 'player'     ? 'bg-amber-500/20 text-amber-400' :
+          item.type === 'comparison' ? 'bg-purple-500/20 text-purple-400' :
+          item.type === 'search'     ? 'bg-cyan-500/20 text-cyan-400' :
+          item.type === 'situational_report' ? 'bg-red-500/20 text-red-400' :
+          'bg-slate-700 text-slate-300'
+        }`}>{item.type === 'situational_report' ? 'report' : item.type}</span>
+        {item.type === 'situational_report' ? (
+          <a href={`/situational?tab=${item.data?.section || 'dashboard'}${item.data?.seasons?.length ? '&seasons=' + item.data.seasons.join(',') : ''}${item.data?.players?.length ? '&p=' + item.data.players.map(p => p.player_id).join(',') + '&pn=' + item.data.players.map(p => p.player_name + '|' + p.pos).join(',') : ''}`}
+            className="text-slate-200 text-sm truncate flex-1 hover:text-amber-400 transition-colors">{item.label}</a>
+        ) : previewable ? (
+          <button onClick={() => setExpanded(!expanded)}
+            className="text-slate-200 text-sm truncate flex-1 text-left hover:text-amber-400 transition-colors">
+            {expanded ? '▼' : '▶'} {item.label}
+          </button>
+        ) : (
+          <span className="text-slate-200 text-sm truncate flex-1">{item.label}</span>
         )}
+        <span className="text-slate-600 text-xs shrink-0">{fmt(item.created_at)}</span>
+        <div className="relative shrink-0">
+          <button onClick={() => setShowMove(!showMove)}
+            className="text-slate-500 hover:text-slate-300 text-xs transition-colors">Move</button>
+          {showMove && (
+            <div className="absolute right-0 top-full mt-1 w-48 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 py-1">
+              <button onClick={() => { onMove(item.id, null); setShowMove(false) }}
+                className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-700/60">
+                Unsorted
+              </button>
+              {projects.map(p => (
+                <button key={p.id} onClick={() => { onMove(item.id, p.id); setShowMove(false) }}
+                  className={`w-full text-left px-3 py-1.5 text-xs hover:bg-slate-700/60 ${
+                    item.project_id === p.id ? 'text-amber-400 font-semibold' : 'text-slate-300'
+                  }`}>
+                  {p.name}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
+
+      {expanded && item.type === 'chart' && (
+        <div className="border-t border-slate-700/50 px-3 py-3">
+          <div ref={exportRef} className="p-2" style={{ backgroundColor: '#0f172a' }}>
+            <GenericChartRenderer chart={item.data} colorOverrides={{}} />
+          </div>
+          <button onClick={handleExportPng} disabled={exporting}
+            className="mt-2 px-2.5 py-1 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-300 hover:bg-amber-500/30 text-xs font-medium transition-colors disabled:opacity-40">
+            {exporting ? 'Exporting…' : 'Download PNG'}
+          </button>
+        </div>
+      )}
+
+      {expanded && item.type === 'table' && (
+        <div className="border-t border-slate-700/50 px-3 py-3">
+          <div className="relative group scroll-x max-h-72 overflow-auto rounded-lg border border-slate-700/60">
+            <CsvDownloadButton
+              columns={item.data?.columns || []}
+              rows={item.data?.rows || []}
+              title={item.label}
+            />
+            <table className="min-w-full text-xs">
+              <thead>
+                <tr className="bg-slate-900/60">
+                  {(item.data?.columns || []).map(c => (
+                    <th key={c.key} className="px-3 py-2 text-left text-slate-500 font-medium whitespace-nowrap">{c.label}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {(item.data?.rows || []).map((row, i) => (
+                  <tr key={i} className="border-t border-slate-800">
+                    {(item.data?.columns || []).map(c => (
+                      <td key={c.key} className="px-3 py-2 text-slate-300 whitespace-nowrap">{row[c.key] ?? '-'}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
