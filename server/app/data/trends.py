@@ -10,6 +10,29 @@ _AGG_MAP = {
     "per_game": lambda s: f"ROUND((SUM(s.{s})::numeric / NULLIF(SUM(COALESCE(s.g, CASE WHEN s.season >= 2021 THEN 17 WHEN s.season >= 1978 THEN 16 ELSE 14 END)), 0)), 2)",
 }
 
+# Derived rate stats (e.g. completion %) are pre-computed per player-season in the
+# source tables, but naively averaging that column treats a QB with 3 attempts the
+# same as one with 500 - a single small-sample outlier can swing the season average
+# by several points. These stats are instead computed as a volume-weighted ratio
+# (sum of the numerator over sum of the denominator across all contributing
+# players), which is what "league-wide completion %" actually means and matches
+# how these rates are computed anywhere else they're reported.
+_RATIO_STATS: dict[str, dict[str, tuple[str, str]]] = {
+    "passing": {
+        "cmp_pct": ("cmp", "att"),
+        "int_pct": ("int", "att"),
+        "td_pct":  ("td", "att"),
+    },
+}
+
+
+def _ratio_expr(category: str, stat: str) -> str | None:
+    pair = _RATIO_STATS.get(category, {}).get(stat)
+    if not pair:
+        return None
+    num, den = pair
+    return f"ROUND(100.0 * SUM(s.{num})::numeric / NULLIF(SUM(s.{den}), 0), 2)"
+
 
 def get_league_trend(
     category: str,
@@ -27,7 +50,9 @@ def get_league_trend(
     if agg not in _AGG_MAP:
         raise ValueError(f"agg must be one of {list(_AGG_MAP)}")
 
-    agg_expr = _AGG_MAP[agg](stat)
+    ratio_expr = _ratio_expr(category, stat)
+    agg_expr = ratio_expr or _AGG_MAP[agg](stat)
+    null_check = stat if not ratio_expr else _RATIO_STATS[category][stat][1]
     params: dict = {
         "pos": pos,
         "season_from": season_from,
@@ -46,7 +71,7 @@ def get_league_trend(
                COUNT(DISTINCT s.player_id) AS player_count
         FROM {category}_seasons s
         JOIN players p ON p.player_id = s.player_id
-        WHERE s.{stat} IS NOT NULL
+        WHERE s.{null_check} IS NOT NULL
           AND (:pos IS NULL OR UPPER(p.pos) = UPPER(:pos))
           {team_clause}
           AND (:season_from IS NULL OR s.season >= :season_from)
@@ -93,7 +118,9 @@ def get_team_breakdown(
     if agg not in _AGG_MAP:
         raise ValueError(f"agg must be one of {list(_AGG_MAP)}")
 
-    agg_expr = _AGG_MAP[agg](stat)
+    ratio_expr = _ratio_expr(category, stat)
+    agg_expr = ratio_expr or _AGG_MAP[agg](stat)
+    null_check = stat if not ratio_expr else _RATIO_STATS[category][stat][1]
     team_expr = _canonical_team_sql()
     params: dict = {"pos": pos, "season_from": season_from, "season_to": season_to}
 
@@ -103,7 +130,7 @@ def get_team_breakdown(
                COUNT(DISTINCT s.player_id) AS player_count
         FROM {category}_seasons s
         JOIN players p ON p.player_id = s.player_id
-        WHERE s.{stat} IS NOT NULL
+        WHERE s.{null_check} IS NOT NULL
           AND s.team IS NOT NULL
           AND UPPER(s.team) NOT IN ('2TM', '3TM', '4TM')
           AND (:pos IS NULL OR UPPER(p.pos) = UPPER(:pos))
