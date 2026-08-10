@@ -644,6 +644,15 @@ function ProjectsTab() {
     } catch { /* ignore */ }
   }
 
+  const deleteItem = async (itemId) => {
+    try {
+      await api.deleteSaved(itemId)
+      load()
+      setProjItems({})
+      setExpanded(null)
+    } catch { /* ignore */ }
+  }
+
   if (loading) return <div className="text-slate-500 text-sm text-center py-8 animate-pulse">Loading...</div>
 
   return (
@@ -703,7 +712,7 @@ function ProjectsTab() {
                 <p className="text-slate-600 text-xs text-center py-2">No items in this project</p>
               ) : (
                 (projItems[p.id] ?? []).map(item => (
-                  <SavedItemRow key={item.id} item={item} projects={projects} onMove={moveItem} />
+                  <SavedItemRow key={item.id} item={item} projects={projects} onMove={moveItem} onDelete={deleteItem} />
                 ))
               )}
             </div>
@@ -731,10 +740,11 @@ function ProjectsTab() {
   )
 }
 
-function SavedItemRow({ item, projects, onMove }) {
+function SavedItemRow({ item, projects, onMove, onDelete }) {
   const [showMove, setShowMove] = useState(false)
   const [expanded, setExpanded] = useState(false)
   const [exporting, setExporting] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const exportRef = useRef(null)
   const previewable = item.type === 'chart' || item.type === 'table'
 
@@ -794,6 +804,17 @@ function SavedItemRow({ item, projects, onMove }) {
             </div>
           )}
         </div>
+        {confirmDelete ? (
+          <div className="flex gap-1 shrink-0">
+            <button onClick={() => onDelete(item.id)}
+              className="text-xs bg-red-500 text-white px-2 py-0.5 rounded font-bold">Yes</button>
+            <button onClick={() => setConfirmDelete(false)}
+              className="text-xs bg-slate-700 text-slate-300 px-2 py-0.5 rounded">No</button>
+          </div>
+        ) : (
+          <button onClick={() => setConfirmDelete(true)}
+            className="text-slate-500 hover:text-red-400 text-xs transition-colors shrink-0">Delete</button>
+        )}
       </div>
 
       {expanded && item.type === 'chart' && (
