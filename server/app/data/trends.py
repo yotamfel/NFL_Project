@@ -10,28 +10,33 @@ _AGG_MAP = {
     "per_game": lambda s: f"ROUND((SUM(s.{s})::numeric / NULLIF(SUM(COALESCE(s.g, CASE WHEN s.season >= 2021 THEN 17 WHEN s.season >= 1978 THEN 16 ELSE 14 END)), 0)), 2)",
 }
 
-# Derived rate stats (e.g. completion %) are pre-computed per player-season in the
-# source tables, but naively averaging that column treats a QB with 3 attempts the
-# same as one with 500 - a single small-sample outlier can swing the season average
-# by several points. These stats are instead computed as a volume-weighted ratio
-# (sum of the numerator over sum of the denominator across all contributing
-# players), which is what "league-wide completion %" actually means and matches
-# how these rates are computed anywhere else they're reported.
-_RATIO_STATS: dict[str, dict[str, tuple[str, str]]] = {
+# Derived rate stats (e.g. completion %, yards/attempt) are pre-computed per
+# player-season in the source tables, but naively averaging that column treats a
+# QB with 3 attempts the same as one with 500 - modern rosters carry many more
+# low-volume backups than in past decades, which biases a plain average of the
+# per-player rate (verified: unweighted avg(y_per_a) for QBs drifted from -0.16
+# below the true rate in 1970 to -0.65 below it by 2025, as backup QB counts grew).
+# These stats are instead computed as a volume-weighted ratio (sum of the
+# numerator over sum of the denominator across all contributing players), which
+# is what "league-wide rate" actually means and matches how these rates are
+# computed anywhere else they're reported.
+_RATIO_STATS: dict[str, dict[str, tuple[str, str, float]]] = {
     "passing": {
-        "cmp_pct": ("cmp", "att"),
-        "int_pct": ("int", "att"),
-        "td_pct":  ("td", "att"),
+        "cmp_pct": ("cmp", "att", 100.0),
+        "int_pct": ("int", "att", 100.0),
+        "td_pct":  ("td", "att", 100.0),
+        "y_per_a": ("yds", "att", 1.0),
     },
 }
 
 
 def _ratio_expr(category: str, stat: str) -> str | None:
-    pair = _RATIO_STATS.get(category, {}).get(stat)
-    if not pair:
+    triple = _RATIO_STATS.get(category, {}).get(stat)
+    if not triple:
         return None
-    num, den = pair
-    return f"ROUND(100.0 * SUM(s.{num})::numeric / NULLIF(SUM(s.{den}), 0), 2)"
+    num, den, scale = triple
+    scale_sql = f"{scale} * " if scale != 1.0 else ""
+    return f"ROUND({scale_sql}SUM(s.{num})::numeric / NULLIF(SUM(s.{den}), 0), 2)"
 
 
 def get_league_trend(
