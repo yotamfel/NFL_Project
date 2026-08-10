@@ -25,6 +25,9 @@ const STAT_OPTIONS = {
     { key: 'qbr',       label: 'QBR',                  rate: true  },
     { key: 'y_per_a',   label: 'Yards / Attempt',      rate: true  },
     { key: 'any_per_a', label: 'ANY/A',                rate: true  },
+    { key: 'cmp_pct',   label: 'Completion %',         rate: true  },
+    { key: 'int_pct',   label: 'Interception %',       rate: true  },
+    { key: 'td_pct',    label: 'TD %',                 rate: true  },
     { key: '_4qc',      label: '4th-Qtr Comebacks',    rate: false },
     { key: 'gwd',       label: 'Game-Winning Drives',  rate: false },
   ],
@@ -182,6 +185,8 @@ export default function LeagueTrends() {
   const [category,   setCategory]   = useState('passing')
   const [stat,       setStat]       = useState('td')
   const [agg,        setAgg]        = useState('sum')
+  const [stat2,      setStat2]      = useState('') // '' = no second stat overlay
+  const [agg2,       setAgg2]       = useState('avg')
   const [pos,        setPos]        = useState('')
   const [teams1,     setTeams1]     = useState([])
   const [teams2,     setTeams2]     = useState([])
@@ -195,12 +200,18 @@ export default function LeagueTrends() {
 
   const [raw1, setRaw1] = useState(null)
   const [raw2, setRaw2] = useState(null)
+  const [raw1b, setRaw1b] = useState(null)
   const [teamData, setTeamData] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error,   setError]   = useState(null)
   const timer = useRef()
 
-  const comparing = Boolean(team2)
+  const comparing     = Boolean(team2)   // comparing team1 vs team2 for the same stat
+  const statComparing = Boolean(stat2)   // overlaying a second stat for team1 (mutually exclusive with comparing)
+
+  // Selecting a second stat and comparing a second team don't mix - keep them mutually exclusive
+  const chooseStat2 = (val) => { setStat2(val); if (val) setTeams2([]) }
+  const chooseTeams2 = (vals) => { setTeams2(vals); if (vals.length) setStat2('') }
 
   // Fetch season range meta when category changes
   useEffect(() => {
@@ -211,6 +222,7 @@ export default function LeagueTrends() {
   useEffect(() => {
     const opts = STAT_OPTIONS[category] ?? []
     if (opts.length) setStat(opts[0].key)
+    setStat2('')
   }, [category])
 
   // Auto-set aggregation based on stat type
@@ -219,27 +231,35 @@ export default function LeagueTrends() {
     setAgg(info?.rate ? 'avg' : 'sum')
   }, [stat, category])
 
+  // Auto-set aggregation for the second (overlay) stat
+  useEffect(() => {
+    if (!stat2) return
+    const info = (STAT_OPTIONS[category] ?? []).find(s => s.key === stat2)
+    setAgg2(info?.rate ? 'avg' : 'sum')
+  }, [stat2, category])
+
   // Fetch data (debounced)
   useEffect(() => {
     clearTimeout(timer.current)
     setLoading(true); setError(null)
     timer.current = setTimeout(async () => {
-      const params = {
-        category, stat, agg,
+      const baseParams = {
+        category,
         pos:        pos        || undefined,
         seasonFrom: seasonFrom || undefined,
         seasonTo:   seasonTo   || undefined,
       }
       try {
         if (viewMode === 'by_team') {
-          const td = await api.getTeamBreakdown(params)
-          setTeamData(td); setRaw1(null); setRaw2(null)
+          const td = await api.getTeamBreakdown({ ...baseParams, stat, agg })
+          setTeamData(td); setRaw1(null); setRaw2(null); setRaw1b(null)
         } else {
-          const [d1, d2] = await Promise.all([
-            api.getTrend({ ...params, team: team1 || undefined }),
-            comparing ? api.getTrend({ ...params, team: team2 }) : Promise.resolve(null),
+          const [d1, d2, d1b] = await Promise.all([
+            api.getTrend({ ...baseParams, stat, agg, team: team1 || undefined }),
+            comparing ? api.getTrend({ ...baseParams, stat, agg, team: team2 }) : Promise.resolve(null),
+            statComparing ? api.getTrend({ ...baseParams, stat: stat2, agg: agg2, team: team1 || undefined }) : Promise.resolve(null),
           ])
-          setRaw1(d1); setRaw2(d2); setTeamData(null)
+          setRaw1(d1); setRaw2(d2); setRaw1b(d1b); setTeamData(null)
         }
         setLoading(false)
       } catch (e) {
@@ -247,21 +267,28 @@ export default function LeagueTrends() {
       }
     }, 350)
     return () => clearTimeout(timer.current)
-  }, [category, stat, agg, pos, team1, team2, seasonFrom, seasonTo, comparing, viewMode])
+  }, [category, stat, agg, stat2, agg2, pos, team1, team2, seasonFrom, seasonTo, comparing, statComparing, viewMode])
 
   // Merge datasets for chart
   const chartData = useMemo(() => {
     if (!raw1) return []
-    if (!raw2) return raw1.map(r => ({ season: r.season, t1: r.value, pc1: r.player_count }))
     const map = {}
     raw1.forEach(r => { map[r.season] = { season: r.season, t1: r.value, pc1: r.player_count } })
-    raw2.forEach(r => {
-      if (!map[r.season]) map[r.season] = { season: r.season }
-      map[r.season].t2 = r.value
-      map[r.season].pc2 = r.player_count
-    })
+    if (raw2) {
+      raw2.forEach(r => {
+        if (!map[r.season]) map[r.season] = { season: r.season }
+        map[r.season].t2 = r.value
+        map[r.season].pc2 = r.player_count
+      })
+    }
+    if (raw1b) {
+      raw1b.forEach(r => {
+        if (!map[r.season]) map[r.season] = { season: r.season }
+        map[r.season].t1b = r.value
+      })
+    }
     return Object.values(map).sort((a, b) => a.season - b.season)
-  }, [raw1, raw2])
+  }, [raw1, raw2, raw1b])
 
   // Build per-key prev-year lookups for tooltip YoY
   const prevByKey = useMemo(() => {
@@ -271,16 +298,21 @@ export default function LeagueTrends() {
       rows.forEach((r, i) => { if (i > 0) m[r.season] = rows[i - 1].value })
       return m
     }
-    return { t1: build(raw1, 't1'), t2: build(raw2, 't2') }
-  }, [raw1, raw2])
+    return { t1: build(raw1, 't1'), t2: build(raw2, 't2'), t1b: build(raw1b, 't1b') }
+  }, [raw1, raw2, raw1b])
 
   const team1Label = team1 || 'All teams'
   const team2Label = team2
 
-  const lineLabels = { t1: team1Label, t2: team2Label }
+  const statInfo  = STAT_OPTIONS[category]?.find(s => s.key === stat)
+  const stat2Info = STAT_OPTIONS[category]?.find(s => s.key === stat2)
+  const aggInfo   = AGG_OPTIONS.find(a => a.key === agg)
 
-  const statInfo = STAT_OPTIONS[category]?.find(s => s.key === stat)
-  const aggInfo  = AGG_OPTIONS.find(a => a.key === agg)
+  // Unified line labels - stat-vs-stat mode labels lines by stat name, team-vs-team by team name
+  const line1Label = statComparing ? (statInfo?.label ?? stat) : team1Label
+  const line2Label = comparing ? team2Label : (statComparing ? (stat2Info?.label ?? stat2) : undefined)
+  const lineLabels = { t1: line1Label, t2: team2Label, t1b: line2Label }
+  const anyComparing = comparing || statComparing
 
   // Summary for primary line
   const summary = useMemo(() => {
@@ -396,8 +428,27 @@ export default function LeagueTrends() {
                 <span className="inline-block w-2 h-2 rounded-full mr-1.5" style={{ background: LINE_COLORS[1] }} />
                 Team 2 <span className="text-slate-600">(optional - for comparison)</span>
               </p>
-              <TeamPicker selected={teams2} setSelected={setTeams2} />
+              <div className={statComparing ? 'opacity-40 pointer-events-none' : ''}>
+                <TeamPicker selected={teams2} setSelected={chooseTeams2} />
+              </div>
             </div>
+          </div>
+        </div>
+
+        <div className="border-t border-slate-800" />
+
+        {/* Second stat overlay row */}
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">
+            Compare a second stat <span className="text-slate-600 normal-case font-normal">(optional - overlay on the same chart, plots on a second axis)</span>
+          </p>
+          <div className={comparing ? 'opacity-40 pointer-events-none' : ''}>
+            <select value={stat2} onChange={e => chooseStat2(e.target.value)} className={inputCls}>
+              <option value="">None</option>
+              {(STAT_OPTIONS[category] ?? []).filter(s => s.key !== stat).map(s => (
+                <option key={s.key} value={s.key}>{s.label}</option>
+              ))}
+            </select>
           </div>
         </div>
       </div>
@@ -545,7 +596,7 @@ export default function LeagueTrends() {
       {hasData && !loading && viewMode === 'over_time' && (
         <>
           {/* Summary tiles - primary line only */}
-          {summary && !comparing && (
+          {summary && !anyComparing && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
                 { label: 'Latest',  val: summary.latest?.value, sub: summary.latest?.season },
@@ -563,7 +614,7 @@ export default function LeagueTrends() {
           )}
 
           {/* Trend indicator */}
-          {summary?.trend && !comparing && (
+          {summary?.trend && !anyComparing && (
             <div className="flex items-center gap-2">
               <span className={`text-lg font-bold ${summary.trend.cls}`}>{summary.trend.icon}</span>
               <span className="text-slate-400 text-sm">{summary.trend.label} trend (last 3 seasons)</span>
@@ -581,20 +632,28 @@ export default function LeagueTrends() {
                   <span style={{ color: LINE_COLORS[1] }}>{team2Label}</span>
                 </span>
               )}
+              {statComparing && (
+                <span className="ml-2 text-slate-500 font-normal">
+                  vs <span style={{ color: LINE_COLORS[1] }}>{stat2Info?.label ?? stat2}</span>
+                </span>
+              )}
             </p>
 
             <ExportableChart
               title={comparing
                 ? `${statInfo?.label ?? stat} - ${team1Label} vs ${team2Label}`
-                : `${statInfo?.label ?? stat} - ${aggInfo?.label}`}
+                : statComparing
+                  ? `${statInfo?.label ?? stat} vs ${stat2Info?.label ?? stat2}`
+                  : `${statInfo?.label ?? stat} - ${aggInfo?.label}`}
               chartData={{
                 chartType: 'GenericLine',
                 data: chartData,
                 config: {
                   xKey: 'season',
                   lines: [
-                    { dataKey: 't1', label: team1Label, color: LINE_COLORS[0] },
+                    { dataKey: 't1', label: line1Label, color: LINE_COLORS[0] },
                     ...(comparing ? [{ dataKey: 't2', label: team2Label, color: LINE_COLORS[1] }] : []),
+                    ...(statComparing ? [{ dataKey: 't1b', label: stat2Info?.label ?? stat2, color: LINE_COLORS[1] }] : []),
                   ],
                 },
               }}
@@ -604,12 +663,16 @@ export default function LeagueTrends() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
                   <XAxis dataKey="season" stroke="#475569"
                     tick={{ fill: '#94a3b8', fontSize: 12 }} tickLine={false} />
-                  <YAxis stroke="#475569" tick={{ fill: '#94a3b8', fontSize: 12 }}
+                  <YAxis yAxisId="left" stroke="#475569" tick={{ fill: '#94a3b8', fontSize: 12 }}
                     tickFormatter={yFmt} width={52} />
+                  {statComparing && (
+                    <YAxis yAxisId="right" orientation="right" stroke="#475569"
+                      tick={{ fill: '#94a3b8', fontSize: 12 }} tickFormatter={yFmt} width={52} />
+                  )}
                   <Tooltip content={
                     <TrendTooltip prevByKey={prevByKey} lineLabels={lineLabels} />
                   } />
-                  {comparing && (
+                  {anyComparing && (
                     <Legend
                       formatter={(value) => <span style={{ color: '#94a3b8', fontSize: 12 }}>{lineLabels[value]}</span>}
                     />
@@ -617,15 +680,21 @@ export default function LeagueTrends() {
                   {NOTABLE.map(n =>
                     !n.noLine && chartData.some(d => d.season === n.season) && (
                       <ReferenceLine key={n.season} x={n.season} stroke={n.color}
-                        strokeDasharray="4 3" strokeOpacity={0.6} />
+                        strokeDasharray="4 3" strokeOpacity={0.6} yAxisId="left" />
                     )
                   )}
-                  <Line type="monotone" dataKey="t1" name="t1"
+                  <Line yAxisId="left" type="monotone" dataKey="t1" name="t1"
                     stroke={LINE_COLORS[0]} strokeWidth={2.5}
                     dot={{ r: 3, fill: LINE_COLORS[0], strokeWidth: 0 }}
                     activeDot={{ r: 6, fill: '#60a5fa' }} connectNulls />
                   {comparing && (
-                    <Line type="monotone" dataKey="t2" name="t2"
+                    <Line yAxisId="left" type="monotone" dataKey="t2" name="t2"
+                      stroke={LINE_COLORS[1]} strokeWidth={2.5}
+                      dot={{ r: 3, fill: LINE_COLORS[1], strokeWidth: 0 }}
+                      activeDot={{ r: 6, fill: '#fb923c' }} connectNulls />
+                  )}
+                  {statComparing && (
+                    <Line yAxisId="right" type="monotone" dataKey="t1b" name="t1b"
                       stroke={LINE_COLORS[1]} strokeWidth={2.5}
                       dot={{ r: 3, fill: LINE_COLORS[1], strokeWidth: 0 }}
                       activeDot={{ r: 6, fill: '#fb923c' }} connectNulls />
@@ -667,8 +736,9 @@ export default function LeagueTrends() {
               <CsvDownloadButton
                 columns={[
                   { key: 'season', label: 'Season' },
-                  { key: 't1', label: team1Label },
+                  { key: 't1', label: line1Label },
                   ...(comparing ? [{ key: 't2', label: team2Label }] : []),
+                  ...(statComparing ? [{ key: 't1b', label: stat2Info?.label ?? stat2 }] : []),
                   { key: 'pc1', label: 'Players' },
                 ]}
                 rows={[...chartData].reverse()}
@@ -679,14 +749,19 @@ export default function LeagueTrends() {
                   <tr className="text-slate-500 text-xs border-b border-slate-800">
                     <th className="text-left py-2 pr-6 font-medium">Season</th>
                     <th className="text-right py-2 pr-6 font-medium">
-                      <span style={{ color: LINE_COLORS[0] }}>●</span> {team1Label}
+                      <span style={{ color: LINE_COLORS[0] }}>●</span> {line1Label}
                     </th>
                     {comparing && (
                       <th className="text-right py-2 pr-6 font-medium">
                         <span style={{ color: LINE_COLORS[1] }}>●</span> {team2Label}
                       </th>
                     )}
-                    {!comparing && <th className="text-right py-2 pr-6 font-medium">YoY change</th>}
+                    {statComparing && (
+                      <th className="text-right py-2 pr-6 font-medium">
+                        <span style={{ color: LINE_COLORS[1] }}>●</span> {stat2Info?.label ?? stat2}
+                      </th>
+                    )}
+                    {!anyComparing && <th className="text-right py-2 pr-6 font-medium">YoY change</th>}
                     <th className="text-right py-2 font-medium">Players</th>
                   </tr>
                 </thead>
@@ -702,7 +777,10 @@ export default function LeagueTrends() {
                         {comparing && (
                           <td className="py-2 pr-6 text-right text-white font-semibold">{fmtVal(row.t2)}</td>
                         )}
-                        {!comparing && (
+                        {statComparing && (
+                          <td className="py-2 pr-6 text-right text-white font-semibold">{fmtVal(row.t1b)}</td>
+                        )}
+                        {!anyComparing && (
                           <td className="py-2 pr-6 text-right">
                             {chg == null
                               ? <span className="text-slate-600">-</span>

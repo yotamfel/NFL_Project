@@ -192,6 +192,10 @@ const CONTENT = {
             body: 'Below the chart, a table shows the value for each season in the selected range, useful for spotting year-over-year changes.',
           },
           {
+            title: 'Compare a second stat',
+            body: 'The "Compare a second stat" dropdown overlays a second metric on the same Season Trend chart (e.g., Completion % and Interception % together) - the second line plots on its own right-hand axis since the two stats can be on very different scales. This is mutually exclusive with the Team 2 comparison - picking one clears the other. Completion %, Interception %, and TD % are now available as Passing stats for exactly this kind of comparison.',
+          },
+          {
             title: 'Save & export',
             body: 'Hover over either chart to reveal a bookmark icon (save to your Saved page) and a download icon (export as PNG). Admins also see a folder icon to save the chart directly into a Research Project. Use the "Season breakdown" table\'s CSV button to export the raw season-by-season numbers for offline analysis.',
           },
@@ -650,6 +654,10 @@ const CONTENT = {
           {
             title: 'Season Breakdown',
             body: 'טבלה מתחת לגרף מציגה את הערך לכל עונה בטווח הנבחר - שימושית לזיהוי שינויים משנה לשנה.',
+          },
+          {
+            title: 'השוואת סטט שני',
+            body: 'תפריט "Compare a second stat" מוסיף מדד שני לאותו גרף Season Trend (למשל Completion % ו-Interception % ביחד) - הקו השני מוצג על ציר ימני נפרד כי לרוב יש להם סקאלה שונה. זה לא ניתן לשילוב עם השוואת Team 2 - בחירה באחד מנקה את השני. Completion %, Interception %, ו-TD % זמינים עכשיו כ-Stats בקטגוריית Passing בדיוק בשביל השוואה כזו.',
           },
           {
             title: 'שמירה וייצוא',

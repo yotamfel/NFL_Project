@@ -80,7 +80,7 @@ _ALLOWED_STATS: dict[str, frozenset[str]] = {
         "yds", "td", "int", "cmp", "att", "sk", "g",
         # advanced
         "rate", "qbr", "y_per_a", "ay_per_a", "ny_per_a", "any_per_a",
-        "sk_pct", "_4qc", "gwd", "_1d",
+        "sk_pct", "_4qc", "gwd", "_1d", "cmp_pct", "int_pct", "td_pct",
     }),
     "offense": frozenset({
         "rush_yds", "rush_td", "rec", "rec_yds", "rec_td", "yscm", "touch", "att", "g",
