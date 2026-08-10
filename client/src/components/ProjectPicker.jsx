@@ -47,6 +47,9 @@ export default function ProjectPicker({ type, label, data, onDone }) {
       const item = await api.createSaved({ type, label, data, note: note.trim() || undefined })
       if (selected.size > 0) {
         await api.assignToProjects(item.id, [...selected])
+        // assignToProjects makes its own per-project copies - the unassigned
+        // item created above would otherwise linger in Unsorted as a duplicate
+        await api.deleteSaved(item.id).catch(() => {})
       }
       onDone?.()
       setOpen(false)
