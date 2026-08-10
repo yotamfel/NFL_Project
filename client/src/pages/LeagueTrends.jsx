@@ -663,11 +663,13 @@ export default function LeagueTrends() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
                   <XAxis dataKey="season" stroke="#475569"
                     tick={{ fill: '#94a3b8', fontSize: 12 }} tickLine={false} />
-                  <YAxis yAxisId="left" stroke="#475569" tick={{ fill: '#94a3b8', fontSize: 12 }}
+                  <YAxis yAxisId="left"
+                    stroke={statComparing ? LINE_COLORS[0] : '#475569'}
+                    tick={{ fill: statComparing ? LINE_COLORS[0] : '#94a3b8', fontSize: 12 }}
                     tickFormatter={yFmt} width={52} />
                   {statComparing && (
-                    <YAxis yAxisId="right" orientation="right" stroke="#475569"
-                      tick={{ fill: '#94a3b8', fontSize: 12 }} tickFormatter={yFmt} width={52} />
+                    <YAxis yAxisId="right" orientation="right" stroke={LINE_COLORS[1]}
+                      tick={{ fill: LINE_COLORS[1], fontSize: 12 }} tickFormatter={yFmt} width={52} />
                   )}
                   <Tooltip content={
                     <TrendTooltip prevByKey={prevByKey} lineLabels={lineLabels} />
