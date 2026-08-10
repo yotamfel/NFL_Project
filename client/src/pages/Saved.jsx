@@ -34,16 +34,23 @@ function fmt(iso) {
 function GenericChartRenderer({ chart, colorOverrides }) {
   const { chartType, config, data } = chart
   if (chartType === 'GenericLine' && config?.lines) {
+    const hasRightAxis = config.lines.some(l => l.yAxisId === 'right')
     return (
       <ResponsiveContainer width="100%" height={240}>
         <LineChart data={data} margin={{ top: 10, right: 20, left: 0, bottom: 10 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
           <XAxis dataKey={config.xKey || 'x'} stroke="#475569" tick={{ fill: '#94a3b8', fontSize: 11 }} />
-          <YAxis stroke="#475569" tick={{ fill: '#94a3b8', fontSize: 11 }} />
+          <YAxis yAxisId="left"
+            stroke={hasRightAxis ? '#3b82f6' : '#475569'}
+            tick={{ fill: hasRightAxis ? '#3b82f6' : '#94a3b8', fontSize: 11 }} />
+          {hasRightAxis && (
+            <YAxis yAxisId="right" orientation="right" stroke="#f97316"
+              tick={{ fill: '#f97316', fontSize: 11 }} />
+          )}
           <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }} />
           <Legend wrapperStyle={{ fontSize: 11, color: '#94a3b8' }} />
           {config.lines.map(l => (
-            <Line key={l.dataKey} type="monotone" dataKey={l.dataKey} name={l.label}
+            <Line key={l.dataKey} yAxisId={l.yAxisId || 'left'} type="monotone" dataKey={l.dataKey} name={l.label}
               stroke={colorOverrides[l.dataKey] || l.color || '#3b82f6'} strokeWidth={2} dot={{ r: 2 }} />
           ))}
         </LineChart>

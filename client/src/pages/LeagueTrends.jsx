@@ -651,9 +651,9 @@ export default function LeagueTrends() {
                 config: {
                   xKey: 'season',
                   lines: [
-                    { dataKey: 't1', label: line1Label, color: LINE_COLORS[0] },
-                    ...(comparing ? [{ dataKey: 't2', label: team2Label, color: LINE_COLORS[1] }] : []),
-                    ...(statComparing ? [{ dataKey: 't1b', label: stat2Info?.label ?? stat2, color: LINE_COLORS[1] }] : []),
+                    { dataKey: 't1', label: line1Label, color: LINE_COLORS[0], yAxisId: 'left' },
+                    ...(comparing ? [{ dataKey: 't2', label: team2Label, color: LINE_COLORS[1], yAxisId: 'left' }] : []),
+                    ...(statComparing ? [{ dataKey: 't1b', label: stat2Info?.label ?? stat2, color: LINE_COLORS[1], yAxisId: 'right' }] : []),
                   ],
                 },
               }}
