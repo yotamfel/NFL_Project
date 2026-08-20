@@ -3,6 +3,11 @@ import { useNavigate } from 'react-router-dom'
 
 const PLATFORM_URL = 'https://fourth-and-data.up.railway.app'
 
+// Add an entry here each time a new analysis post goes live elsewhere (Medium, etc.)
+// { title, site, date: 'YYYY-MM', blurb, url }
+const WRITING_POSTS = [
+]
+
 const P = PLATFORM_URL
 const SeeIt = ({ to, label }) => (
   <a href={`${P}${to}`} target="_blank" rel="noopener noreferrer"
@@ -75,6 +80,31 @@ export default function Portfolio() {
             <Stat value="66" label="API endpoints" />
           </div>
         </section>
+
+        {/* Writing - analysis pieces built with the platform, published elsewhere */}
+        {WRITING_POSTS.length > 0 && (
+          <section className="space-y-6">
+            <div>
+              <p className="text-amber-500 text-xs font-bold uppercase tracking-widest mb-1">Writing</p>
+              <h2 className="text-2xl font-black text-white">Analysis Built With This Platform</h2>
+              <p className="text-slate-400 text-sm mt-2">
+                Data-driven pieces pulled and charted directly from the platform above, published externally.
+              </p>
+            </div>
+            <div className="space-y-3">
+              {WRITING_POSTS.map(p => (
+                <a key={p.url} href={p.url} target="_blank" rel="noopener noreferrer"
+                  className="block bg-slate-900/60 border border-slate-800 hover:border-amber-500/40 rounded-2xl p-5 transition-colors">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-white font-bold text-sm">{p.title}</p>
+                    <span className="text-slate-600 text-[10px] shrink-0">{p.site} &middot; {p.date}</span>
+                  </div>
+                  <p className="text-slate-500 text-xs leading-relaxed mt-1.5">{p.blurb}</p>
+                </a>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Architecture */}
         <section className="space-y-6">
