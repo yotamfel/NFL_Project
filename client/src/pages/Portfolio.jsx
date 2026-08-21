@@ -6,6 +6,13 @@ const PLATFORM_URL = 'https://fourth-and-data.up.railway.app'
 // Add an entry here each time a new analysis post goes live elsewhere (Medium, etc.)
 // { title, site, date: 'YYYY-MM', blurb, url }
 const WRITING_POSTS = [
+  {
+    title: 'I Pulled 56 Years of NFL Passing Stats to Test a Common Belief',
+    site: 'Medium',
+    date: '2026-08',
+    blurb: 'A 56-year investigation into how the NFL passing game actually changed since 1970 - built on League Trends\' dual-stat overlay and a volume-weighted stat engine I fixed mid-analysis after catching it skewing on low-attempt backups.',
+    url: 'https://medium.com/@yotam6p/i-pulled-56-years-of-nfl-passing-stats-to-test-a-common-belief-d347d1d8b1cf',
+  },
 ]
 
 const P = PLATFORM_URL
