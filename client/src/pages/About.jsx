@@ -25,6 +25,10 @@ export default function About() {
         <div>
           <h2 className="text-white font-bold mb-2">Built by</h2>
           <p>Yotam - data analyst and NFL fan. Built as a personal project to make NFL statistics accessible to everyone.</p>
+          <button onClick={() => navigate('/portfolio')}
+            className="text-xs text-amber-500/80 hover:text-amber-400 transition-colors mt-2 inline-flex items-center gap-1">
+            See the technical portfolio →
+          </button>
         </div>
       </div>
 
